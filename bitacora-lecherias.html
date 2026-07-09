@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d1b2a">
+<title>Bitácora de Lecherías · Pintura de Fachadas</title>
+<style>
+  :root{
+    --navy:#0d1b2a; --navy2:#16263a; --steel:#3a4f66;
+    --paper:#f4f6f8; --card:#ffffff; --line:#dfe5ec;
+    --milk:#eef3f7; --ink:#11202e; --mut:#6b7b8c;
+    --leche:#1f6feb;          /* azul leche bienestar */
+    --leche-d:#1657c0;
+    --done:#1f8a4c; --done-bg:#e3f3e9;
+    --pend:#9aa7b4; --pend-bg:#eef1f4;
+    --wait:#e08a1e; --wait-bg:#fbeed8;
+    --rej:#c0362c; --rej-bg:#f8e3e1;
+    --extra:#7b2ff7; --extra-bg:#efe6fe;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--paper);color:var(--ink);font-size:15px;line-height:1.45;overflow:hidden}
+  .mono{font-family:'SF Mono','Roboto Mono',ui-monospace,Menlo,monospace}
+  .app{display:flex;flex-direction:column;height:100dvh;max-width:540px;margin:0 auto;background:var(--paper);position:relative}
+
+  header.top{background:var(--navy);color:#fff;padding:9px 15px;display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;border-bottom:3px solid var(--leche)}
+  .brand{display:flex;align-items:center;gap:9px}
+  .brand .mk{width:30px;height:30px;border-radius:7px;background:var(--leche);display:flex;align-items:center;justify-content:center;font-size:16px;flex:0 0 auto}
+  .brand b{font-size:14px;letter-spacing:.3px;font-weight:800;display:block;line-height:1.1}
+  .brand span{font-size:9.5px;letter-spacing:1.5px;color:#8aa0b6;text-transform:uppercase}
+  .rolepick{background:var(--navy2);border:1px solid var(--steel);color:#fff;font:inherit;font-size:12px;padding:7px 8px;border-radius:7px;font-weight:600;max-width:165px}
+
+  .contract{background:var(--navy2);color:#aebccb;padding:6px 15px;font-size:10.5px;display:flex;justify-content:space-between;flex:0 0 auto;letter-spacing:.3px}
+  .contract b{color:#fff}
+
+  .roleband{font-size:10px;text-align:center;padding:5px;letter-spacing:1px;text-transform:uppercase;font-weight:800;flex:0 0 auto;color:#fff}
+  .rb-sub{background:var(--leche)} .rb-gen{background:var(--steel)} .rb-admin{background:var(--wait)} .rb-dep{background:var(--navy)}
+
+  /* min-max gauge */
+  .minmax{background:var(--navy);padding:11px 15px 13px;flex:0 0 auto;color:#fff}
+  .minmax .head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .minmax .head .t{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:#8aa0b6}
+  .minmax .head .big{font-size:13px;font-weight:800}
+  .minmax .big b{color:var(--leche);font-size:20px}
+  .track{position:relative;height:24px;background:var(--navy2);border-radius:6px;overflow:hidden}
+  .track .fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--leche),#3d8bff);border-radius:6px;transition:width .6s cubic-bezier(.3,.7,.3,1)}
+  .track .seg{position:absolute;top:0;bottom:0;width:2px;background:#fff}
+  .track .seg .lab{position:absolute;top:26px;font-size:8.5px;color:#8aa0b6;transform:translateX(-50%);white-space:nowrap}
+  .track .seg.maxseg .lab{color:#fff}
+  .mmlegend{display:flex;gap:14px;margin-top:22px;font-size:9.5px;color:#8aa0b6}
+  .mmlegend b{color:#fff}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);background:var(--navy2);flex:0 0 auto}
+  .kpi{padding:8px 5px;text-align:center;border-left:1px solid #24364a}
+  .kpi:first-child{border-left:none}
+  .kpi .n{font-size:17px;font-weight:800;color:#fff;line-height:1}
+  .kpi .n.acc{color:#5ea0ff}
+  .kpi .l{font-size:8px;letter-spacing:.8px;color:#8aa0b6;text-transform:uppercase;margin-top:3px}
+
+  .crumbs{display:flex;align-items:center;gap:7px;padding:9px 15px 4px;font-size:12px;flex:0 0 auto;color:var(--mut)}
+  .crumbs a{color:var(--leche);font-weight:700;cursor:pointer;text-decoration:none}
+  .crumbs .sep{color:var(--line)}
+
+  .filters{display:flex;gap:6px;padding:7px 13px;overflow-x:auto;flex:0 0 auto}
+  .filters::-webkit-scrollbar{display:none}
+  .chip{white-space:nowrap;border:1px solid var(--line);background:#fff;color:var(--steel);padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;flex:0 0 auto}
+  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .search{flex:1;min-width:120px}
+  .search input{width:100%;border:1px solid var(--line);background:#fff;border-radius:20px;padding:7px 13px;font:inherit;font-size:12px}
+
+  .scroll{flex:1 1 auto;overflow-y:auto;padding:4px 13px 80px}
+
+  /* estado list */
+  .estcard{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:9px;cursor:pointer;overflow:hidden;transition:transform .08s}
+  .estcard:active{transform:scale(.99)}
+  .estcard .top{display:flex;align-items:center;gap:11px;padding:12px 14px}
+  .estcard .flag{width:42px;height:42px;border-radius:10px;background:var(--milk);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--leche);flex:0 0 auto;letter-spacing:-.5px}
+  .estcard .nm{flex:1;min-width:0}
+  .estcard .nm b{font-size:15px;font-weight:700;display:block}
+  .estcard .nm span{font-size:11px;color:var(--mut)}
+  .estcard .cnt{text-align:right;flex:0 0 auto}
+  .estcard .cnt .num{font-size:19px;font-weight:800}
+  .estcard .cnt .pct{font-size:10px;color:var(--mut)}
+  .estbar{height:5px;background:var(--pend-bg)}
+  .estbar .f{height:100%;background:var(--done);transition:width .4s}
+
+  /* punto list */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:11px;margin-bottom:9px;overflow:hidden;cursor:pointer;transition:transform .08s}
+  .card:active{transform:scale(.992)}
+  .card .row1{display:flex;align-items:center;gap:10px;padding:11px 12px 8px}
+  .pv{font-size:10px;font-weight:800;letter-spacing:.3px;background:var(--milk);color:var(--steel);padding:3px 7px;border-radius:5px;flex:0 0 auto}
+  .addr{flex:1;min-width:0}
+  .addr .a{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .addr .s{font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stbadge{font-size:9.5px;font-weight:800;letter-spacing:.3px;padding:4px 8px;border-radius:20px;flex:0 0 auto;text-transform:uppercase}
+  .st-no{background:var(--pend-bg);color:var(--mut)} .st-at{background:var(--done-bg);color:var(--done)}
+  .card .row2{display:flex;border-top:1px solid var(--line);font-size:10px}
+  .meta{flex:1;padding:6px 8px;border-left:1px solid var(--line);text-align:center}
+  .meta:first-child{border-left:none}
+  .meta .v{font-weight:800;font-size:11.5px}.meta .k{color:var(--mut);letter-spacing:.4px;text-transform:uppercase;font-size:8px;margin-top:1px}
+  .v-ok{color:var(--done)}.v-pe{color:var(--mut)}.v-re{color:var(--rej)}.v-wa{color:var(--wait)}.v-ex{color:var(--extra)}
+
+  .rolehint{position:absolute;left:0;right:0;bottom:0;padding:8px 15px;text-align:center;background:linear-gradient(transparent,var(--paper) 35%);font-size:11px;color:var(--mut);pointer-events:none}
+
+  /* sheet */
+  .sheet{position:fixed;inset:0;max-width:540px;margin:0 auto;background:var(--paper);z-index:40;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .25s cubic-bezier(.3,.7,.3,1)}
+  .sheet.show{transform:translateY(0)}
+  .sheet header{background:var(--navy);color:#fff;padding:12px 15px;display:flex;align-items:center;gap:11px;border-bottom:3px solid var(--leche);flex:0 0 auto}
+  .sheet header .x{background:none;border:none;color:#fff;font-size:25px;line-height:1;cursor:pointer;padding:0 3px}
+  .sheet header .h{flex:1;min-width:0}
+  .sheet header .h b{font-size:14px;display:block}
+  .sheet header .h span{font-size:11px;color:#8aa0b6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+  .sbody{flex:1;overflow-y:auto;padding:14px 15px 30px}
+  .sect{margin-bottom:17px}
+  .sect>h3{font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--steel);margin-bottom:8px;display:flex;align-items:center;gap:7px}
+  .sect>h3::before{content:'';width:14px;height:2px;background:var(--leche)}
+  .infogrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ib{background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+  .ib .k{font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--mut)}
+  .ib .v{font-size:13.5px;font-weight:700;margin-top:2px}
+  .ib.full{grid-column:1/-1}
+
+  .phlane{margin-bottom:11px}
+  .phlane .lbl{font-size:11px;font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+  .phlane .lbl .tag{font-size:8.5px;font-weight:800;letter-spacing:.4px;padding:2px 7px;border-radius:4px;text-transform:uppercase}
+  .tag-prev{background:var(--pend-bg);color:var(--steel)} .tag-fin{background:var(--done-bg);color:var(--done)}
+  .phscroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+  .phscroll::-webkit-scrollbar{height:0}
+  .ph{position:relative;width:112px;height:142px;flex:0 0 auto;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#cdd6df}
+  .ph img{width:100%;height:100%;object-fit:cover;display:block}
+  .ph .geo{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent,rgba(0,0,0,.85));color:#fff;font-size:7.5px;padding:13px 5px 4px;line-height:1.3}
+  .ph .geo .c{font-weight:700}
+  .ph.add{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;border:2px dashed var(--line);background:#fff;color:var(--mut);cursor:pointer;font-size:10.5px;font-weight:600}
+  .ph.add .plus{font-size:24px;font-weight:300;line-height:1}
+
+  .extra-box{background:#fff;border:1px solid var(--line);border-left:4px solid var(--extra);border-radius:8px;padding:11px 12px}
+  .extra-box .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .extra-box .top .t{font-size:12px;font-weight:700}
+  .extra-box .top .badge{font-size:9px;font-weight:800;background:var(--extra);color:#fff;padding:2px 7px;border-radius:4px}
+  .extra-box .calc{font-size:11px;color:var(--steel);line-height:1.6}
+  .extra-box .calc b{color:var(--extra)}
+
+  .tl{background:#fff;border:1px solid var(--line);border-radius:8px;padding:2px 0}
+  .tlrow{display:flex;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);align-items:center}
+  .tlrow:last-child{border-bottom:none}
+  .tldot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:var(--line)}
+  .tldot.on{background:var(--done)} .tldot.wait{background:var(--wait)}
+  .tlrow .tx{flex:1}.tlrow .tx b{font-size:12px}.tlrow .tx span{display:block;font-size:10px;color:var(--mut)}
+  .tlrow .when{font-size:10px;color:var(--mut);text-align:right}
+
+  .actions{position:sticky;bottom:0;background:linear-gradient(transparent,var(--paper) 22%);padding:13px 0 6px;display:flex;flex-direction:column;gap:8px}
+  .btn{border:none;border-radius:9px;padding:13px;font:inherit;font-size:13.5px;font-weight:800;letter-spacing:.3px;cursor:pointer;text-transform:uppercase;width:100%}
+  .btn-leche{background:var(--leche);color:#fff}.btn-leche:active{background:var(--leche-d)}
+  .btn-admin{background:var(--wait);color:#fff}
+  .btn-rej{background:#fff;color:var(--rej);border:1.5px solid var(--rej)}
+  .btn-done{background:var(--done);color:#fff}
+  .btn:disabled{background:#dde3ea;color:#9aa7b4;cursor:not-allowed}
+  .lock{font-size:11px;text-align:center;color:var(--mut);padding:6px}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;z-index:80;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
+  .toast.show{opacity:1}
+  .offline{position:fixed;top:0;left:0;right:0;max-width:540px;margin:0 auto;background:var(--wait);color:#fff;font-size:11px;font-weight:700;text-align:center;padding:4px;z-index:60;display:none}
+  .offline.show{display:block}
+
+  /* assign view */
+  .assignrow{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .assignrow .zn{flex:1}.assignrow .zn b{font-size:13px}.assignrow .zn span{font-size:10.5px;color:var(--mut);display:block}
+  .assignrow .zc{font-size:18px;font-weight:800;color:var(--leche)}
+  .estados-z{font-size:10px;color:var(--mut);margin-top:2px;line-height:1.4}
+  .note{background:var(--milk);border-radius:9px;padding:10px 12px;font-size:11.5px;color:var(--steel);margin-bottom:10px;line-height:1.5}
+  .note b{color:var(--ink)}
+
+  /* ===== bottom nav ===== */
+  .scroll{padding-bottom:74px}
+  .navbar{position:absolute;left:0;right:0;bottom:0;height:60px;background:var(--card);border-top:1px solid var(--line);display:flex;z-index:30;max-width:540px;margin:0 auto}
+  .navbtn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--mut);font-size:8.5px;font-weight:600;letter-spacing:.1px;border:none;background:none;padding:0}
+  .navbtn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .navbtn.on{color:var(--leche)}
+  .navbtn.on svg{stroke:var(--leche)}
+  .rolehint{bottom:60px}
+  /* ===== programa / desviaciones ===== */
+  .progrow{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .progrow .t{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .progrow .t b{font-size:13px}
+  .desv-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px}
+  .d-on{background:var(--done-bg);color:var(--done)} .d-late{background:var(--rej-bg);color:var(--rej)} .d-soon{background:var(--wait-bg);color:var(--wait)} .d-none{background:var(--pend-bg);color:var(--mut)}
+  .progrow .dates{display:flex;gap:0;font-size:10px}
+  .progrow .dt{flex:1;text-align:center;border-left:1px solid var(--line)}
+  .progrow .dt:first-child{border-left:none}
+  .progrow .dt .v{font-weight:700;font-size:12px;font-family:'SF Mono',monospace}
+  .progrow .dt .k{color:var(--mut);font-size:8px;text-transform:uppercase;letter-spacing:.4px}
+  .curvebox{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:10px}
+  .curvebox h4{font-size:12px;margin-bottom:10px;color:var(--steel)}
+  .curve-svg{width:100%;height:150px}
+  .progsum{display:flex;gap:8px;margin-bottom:10px}
+  .progsum .s{flex:1;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px;text-align:center}
+  .progsum .s .v{font-size:19px;font-weight:800;line-height:1}
+  .progsum .s .k{font-size:8.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+  /* ===== actas ===== */
+  .lotecard{background:var(--card);border:1px solid var(--line);border-radius:11px;margin-bottom:9px;overflow:hidden;cursor:pointer}
+  .lotecard .top{display:flex;align-items:center;gap:10px;padding:11px 13px}
+  .lotecard .ic{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-size:17px}
+  .ic-dep{background:var(--vobo-bg)} .ic-con{background:var(--milk)}
+  .lotecard .nm{flex:1}.lotecard .nm b{font-size:13.5px;display:block}.lotecard .nm span{font-size:10.5px;color:var(--mut)}
+  .acta-badge{font-size:9.5px;font-weight:800;padding:4px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;flex:0 0 auto}
+  .ab-rev{background:var(--wait-bg);color:var(--wait)} .ab-ap{background:var(--done-bg);color:var(--done)} .ab-rej{background:var(--rej-bg);color:var(--rej)} .ab-arm{background:var(--pend-bg);color:var(--mut)}
+  .lotecard .foot{border-top:1px solid var(--line);display:flex;font-size:10px}
+  .lotecard .foot .f{flex:1;padding:7px;text-align:center;border-left:1px solid var(--line)}
+  .lotecard .foot .f:first-child{border-left:none}
+  .lotecard .foot .f .v{font-weight:800;font-size:12px}.lotecard .foot .f .k{color:var(--mut);font-size:8px;text-transform:uppercase}
+  .obschips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .obschip{font-size:11px;padding:6px 10px;border:1px solid var(--line);border-radius:18px;cursor:pointer;background:#fff;user-select:none}
+  .obschip.on{background:var(--rej);color:#fff;border-color:var(--rej)}
+  .acta-upload{border:2px dashed var(--line);border-radius:10px;padding:20px;text-align:center;color:var(--mut);cursor:pointer;background:#fff;margin-bottom:10px}
+  .acta-upload.done{border-color:var(--done);color:var(--done);background:var(--done-bg)}
+  .acta-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .cobro-flag{display:flex;align-items:center;gap:8px;background:var(--milk);border-radius:9px;padding:9px 11px;font-size:12px;margin-bottom:8px}
+  .cobro-flag .k{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  /* ===== map ===== */
+  #mapWrap{position:absolute;inset:0;bottom:60px;display:none}
+  #map{width:100%;height:100%;background:#dfe5ec}
+  .map-legend{position:absolute;bottom:12px;left:12px;background:rgba(255,255,255,.95);border-radius:9px;padding:8px 11px;font-size:10.5px;box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:500;line-height:1.7}
+  .map-legend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .leaflet-popup-content{font-family:'Inter',sans-serif;font-size:12px;margin:9px 11px}
+  .leaflet-popup-content b{font-size:13px}
+  .popbtn{display:inline-block;margin-top:6px;background:var(--leche);color:#fff;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer}
+  /* ===== dashboard ===== */
+  .dashcard{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:9px}
+  .dashcard .hd{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+  .dashcard .av{width:38px;height:38px;border-radius:9px;background:var(--leche);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex:0 0 auto}
+  .dashcard .nm{flex:1}.dashcard .nm b{font-size:14px;display:block}.dashcard .nm span{font-size:10.5px;color:var(--mut)}
+  .dashcard .big{text-align:right}.dashcard .big .p{font-size:20px;font-weight:800;line-height:1}.dashcard .big .l{font-size:9px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
+  .dbar{height:8px;background:var(--pend-bg);border-radius:5px;overflow:hidden;display:flex}
+  .dbar .ok{background:var(--done)}.dbar .wa{background:var(--wait)}
+  .dstats{display:flex;gap:0;margin-top:9px;border-top:1px solid var(--line);padding-top:8px}
+  .dstats .s{flex:1;text-align:center;border-left:1px solid var(--line)}
+  .dstats .s:first-child{border-left:none}
+  .dstats .s .v{font-weight:800;font-size:13px}.dstats .s .k{font-size:8.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
+  /* ===== estimación ===== */
+  .estim-hero{background:var(--navy);color:#fff;border-radius:12px;padding:15px 16px;margin-bottom:12px}
+  .estim-hero .lbl{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:#8aa0b6}
+  .estim-hero .amt{font-size:30px;font-weight:800;margin:3px 0;letter-spacing:-.5px}
+  .estim-hero .sub{font-size:11.5px;color:#aebccb}
+  .estim-row{display:flex;justify-content:space-between;padding:10px 13px;background:var(--card);border:1px solid var(--line);border-radius:9px;margin-bottom:7px;font-size:13px;align-items:center}
+  .estim-row .l{color:var(--steel)}.estim-row .v{font-weight:700;font-family:'SF Mono',monospace}
+  .estim-row.tot{background:var(--milk);font-weight:800}
+  .estim-row.extra-row{border-left:3px solid var(--extra)}
+  .expbtns{display:flex;gap:8px;margin:12px 0}
+  .expbtn{flex:1;border:none;border-radius:9px;padding:13px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;text-transform:uppercase;letter-spacing:.3px}
+  .expbtn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2}
+  .exp-xlsx{background:var(--done);color:#fff}.exp-pdf{background:var(--rej);color:#fff}
+  .sectlabel{font-size:10.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--steel);margin:16px 0 8px;font-weight:700}
+  .rejbox{margin-top:8px}
+  .rejbox textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit;font-size:13px;resize:vertical;min-height:56px}
+  .rejmotivo{background:var(--rej-bg);border:1px solid #eab5b0;border-radius:8px;padding:9px 11px;font-size:12px;color:var(--rej);margin-top:8px}
+  .rejmotivo b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+  .photo-req{font-size:11px;color:var(--mut);text-align:center;padding:4px}
+  .photo-req.ok{color:var(--done)}
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="02-supabase-conexion.js"></script>
+</head>
+<body>
+<div id="loginScreen" style="display:none;position:fixed;inset:0;background:#0d1b2a;z-index:200;
+     display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:24px">
+  <div style="color:#fff;font-size:20px;font-weight:800">Bitácora de Lecherías</div>
+  <div style="color:#8aa0b6;font-size:12px;margin-bottom:8px">LUMEN-OAX · Ingresa con tu cuenta</div>
+  <input id="loginMail" placeholder="Correo" style="width:100%;max-width:300px;padding:12px;border-radius:8px;border:none">
+  <input id="loginPass" type="password" placeholder="Contraseña" style="width:100%;max-width:300px;padding:12px;border-radius:8px;border:none">
+  <button onclick="hacerLogin()" style="width:100%;max-width:300px;padding:12px;border-radius:8px;border:none;
+     background:#1f6feb;color:#fff;font-weight:800;cursor:pointer">Entrar</button>
+  <div id="loginError" style="color:#ff6b6b;font-size:12px;min-height:16px"></div>
+</div>
+<div class="offline" id="offlineBar">SIN CONEXION - los cambios se sincronizan al recuperar señal</div>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="mk">&#129371;</div>
+      <div><b>Bitacora</b><span>Lecherias &middot; Fachadas</span></div>
+    </div>
+    <!--
+    <select class="rolepick" id="rolePick" onchange="setRole(this.value)">
+      <option value="sub">Subcontratista de zona</option>
+      <option value="gen">Contratista general</option>
+      <option value="admin">Administrador (Vo.Bo.)</option>
+      <option value="dep">Dependencia</option>
+    </select>
+    -->
+  </header>
+  <div class="contract">
+    <span>Proc. <b id="cNum">LA-08-VST-008VST977-N-54-2026</b></span>
+    <span id="zoneTag">Todas las zonas</span>
+  </div>
+  <div class="roleband rb-sub" id="roleBand"></div>
+
+  <div class="minmax" id="minmax"></div>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="crumbs" id="crumbs"></div>
+  <div class="filters" id="filters"></div>
+
+  <div class="scroll" id="scroll"></div>
+  <div id="mapWrap"><div id="map"></div>
+    <div class="map-legend">
+      <div><span class="dot" style="background:#1f8a4c"></span>Con Vo.Bo.</div>
+      <div><span class="dot" style="background:#e08a1e"></span>Atendido s/ Vo.Bo.</div>
+      <div><span class="dot" style="background:#9aa7b4"></span>No atendido</div>
+    </div>
+  </div>
+  <div class="rolehint" id="roleHint"></div>
+  <nav class="navbar" id="navbar">
+    <button class="navbtn on" data-tab="lista" onclick="setTab('lista')">
+      <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Puntos</button>
+    <button class="navbtn" data-tab="mapa" onclick="setTab('mapa')">
+      <svg viewBox="0 0 24 24"><path d="M9 20l-6 3V6l6-3 6 3 6-3v14l-6 3-6-3z"/><path d="M9 3v14M15 6v14"/></svg>Mapa</button>
+    <button class="navbtn" data-tab="programa" onclick="setTab('programa')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 14l2 2 4-4"/></svg>Programa</button>
+    <button class="navbtn" data-tab="tablero" onclick="setTab('tablero')">
+      <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-6 4 3 5-8"/></svg>Tablero</button>
+    <button class="navbtn" data-tab="actas" onclick="setTab('actas')">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>Actas</button>
+    <button class="navbtn" data-tab="estim" onclick="setTab('estim')">
+      <svg viewBox="0 0 24 24"><path d="M9 7h6M9 11h6M9 15h4"/><rect x="4" y="3" width="16" height="18" rx="2"/></svg>Estim.</button>
+  </nav>
+</div>
+
+<div class="sheet" id="sheet">
+  <header>
+    <button class="x" onclick="closeSheet()">&times;</button>
+    <div class="h"><b id="shTitle"></b><span id="shSub"></span></div>
+    <span class="stbadge" id="shBadge"></span>
+  </header>
+  <div class="sbody" id="sbody"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+function mostrarLogin(){ document.getElementById('loginScreen').style.display='flex'; }
+async function hacerLogin(){
+  const mail=document.getElementById('loginMail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  try{
+    await iniciarSesion(mail,pass);
+    document.getElementById('loginScreen').style.display='none';
+    await arrancarApp();
+  }catch(e){ document.getElementById('loginError').textContent='Correo o contraseña incorrectos'; }
+}
+const ZONAS={"Z1 · Valle de México Pte.": ["CDMX"], "Z2 · Valle de México Or.": ["Edo. México"], "Z3 · Centro": ["Hidalgo", "Morelos", "Puebla", "Tlaxcala"], "Z4 · Bajío": ["Aguascalientes", "Colima", "Guanajuato", "Jalisco", "Michoacán", "Querétaro", "San Luis Potosí", "Zacatecas"], "Z5 · Norte": ["BCS", "Chihuahua", "Coahuila", "Durango", "Nuevo León", "Sinaloa", "Sonora", "Tamaulipas"], "Z6 · Sur/Golfo": ["Guerrero", "Nayarit", "Oaxaca", "Tabasco", "Veracruz"]};
+const SUBS={"SUB-4": "Z4 · Bajío", "SUB-5": "Z5 · Norte", "SUB-1": "Z1 · Valle de México Pte.", "SUB-2": "Z2 · Valle de México Or.", "SUB-6": "Z6 · Sur/Golfo", "SUB-3": "Z3 · Centro"};
+const METAS={"SUB-1": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-2": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-3": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-4": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-5": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-6": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}};
+
+
+/* ---- contrato ---- */
+const MIN=1000, MAX=1400, DEFINIDAS=1037;
+// ===== PRECIOS =====
+// A LA DEPENDENCIA: unidad estándar por lechería = 21 m² a $17,769.75 + IVA (fijo, sin extraordinarios)
+const PRECIO_FACHADA=17769.75, M2_STD=21, IVA=0.16;
+// EXTRAORDINARIOS: control INTERNO hacia subcontratistas (la dependencia NO paga extra).
+// Precio por m² adicional configurable por subcontratista (default; se ajusta al cerrar cada subcontrato).
+const PRECIO_M2_EXTRA_DEFAULT=450.00;
+const PRECIO_M2_EXTRA_SUB={}; // {'SUB-1':450, ...} — se llena desde config; si no, usa el default
+function precioExtraSub(sub){ return PRECIO_M2_EXTRA_SUB[sub] || PRECIO_M2_EXTRA_DEFAULT; }
+// requisitos de evidencia (anexo técnico)
+const MIN_FOTOS_PREV=3, MIN_FOTOS_FIN=3;
+const CAT_FIN_OBLIGATORIAS=['fachada','letrero']; // de las "después"
+const CAT_LABEL={fachada:'Fachada global',letrero:'Letrero lechería',general:'General',detalle:'Detalle'};
+const MIN_FACTURA=50; // mínimo de lecherías por factura (ajustable con la dependencia)
+// ===== IDENTIDAD DEL CONTRATO =====
+const EMPRESA='LUMEN-OAX PROYECTOS Y CONSTRUCCIÓN S.A. DE C.V.';
+const EMPRESA_RFC='LPC230130LRA';
+const DEPENDENCIA='LECHE PARA EL BIENESTAR, S.A. DE C.V.';
+const PROCEDIMIENTO='LA-08-VST-008VST977-N-54-2026';
+// helpers de requisitos de fotos
+function tiposFin(p){ return new Set((p.fotosFin||[]).map(f=>f.tipo)); }
+function faltanCatFin(p){ const t=tiposFin(p); return CAT_FIN_OBLIGATORIAS.filter(c=>!t.has(c)); }
+function fotosOk(p){
+  return (p.fotosPrev||[]).length>=MIN_FOTOS_PREV
+      && (p.fotosFin||[]).length>=MIN_FOTOS_FIN
+      && faltanCatFin(p).length===0;
+}
+const HOY=new Date();
+function addDays(iso, d) {
+    const dt = new Date(iso);
+    dt.setDate(dt.getDate() + d);
+    return dt.toISOString().slice(0, 10);
+}
+
+function daysBetween(a, b) {
+    return Math.round((new Date(b)-new Date(a))/86400000);
+}
+/*
+// la zona y el subcontratista YA vienen del Excel maestro (columna Zona / Subcontratista)
+let seed=7; const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+const HOY=new Date('2026-08-15'); // fecha de corte simulada para el piloto
+function addDays(iso,d){ const dt=new Date(iso); dt.setDate(dt.getDate()+d); return dt.toISOString().slice(0,10); }
+function daysBetween(a,b){ return Math.round((new Date(b)-new Date(a))/86400000); }
+LECH.forEach((p,i)=>{
+  p.id=i;
+  const r=rnd();
+  if(r>.55){ p.status='at';
+    p.vobo = rnd()>.6?'ok':(rnd()>.5?'wait':'rej');
+    p.m2 = rnd()>.78 ? M2_STD+Math.floor(rnd()*16) : M2_STD;
+    // fecha real de atención: cerca de la comprometida ±desvío
+    if(p.fcomp){ const desv=Math.floor((rnd()-0.45)*18); p.freal=addDays(p.fcomp,desv); }
+    else p.freal='';
+  } else { p.status='no'; p.vobo='-'; p.m2=M2_STD; p.freal=''; }
+  // ===== FOTOS: arrays con categorías =====
+  // previa: cualquier tipo. final: debe incluir 'fachada' (global) y 'letrero'.
+  p.fotosPrev=[]; p.fotosFin=[]; p.adjuntos=[];
+  if(p.status==='at'){
+    // 3 previas
+    for(let k=0;k<3;k++) p.fotosPrev.push({tipo:'general',k});
+    // 3 finales cubriendo las obligatorias
+    p.fotosFin.push({tipo:'fachada',k:0});
+    p.fotosFin.push({tipo:'letrero',k:1});
+    p.fotosFin.push({tipo:'general',k:2});
+    if(rnd()>.7) p.fotosFin.push({tipo:'detalle',k:3});
+  } else {
+    const np = rnd()>.5 ? 1+Math.floor(rnd()*2) : 0;
+    for(let k=0;k<np;k++) p.fotosPrev.push({tipo:'general',k});
+  }
+  p.cuadrilla='Cuadrilla '+(1+(i%5));
+  // evidencia del excedente (si aplica) — control interno hacia subcontratista
+  p.extraEvidencia = (p.m2>M2_STD && rnd()>.4) ? ['medicion_m2.pdf'] : [];
+  // estado del acta de conformidad (solo relevante si tiene Vo.Bo.)
+  // acta: 'ninguna' | 'cargada' (pend. revisión) | 'aprobada' | 'rechazada'
+  if(p.vobo==='ok'){
+    const a=rnd();
+    p.acta = a>.55?'aprobada':(a>.30?'cargada':(a>.18?'rechazada':'ninguna'));
+    p.actaObs = p.acta==='rechazada' ? ['Falta sello de la dependencia'] : [];
+  } else { p.acta='ninguna'; p.actaObs=[]; }
+  p.motivo = p.vobo==='rej' ? 'Foto final no cubre toda la fachada' : '';
+});
+
+/* ---- LOTES DE ACTAS (simulados) ---- *
+// acta-dependencia: agrupa 50+ lecherías cobrables. acta-contratista: corte quincenal.
+let LOTES=[];
+(function seedLotes(){
+  let lid=1;
+  // ACTAS CON LA DEPENDENCIA: acumular lecherías con Vo.Bo. en lotes de 50 (pueden cruzar zonas)
+  const okAll=LECH.filter(p=>p.vobo==='ok');
+  const estadosDep=['aprobada','en_revision','rechazada'];
+  let di=0;
+  for(let i=0;i+50<=okAll.length;i+=50){
+    const bloque=okAll.slice(i,i+50);
+    const est=estadosDep[di%estadosDep.length]; di++;
+    const zc={}; bloque.forEach(p=>{zc[p.zona]=(zc[p.zona]||0)+1;});
+    const zonaDom=Object.entries(zc).sort((a,b)=>b[1]-a[1])[0][0];
+    LOTES.push({id:lid++,tipo:'dependencia',zona:zonaDom+(Object.keys(zc).length>1?' +':''),sub:'',pvs:bloque.map(p=>p.pv),
+      estado:est, obs: est==='rechazada'?['Falta sello de la dependencia','Falta fecha en hoja 2']:[],
+      fini:'2026-07-06',ffin:'2026-08-10',
+      admin:'Administrador · '+DEPENDENCIA, contratista:EMPRESA});
+  }
+  // ACTAS CON SUBCONTRATISTAS: corte quincenal, variando estados
+  const estadosCon=['aprobada','en_revision','rechazada','por_armar'];
+  let ci=0;
+  Object.keys(SUBS).forEach(s=>{
+    const arr=LECH.filter(p=>p.sub===s&&p.vobo==='ok');
+    if(arr.length){
+      const est=estadosCon[ci%estadosCon.length]; ci++;
+      LOTES.push({id:lid++,tipo:'contratista',zona:SUBS[s],sub:s,pvs:arr.slice(0,15).map(p=>p.pv),
+        estado:est, obs: est==='rechazada'?['Falta firma del residente']:[],
+        fini:'2026-07-06',ffin:'2026-07-20',
+        admin:'Administrador · '+DEPENDENCIA, contratista:s});
+    }
+  });
+})();
+*/
+let LOTES=[];
+/* ---- state ---- */
+let ROLE='sub', CURSUB=Object.keys(SUBS)[0]||'', VIEW='estados', CUR_EST=null, CUR=null, FILTER='all', OFFLINE=false;
+let TAB='lista', MAP=null, MAPLAYER=null, MAP_READY=false;
+const ROLEINFO={
+  sub:{band:'rb-sub',txt:()=>'Subcontratista · '+CURSUB,hint:'Toca un estado para ver tus lecherías asignadas'},
+  gen:{band:'rb-gen',txt:()=>'Contratista general · panel completo',hint:'Vista nacional de los 32 estados y 6 zonas'},
+  admin:{band:'rb-admin',txt:()=>'Administrador del contrato · validación',hint:'Otorga Vo.Bo. a lecherías atendidas'},
+  dep:{band:'rb-dep',txt:()=>'Dependencia · solo consulta',hint:'Vista nacional de lectura, sin edición'}
+};
+
+function visiblePts(){
+  if(ROLE==='sub') return LECH.filter(p=>p.sub===CURSUB);
+  return LECH;
+}
+function setRole(r){
+  ROLE=r; VIEW='estados'; CUR_EST=null;
+  const info=ROLEINFO[r], b=document.getElementById('roleBand');
+  b.className='roleband '+info.band; b.textContent=info.txt();
+  document.getElementById('roleHint').textContent=info.hint;
+  document.getElementById('zoneTag').textContent = r==='sub'?CURSUB:'Nacional';
+  setTab('lista');
+}
+function setFilter(f,el){
+  FILTER=f;
+  document.querySelectorAll('#filters .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on'); render();
+}
+
+/* ---- min/max gauge ---- */
+function renderMinMax(){
+  const pts=visiblePts();
+  // a nivel nacional mostramos progreso del contrato; a nivel sub, su universo
+  const universo = ROLE==='sub'? pts.length : DEFINIDAS;
+  const atend = pts.filter(p=>p.status==='at').length;
+  const vobo = pts.filter(p=>p.vobo==='ok').length;
+  const el=document.getElementById('minmax');
+  if(ROLE==='sub'){
+    const pct=Math.round(atend/universo*100);
+    el.innerHTML=`<div class="head"><div class="t">Avance de mi cartera</div>
+      <div class="big"><b>${atend}</b> / ${universo} atendidas</div></div>
+      <div class="track"><div class="fill" style="width:${pct}%"></div></div>
+      <div class="mmlegend"><span><b>${vobo}</b> con Vo.Bo.</span><span><b>${universo-atend}</b> pendientes</span><span><b>${pct}%</b> avance</span></div>`;
+    return;
+  }
+  // nacional: barra de min-max
+  const wDef=DEFINIDAS/MAX*100, wMin=MIN/MAX*100;
+  el.innerHTML=`<div class="head"><div class="t">Contrato abierto · mín–máx</div>
+    <div class="big"><b>${DEFINIDAS}</b> definidas</div></div>
+    <div class="track">
+      <div class="fill" style="width:${wDef}%"></div>
+      <div class="seg" style="left:${wMin}%"><span class="lab">mín ${MIN}</span></div>
+      <div class="seg maxseg" style="left:99.5%"><span class="lab">máx ${MAX}</span></div>
+    </div>
+    <div class="mmlegend"><span>Rango <b>${MIN}–${MAX}</b> P.V.</span><span>Faltan <b>${MAX-DEFINIDAS}</b> por definir</span><span><b>${atend}</b> atendidas</span></div>`;
+}
+function renderKPI(){
+  const pts=visiblePts();
+  const tot=pts.length, at=pts.filter(p=>p.status==='at').length;
+  const ok=pts.filter(p=>p.vobo==='ok').length, ext=pts.filter(p=>p.m2>M2_STD).length;
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi"><div class="n">${tot}</div><div class="l">${ROLE==='sub'?'Mi zona':'Cargadas'}</div></div>
+    <div class="kpi"><div class="n">${at}</div><div class="l">Atendidas</div></div>
+    <div class="kpi"><div class="n acc">${ok}</div><div class="l">Con Vo.Bo.</div></div>
+    <div class="kpi"><div class="n">${ext}</div><div class="l">Extra m²</div></div>`;
+}
+
+/* ---- tabs ---- */
+function setTab(t){
+  TAB=t;
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  document.getElementById('scroll').style.display = (t==='mapa')?'none':'block';
+  document.getElementById('mapWrap').style.display = (t==='mapa')?'block':'none';
+  const showList = (t==='lista');
+  document.getElementById('crumbs').style.display = showList?'flex':'none';
+  document.getElementById('filters').style.display = showList?'flex':'none';
+  render();
+  if(t==='mapa') setTimeout(initMap,60);
+}
+
+/* ---- render router ---- */
+function render(){
+  renderMinMax(); renderKPI();
+  if(TAB==='mapa'){ if(MAP_READY) drawMarkers(); return; }
+  if(TAB==='programa'){ renderPrograma(); return; }
+  if(TAB==='tablero'){ renderTablero(); return; }
+  if(TAB==='actas'){ renderActas(); return; }
+  if(TAB==='estim'){ renderEstim(); return; }
+  if(VIEW==='estados') renderEstados();
+  else renderPuntos();
+}
+function renderCrumbs(){
+  const c=document.getElementById('crumbs');
+  if(VIEW==='estados'){ c.innerHTML=`<b style="color:var(--ink)">${ROLE==='sub'?'Estados de mi zona':'Estados'}</b>`; }
+  else c.innerHTML=`<a onclick="goEstados()">Estados</a><span class="sep">›</span><b style="color:var(--ink)">${CUR_EST}</b>`;
+}
+function renderFilters(){
+  const f=document.getElementById('filters');
+  if(VIEW==='estados'){ f.innerHTML=`<div class="search"><input placeholder="Buscar estado…" oninput="render()" id="searchBox"></div>`; return; }
+  const cur=FILTER;
+  f.innerHTML=`
+    <div class="chip ${cur==='all'?'on':''}" onclick="setFilter('all',this)">Todas</div>
+    <div class="chip ${cur==='no'?'on':''}" onclick="setFilter('no',this)">No atendido</div>
+    <div class="chip ${cur==='at'?'on':''}" onclick="setFilter('at',this)">Atendido</div>
+    <div class="chip ${cur==='wait'?'on':''}" onclick="setFilter('wait',this)">Por Vo.Bo.</div>
+    <div class="chip ${cur==='ext'?'on':''}" onclick="setFilter('ext',this)">Extra m²</div>
+    <div class="search"><input placeholder="P.V., calle, colonia…" oninput="render()" id="searchBox"></div>`;
+}
+function getQ(){ const b=document.getElementById('searchBox'); return b?(b.value||'').toLowerCase():''; }
+
+function renderEstados(){
+  renderCrumbs(); renderFilters();
+  const q=getQ();
+  const pts=visiblePts();
+  const map={};
+  pts.forEach(p=>{ (map[p.estado]=map[p.estado]||[]).push(p); });
+  let ests=Object.keys(map).sort();
+  if(q) ests=ests.filter(e=>e.toLowerCase().includes(q));
+  const sc=document.getElementById('scroll'); sc.innerHTML='';
+  if(!ests.length){ sc.innerHTML='<div style="text-align:center;color:var(--mut);padding:40px 0">Sin estados.</div>'; return; }
+  ests.forEach(e=>{
+    const arr=map[e], tot=arr.length, at=arr.filter(p=>p.status==='at').length;
+    const pct=Math.round(at/tot*100);
+    const abbr=e.replace('Edo. ','').slice(0,4).toUpperCase();
+    const d=document.createElement('div'); d.className='estcard'; d.onclick=()=>openEstado(e);
+    d.innerHTML=`<div class="top">
+        <div class="flag">${abbr}</div>
+        <div class="nm"><b>${e}</b><span>${arr[0].zona}</span></div>
+        <div class="cnt"><div class="num">${tot}</div><div class="pct">${at} atend · ${pct}%</div></div>
+      </div><div class="estbar"><div class="f" style="width:${pct}%"></div></div>`;
+    sc.appendChild(d);
+  });
+}
+function openEstado(e){ CUR_EST=e; VIEW='puntos'; FILTER='all'; render(); }
+function goEstados(){ VIEW='estados'; CUR_EST=null; render(); }
+
+function matchF(p){
+  if(FILTER==='no')return p.status==='no';
+  if(FILTER==='at')return p.status==='at';
+  if(FILTER==='wait')return p.status==='at'&&p.vobo==='wait';
+  if(FILTER==='ext')return p.m2>M2_STD;
+  return true;
+}
+function renderPuntos(){
+  renderCrumbs(); renderFilters();
+  const q=getQ();
+  let arr=visiblePts().filter(p=>p.estado===CUR_EST&&matchF(p));
+  if(q) arr=arr.filter(p=>p.pv.includes(q)||(p.calle||'').toLowerCase().includes(q)||(p.colonia||'').toLowerCase().includes(q)||(p.municipio||'').toLowerCase().includes(q));
+  const sc=document.getElementById('scroll'); sc.innerHTML='';
+  if(!arr.length){ sc.innerHTML='<div style="text-align:center;color:var(--mut);padding:40px 0">Sin lecherías en este filtro.</div>'; return; }
+  arr.forEach(p=>{
+    const stCls=p.status==='at'?'st-at':'st-no', stTx=p.status==='at'?'Atendido':'No atendido';
+    let voV='—',voC='v-pe';
+    if(p.status==='at'){ if(p.vobo==='ok'){voV='Aprobado';voC='v-ok'} else if(p.vobo==='rej'){voV='Rechazado';voC='v-re'} else {voV='Por revisar';voC='v-wa'} }
+    const exc=p.m2-M2_STD;
+    const c=document.createElement('div'); c.className='card'; c.onclick=()=>openSheet(p.id);
+    c.innerHTML=`<div class="row1">
+        <span class="pv">${p.pv}</span>
+        <div class="addr"><div class="a">${p.calle||'(sin calle)'}</div><div class="s">${p.colonia?p.colonia+' · ':''}${p.municipio}</div></div>
+        <span class="stbadge ${stCls}">${stTx}</span>
+      </div>
+      <div class="row2">
+        <div class="meta"><div class="v ${voC}">${voV}</div><div class="k">Vo.Bo.</div></div>
+        <div class="meta"><div class="v">${p.m2} m²</div><div class="k">Superficie</div></div>
+        <div class="meta"><div class="v ${exc>0?'v-ex':''}">${exc>0?'+'+exc:'—'}</div><div class="k">Extra m²</div></div>
+        <div class="meta"><div class="v">${p.beneficiarios||'—'}</div><div class="k">Benef.</div></div>
+      </div>`;
+    sc.appendChild(c);
+  });
+}
+
+/* ---- detail ---- */
+function fakeGeo(p,k){
+  const dl=(rnd()-.5)*0.0008, dn=(rnd()-.5)*0.0008;
+  return {lat:(p.lat+dl).toFixed(5),lng:(p.lng+dn).toFixed(5),fecha:`2026-06-${(10+(p.id%15)).toString().padStart(2,'0')} ${(8+p.id%9)}:${(10+(p.id*7+k)%50).toString().padStart(2,'0')}`};
+}
+function photoCard(p,kind,k,tipo){
+  const g=fakeGeo(p,k);
+  const tone = kind==='prev'?'?grayscale':'';
+  const src=`https://picsum.photos/seed/${kind}${p.id}_${k}/220/280${tone}`;
+  const catBadge = (tipo&&tipo!=='general') ? `<div style="position:absolute;top:5px;left:5px;background:${tipo==='fachada'?'var(--leche)':tipo==='letrero'?'var(--extra)':'var(--steel)'};color:#fff;font-size:8px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:.3px">${CAT_LABEL[tipo]||tipo}</div>` : '';
+  return `<div class="ph"><img loading="lazy" src="${src}">${catBadge}
+    <div class="geo"><div class="c">◉ ${g.lat}, ${g.lng}</div>${g.fecha}</div></div>`;
+}
+function openSheet(id){
+  CUR=LECH.find(p=>p.id===id); const p=CUR;
+  document.getElementById('shTitle').textContent='P.V. '+p.pv;
+  document.getElementById('shSub').textContent=`${p.calle||''} · ${p.municipio}, ${p.estado}`;
+  const bd=document.getElementById('shBadge');
+  bd.className='stbadge '+(p.status==='at'?'st-at':'st-no');
+  bd.textContent=p.status==='at'?'Atendido':'No atendido';
+
+  const exc=p.m2-M2_STD;
+  const canPintor = ROLE==='sub';
+  const isAdmin = ROLE==='admin';
+
+  let prevImgs=''; (p.fotosPrev||[]).forEach((f,k)=>prevImgs+=photoCard(p,'prev',k,f.tipo));
+  let finImgs=''; (p.fotosFin||[]).forEach((f,k)=>finImgs+=photoCard(p,'fin',k,f.tipo));
+
+  const nPrev=(p.fotosPrev||[]).length, nFin=(p.fotosFin||[]).length;
+  const faltantesCat=faltanCatFin(p);
+  const prevLane=`<div class="phlane"><div class="lbl">Fotos previas <span class="tag tag-prev">Antes · ${nPrev}/${MIN_FOTOS_PREV} mín</span></div>
+    <div class="phscroll">${prevImgs||'<div style="font-size:11px;color:var(--mut);padding:12px">Sin fotos previas</div>'}
+    ${canPintor?`<div class="ph add" onclick="addPhoto('prev','general')"><span class="plus">+</span>Agregar</div>`:''}</div></div>`;
+  const finLane=`<div class="phlane"><div class="lbl">Fotos finales <span class="tag tag-fin">Después · ${nFin}/${MIN_FOTOS_FIN} mín</span></div>
+    <div class="phscroll">${finImgs||'<div style="font-size:11px;color:var(--mut);padding:12px">Aún sin fotos finales</div>'}
+    ${canPintor?`<div class="ph add" onclick="addPhotoMenu()"><span class="plus">+</span>Agregar</div>`:''}</div>
+    ${canPintor&&faltantesCat.length?`<div class="photo-req">Obligatorias pendientes: ${faltantesCat.map(c=>CAT_LABEL[c]).join(', ')}</div>`:''}</div>`;
+
+  let sup=`<div class="sect"><h3>Superficie</h3><div class="infogrid">
+    <div class="ib"><div class="k">Unidad estándar (a la dependencia)</div><div class="v">21 m²</div></div>
+    <div class="ib"><div class="k">Superficie real ejecutada</div><div class="v">${
+      canPintor&&p.status==='at'
+      ?`<input class="mono" type="number" min="21" value="${p.m2}" style="width:70px;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:14px;font-weight:700" onchange="setM2(this.value)">`
+      :p.m2+' m²'}</div></div></div>`;
+  if(exc>0){
+    const precioSub=precioExtraSub(p.sub);
+    const evOk=(p.extraEvidencia||[]).length>0;
+    sup+=`<div style="height:8px"></div><div class="extra-box">
+      <div class="top"><div class="t">Excedente (pago a subcontratista)</div><div class="badge">+${exc} m²</div></div>
+      <div class="calc">La dependencia paga fijo por unidad estándar; este excedente <b>no se cobra a la dependencia</b>.<br>
+      Es un <b>registro interno</b> para el pago a <b>${p.sub}</b>: ${exc} m² × $${precioSub.toFixed(2)} = <b>$${(exc*precioSub).toLocaleString('es-MX',{minimumFractionDigits:2})}</b><br>
+      <span style="color:var(--mut);font-size:10px">Precio por m² configurable al cerrar el subcontrato.</span></div>
+      <div style="margin-top:8px">
+        ${(p.extraEvidencia||[]).map(a=>`<div class="estim-row" style="margin-bottom:4px"><span class="l">📎 ${a}</span><span class="v" style="color:var(--done)">✓</span></div>`).join('')}
+        ${canPintor?`<div class="acta-upload" style="padding:10px;margin:0" onclick="addExtraEvidencia()">📎 Adjuntar evidencia del excedente${evOk?' (agregar más)':' (obligatoria)'}</div>`:(!evOk?'<div class="photo-req">Sin evidencia del excedente</div>':'')}
+      </div></div>`;
+  }
+  sup+='</div>';
+
+  const vo=p.vobo;
+  const nPrevTL=(p.fotosPrev||[]).length, nFinTL=(p.fotosFin||[]).length;
+  const tl=`<div class="sect"><h3>Estatus y validación</h3><div class="tl">
+    <div class="tlrow"><div class="tldot on"></div><div class="tx"><b>Capturado</b><span>${p.cuadrilla} · ${p.zona}</span></div><div class="when">${nPrevTL?'✓':'—'}</div></div>
+    <div class="tlrow"><div class="tldot ${p.status==='at'?'on':''}"></div><div class="tx"><b>Atendido</b><span>${p.status==='at'?nFinTL+' fotos finales':'Pendiente de ejecución'}</span></div><div class="when">${p.status==='at'?'✓':'—'}</div></div>
+    <div class="tlrow"><div class="tldot ${vo==='ok'?'on':(vo==='wait'?'wait':'')}"></div><div class="tx"><b>Vo.Bo. administrador</b><span>${
+      vo==='ok'?'Aprobado · entra a estimación':vo==='rej'?'Rechazado · corregir':vo==='wait'?'Esperando revisión':'No disponible aún'}</span></div>
+      <div class="when">${vo==='ok'?'✓':vo==='rej'?'✕':vo==='wait'?'…':''}</div></div>
+  </div></div>`;
+
+  const info=`<div class="sect"><h3>Ubicación</h3><div class="infogrid">
+    <div class="ib full"><div class="k">Domicilio</div><div class="v" style="font-size:12.5px">${p.calle||'(sin calle)'}${p.colonia?', '+p.colonia:''}</div></div>
+    <div class="ib"><div class="k">Municipio</div><div class="v" style="font-size:12.5px">${p.municipio}</div></div>
+    <div class="ib"><div class="k">Beneficiarios</div><div class="v">${p.beneficiarios||'—'}</div></div>
+    <div class="ib full"><div class="k">Coordenadas GPS</div><div class="v mono" style="font-size:12px">◉ ${p.lat}, ${p.lng}</div></div>
+  </div></div>`;
+
+  // aviso de motivo de rechazo (visible para todos si existe)
+  const motivoBox = (vo==='rej' && p.motivo) ? `<div class="rejmotivo"><b>Motivo del rechazo</b>${p.motivo}</div>` : '';
+
+  // requisito de fotos (anexo): 3 previas + 3 finales, con fachada global y letrero
+  const reqOk = fotosOk(p);
+  const nP=(p.fotosPrev||[]).length, nF=(p.fotosFin||[]).length;
+  const faltaCat=faltanCatFin(p);
+  let reqDetalle;
+  if(reqOk){ reqDetalle='✓ Cumple: 3+ antes, 3+ después con fachada global y letrero'; }
+  else {
+    const partes=[];
+    if(nP<MIN_FOTOS_PREV) partes.push(`faltan ${MIN_FOTOS_PREV-nP} previa(s)`);
+    if(nF<MIN_FOTOS_FIN) partes.push(`faltan ${MIN_FOTOS_FIN-nF} final(es)`);
+    if(faltaCat.length) partes.push('falta '+faltaCat.map(c=>CAT_LABEL[c]).join(' y '));
+    reqDetalle='Requiere: '+partes.join(' · ');
+  }
+  const reqTxt = `<div class="photo-req ${reqOk?'ok':''}">${reqDetalle}</div>`;
+
+  // adjuntos (documentos y mapas) — el anexo lo exige
+  const adjBlock=`<div class="sect"><h3>Documentos y mapas adjuntos</h3>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${(p.adjuntos||[]).map(a=>`<div class="estim-row"><span class="l">📎 ${a}</span><span class="v" style="color:var(--done)">cargado</span></div>`).join('')||'<div style="font-size:11px;color:var(--mut)">Sin documentos adjuntos</div>'}
+      ${canPintor?`<div class="acta-upload" style="padding:12px" onclick="addAdjunto()">📎 Adjuntar documento o mapa (PDF, imagen)</div>`:''}
+    </div></div>`;
+
+  let actions='';
+  if(ROLE==='sub'){
+    if(p.status==='no') actions=`<button class="btn btn-leche" onclick="markAt()" ${reqOk?'':'disabled'}>Marcar como atendido</button>${reqTxt}`;
+    else { actions=`<div class="lock">Atendido. ${vo==='rej'?'Rechazado: corrige y reenvía.':'En espera de Vo.Bo.'}</div>${motivoBox}`;
+      if(vo==='rej') actions=`<button class="btn btn-leche" onclick="resend()">Reenviar a revisión</button>`+actions; }
+  } else if(ROLE==='admin'){
+    if(p.status==='at'&&vo==='wait') actions=`
+      <button class="btn btn-admin" onclick="vobo(true)">Otorgar Vo.Bo.</button>
+      <div id="rejWrap" class="rejbox" style="display:none">
+        <textarea id="rejMotivo" placeholder="Motivo del rechazo (obligatorio): p. ej. foto final sin cubrir toda la fachada…"></textarea>
+        <div style="height:8px"></div>
+        <button class="btn btn-rej" onclick="vobo(false)">Confirmar rechazo</button>
+      </div>
+      <button class="btn btn-rej" onclick="toggleRej()">Rechazar…</button>`;
+    else if(vo==='ok') actions=`<button class="btn btn-done" disabled>✓ Aprobado para estimación</button>`;
+    else if(vo==='rej') actions=`<div class="lock">Rechazado. En espera de corrección.</div>${motivoBox}`;
+    else actions=`<div class="lock">Aún no se marca como atendido.</div>`;
+  } else if(ROLE==='gen'){
+    actions=`<div class="lock">Contratista general · seguimiento (sin captura directa)</div>${motivoBox}`;
+  } else {
+    actions=`<div class="lock">Dependencia · solo consulta</div>${motivoBox}`;
+  }
+
+  // fecha compromiso / real en el detalle
+  const dInfo = p.fcomp ? desvio(p) : null;
+  const fechasBlock = p.fcomp ? `<div class="sect"><h3>Programa</h3><div class="infogrid">
+    <div class="ib"><div class="k">Fecha compromiso</div><div class="v" style="font-size:12.5px">${p.fcomp}</div></div>
+    <div class="ib"><div class="k">Fecha real</div><div class="v" style="font-size:12.5px">${p.freal||'—'}</div></div>
+    <div class="ib full"><div class="k">Desviación</div><div class="v"><span class="desv-badge ${dInfo.cls}">${dInfo.txt}</span></div></div>
+  </div></div>` : '';
+
+  // estado del acta de esta lechería (solo si tiene Vo.Bo.)
+  let actaBlock='';
+  if(p.vobo==='ok'){
+    const map={aprobada:['var(--done)','Acta aprobada — cobrable'],cargada:['var(--wait)','Acta en revisión'],rechazada:['var(--rej)','Acta rechazada'],ninguna:['var(--mut)','Sin acta cargada']};
+    const [col,txt]=map[p.acta]||map.ninguna;
+    actaBlock=`<div class="sect"><h3>Acta de conformidad</h3>
+      <div class="cobro-flag"><span class="k" style="background:${col}"></span>${txt}</div>
+      ${p.acta==='rechazada'&&p.actaObs.length?`<div class="rejmotivo"><b>Observaciones</b>${p.actaObs.join(' · ')}</div>`:''}
+      <div style="font-size:11px;color:var(--mut);padding:2px">Las actas se gestionan por lote en la pestaña Actas.</div>
+    </div>`;
+  }
+
+  // botón de reporte PDF antes/después (disponible cuando hay evidencia)
+  const repBtn = ((p.fotosPrev||[]).length>0||(p.fotosFin||[]).length>0) ? `<button class="btn" style="background:var(--steel);color:#fff" onclick="reportePDF()">📄 Descargar reporte antes/después</button>` : '';
+
+  document.getElementById('sbody').innerHTML=
+    info+fechasBlock+`<div class="sect"><h3>Evidencia fotográfica</h3>${prevLane}${finLane}</div>`+adjBlock+sup+actaBlock+tl+`<div class="actions">${actions}${repBtn}</div>`;
+  document.getElementById('sheet').classList.add('show');
+}
+async function seleccionarArchivo(){
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = () => {
+      if (input.files.length > 0) {
+        resolve(input.files[0]);
+      }else{
+        resolve(null);
+      }
+    };
+    input.click();
+  });
+}
+async function obtenerUbicacion(){
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve({ lat: null, lng: null});
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        resolve({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        });
+      },
+      () => {
+        resolve({
+          lat: null,
+          lng: null
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000
+      }
+      );
+  });
+}
+async function addPhoto(kind,tipo){
+  if(ROLE!=='sub')return;
+    const archivo = await seleccionarArchivo();
+  if (!archivo) return;
+    const {lat, lng} = await obtenerUbicacion();
+  await subirFoto(CUR.pv, kind, tipo, archivo, lat, lng);
+    const fotos = await cargarFotos(CUR.pv);
+  CUR.fotosPrev = fotos.prev;
+  CUR.fotosFin = fotos.fin;
+  openSheet(CUR.id);
+  toast('Foto subida correctamente');
+}
+function addPhotoMenu(){
+  // menú simple para elegir tipo de foto final
+  const falta=faltanCatFin(CUR);
+  const opciones=['fachada','letrero','general','detalle'];
+  const lista=opciones.map(o=>{
+    const need=falta.includes(o)?' ⚠ obligatoria':'';
+    return `<div class="obschip" style="justify-content:flex-start" onclick="addPhoto('fin','${o}');closeMenu()">${CAT_LABEL[o]}${need}</div>`;
+  }).join('');
+  showMenu('¿Qué tipo de foto final?',lista);
+}
+let MENU=null;
+function showMenu(title,html){
+  closeMenu();
+  MENU=document.createElement('div');
+  MENU.style.cssText='position:fixed;inset:0;max-width:540px;margin:0 auto;background:rgba(0,0,0,.4);z-index:70;display:flex;align-items:flex-end';
+  MENU.onclick=(e)=>{if(e.target===MENU)closeMenu();};
+  MENU.innerHTML=`<div style="background:#fff;width:100%;border-radius:16px 16px 0 0;padding:16px">
+    <div style="font-weight:800;font-size:14px;margin-bottom:12px">${title}</div>
+    <div class="obschips" style="flex-direction:column">${html}</div></div>`;
+  document.body.appendChild(MENU);
+}
+function closeMenu(){ if(MENU){MENU.remove();MENU=null;} }
+function addAdjunto(){
+  if(ROLE!=='sub')return;
+  const nombres=['plano_ubicacion.pdf','croquis_acceso.jpg','oficio_dependencia.pdf','mapa_zona.png'];
+  const n=nombres[(CUR.adjuntos||[]).length%nombres.length];
+  (CUR.adjuntos=CUR.adjuntos||[]).push(n);
+  toast('Documento adjuntado'); openSheet(CUR.id);
+}
+async function addExtraEvidencia(){
+  if(ROLE!=='sub')return;
+  const nombres=['medicion_m2.pdf','foto_medicion.jpg','levantamiento.pdf'];
+  const n=nombres[(CUR.extraEvidencia||[]).length%nombres.length];
+  (CUR.extraEvidencia=CUR.extraEvidencia||[]).push(n);
+  toast('Evidencia del excedente adjuntada'); openSheet(CUR.id);
+  await guardarExcedente(CUR.pv, exc, url);
+}
+async function markAt(){
+  const nP=(CUR.fotosPrev||[]).length, nF=(CUR.fotosFin||[]).length;
+  if(nP<MIN_FOTOS_PREV){ toast(`Faltan fotos previas (${nP}/${MIN_FOTOS_PREV})`); return; }
+  if(nF<MIN_FOTOS_FIN){ toast(`Faltan fotos finales (${nF}/${MIN_FOTOS_FIN})`); return; }
+  const fc=faltanCatFin(CUR);
+  if(fc.length){ toast('Falta foto obligatoria: '+fc.map(c=>CAT_LABEL[c]).join(', ')); return; }
+  CUR.status='at'; CUR.vobo='wait'; CUR.freal=(new Date()).toISOString().slice(0,10);
+  toast('✓ Atendido — pasa a Vo.Bo.'); openSheet(CUR.id); render();
+  await guardarAtendido(CUR.pv, CUR.m2);
+}
+function setM2(v){ CUR.m2=Math.max(21,parseInt(v)||21); openSheet(CUR.id); render(); }
+async function vobo(ok){
+  if(ok){ CUR.vobo='ok'; CUR.motivo=''; toast('✅ Vo.Bo. otorgado — entra a estimación'); openSheet(CUR.id); render(); return; }
+  // rechazo: exigir motivo
+  const ta=document.getElementById('rejMotivo');
+  const m=ta?ta.value.trim():'';
+  if(!m){ toast('Escribe el motivo del rechazo'); if(ta) ta.focus(); return; }
+  CUR.vobo='rej'; CUR.motivo=m; toast('Rechazado — regresa a cuadrilla'); openSheet(CUR.id); render();
+  await guardarVobo(CUR.pv, ok, motivo);
+}
+function toggleRej(){ const b=document.getElementById('rejWrap'); if(b) b.style.display = b.style.display==='none'?'block':'none'; }
+function resend(){ CUR.vobo='wait'; toast('Reenviado a Vo.Bo.'); openSheet(CUR.id); render(); }
+function closeSheet(){ document.getElementById('sheet').classList.remove('show'); CUR=null; }
+
+/* ============ MAPA ============ */
+function markerColor(p){
+  if(p.status!=='at') return '#9aa7b4';
+  if(p.vobo==='ok') return '#1f8a4c';
+  if(p.vobo==='rej') return '#c0362c';
+  return '#e08a1e';
+}
+function initMap(){
+  if(!MAP){
+    MAP=L.map('map',{zoomControl:true,attributionControl:false}).setView([21.5,-99.5],5);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(MAP);
+    MAPLAYER=L.layerGroup().addTo(MAP);
+    MAP_READY=true;
+  }
+  MAP.invalidateSize();
+  drawMarkers();
+}
+function drawMarkers(){
+  if(!MAPLAYER) return;
+  MAPLAYER.clearLayers();
+  const pts=visiblePts();
+  const bounds=[];
+  pts.forEach(p=>{
+    const c=markerColor(p);
+    const m=L.circleMarker([p.lat,p.lng],{radius:6,color:'#fff',weight:1.5,fillColor:c,fillOpacity:.95});
+    const stTxt = p.status==='at' ? (p.vobo==='ok'?'Con Vo.Bo.':p.vobo==='rej'?'Rechazado':'Atendido s/ Vo.Bo.') : 'No atendido';
+    m.bindPopup(`<b>P.V. ${p.pv}</b><br>${p.calle||''}<br><span style="color:#6b7b8c">${p.municipio}, ${p.estado}</span><br><b style="color:${c}">${stTxt}</b> · ${p.m2} m²<br><span class="popbtn" onclick="fromMap(${p.id})">Ver detalle</span>`);
+    m.addTo(MAPLAYER); bounds.push([p.lat,p.lng]);
+  });
+  if(bounds.length){ try{ MAP.fitBounds(bounds,{padding:[30,30],maxZoom:12}); }catch(e){} }
+}
+function fromMap(id){ openSheet(id); }
+
+/* ============ TABLERO por subcontratista ============ */
+function renderTablero(){
+  document.getElementById('crumbs').style.display='none';
+  document.getElementById('filters').style.display='none';
+  const sc=document.getElementById('scroll'); sc.innerHTML='';
+  // agrupar por subcontratista (o todos si sub filtra). En rol sub, solo el suyo.
+  const pts=visiblePts();
+  const groups={};
+  pts.forEach(p=>{ (groups[p.sub||'(sin asignar)']=groups[p.sub||'(sin asignar)']||[]).push(p); });
+  const heading=document.createElement('div');
+  heading.className='sectlabel'; heading.style.margin='6px 0 10px';
+  heading.textContent = ROLE==='sub' ? 'Avance de mi cartera' : 'Avance por subcontratista';
+  sc.appendChild(heading);
+  const subs=Object.keys(groups).sort();
+  subs.forEach(s=>{
+    const arr=groups[s], tot=arr.length;
+    const at=arr.filter(p=>p.status==='at').length;
+    const ok=arr.filter(p=>p.vobo==='ok').length;
+    const wait=arr.filter(p=>p.status==='at'&&p.vobo==='wait').length;
+    const rej=arr.filter(p=>p.vobo==='rej').length;
+    const no=tot-at;
+    const pctOk=Math.round(ok/tot*100), pctWait=Math.round(wait/tot*100);
+    const zona=arr[0].zona||'';
+    const d=document.createElement('div'); d.className='dashcard';
+    d.innerHTML=`
+      <div class="hd">
+        <div class="av">${s.replace(/[^0-9A-Za-z]/g,'').slice(-3).toUpperCase()}</div>
+        <div class="nm"><b>${s}</b><span>${zona} · ${tot} lecherías</span></div>
+        <div class="big"><div class="p">${Math.round(at/tot*100)}%</div><div class="l">atendido</div></div>
+      </div>
+      <div class="dbar"><div class="ok" style="width:${pctOk}%"></div><div class="wa" style="width:${pctWait}%"></div></div>
+      <div class="dstats">
+        <div class="s"><div class="v">${no}</div><div class="k">Sin atender</div></div>
+        <div class="s"><div class="v" style="color:var(--wait)">${wait}</div><div class="k">Por Vo.Bo.</div></div>
+        <div class="s"><div class="v" style="color:var(--done)">${ok}</div><div class="k">Aprobadas</div></div>
+        <div class="s"><div class="v" style="color:var(--rej)">${rej}</div><div class="k">Rechazadas</div></div>
+      </div>`;
+    sc.appendChild(d);
+  });
+}
+
+/* ============ ESTIMACIÓN + exportación ============ */
+function estimData(){
+  const pts=visiblePts();
+  const aprob=pts.filter(p=>p.vobo==='ok');
+  const cobrable=aprob.filter(p=>p.acta==='aprobada');
+  const unidades=aprob.length;
+  const cobUnid=cobrable.length;
+  const monto=unidades*PRECIO_FACHADA;
+  const montoCob=cobUnid*PRECIO_FACHADA;
+  const ivaCob=montoCob*IVA, totalCob=montoCob+ivaCob;
+  // EXTRAORDINARIOS = costo interno hacia subcontratistas (NO a la dependencia)
+  // se calcula sobre lo atendido con excedente, agrupado por subcontratista con su precio
+  const extras=pts.filter(p=>p.status==='at'&&p.m2>M2_STD).map(p=>({pv:p.pv,estado:p.estado,municipio:p.municipio,sub:p.sub,exc:p.m2-M2_STD,precio:precioExtraSub(p.sub),importe:(p.m2-M2_STD)*precioExtraSub(p.sub),evidencia:(p.extraEvidencia||[]).length>0}));
+  const m2extra=extras.reduce((s,e)=>s+e.exc,0);
+  const costoExtra=extras.reduce((s,e)=>s+e.importe,0);
+  // agrupado por subcontratista
+  const extraPorSub={};
+  extras.forEach(e=>{ (extraPorSub[e.sub]=extraPorSub[e.sub]||{m2:0,importe:0,n:0,sinEv:0}); extraPorSub[e.sub].m2+=e.exc; extraPorSub[e.sub].importe+=e.importe; extraPorSub[e.sub].n++; if(!e.evidencia)extraPorSub[e.sub].sinEv++; });
+  return {pts,aprob,cobrable,unidades,cobUnid,monto,montoCob,ivaCob,totalCob,extras,m2extra,costoExtra,extraPorSub};
+}
+function money(n){ return '$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function renderEstim(){
+  document.getElementById('crumbs').style.display='none';
+  document.getElementById('filters').style.display='none';
+  const d=estimData();
+  const sc=document.getElementById('scroll'); sc.innerHTML='';
+  const alcance = ROLE==='sub' ? CURSUB : 'Nacional (todas las zonas)';
+  // facturación: solo cobrable, en múltiplos del mínimo (50)
+  const facturables=Math.floor(d.cobUnid/MIN_FACTURA)*MIN_FACTURA;
+  const montoFacturable=facturables*PRECIO_FACHADA;
+  const enEspera=d.cobUnid-facturables; // cobrables que aún no llegan a otro bloque de 50
+  const wrap=document.createElement('div');
+  // extraordinarios internos por subcontratista
+  let extraRows='';
+  const subsExtra=Object.keys(d.extraPorSub).sort();
+  if(subsExtra.length){
+    extraRows=subsExtra.map(s=>{
+      const e=d.extraPorSub[s];
+      return `<div class="estim-row extra-row"><span class="l">${s} · ${e.m2} m² (${e.n} lech.)${e.sinEv?` · <span style="color:var(--rej)">${e.sinEv} sin evidencia</span>`:''}</span><span class="v">${money(e.importe)}</span></div>`;
+    }).join('');
+  } else {
+    extraRows='<div style="font-size:12px;color:var(--mut);padding:2px">Sin excedentes registrados.</div>';
+  }
+  wrap.innerHTML=`
+    <div class="estim-hero">
+      <div class="lbl">Facturable a la dependencia · ${alcance}</div>
+      <div class="amt">${money(montoFacturable*(1+IVA))}</div>
+      <div class="sub">${facturables} lecherías · ${money(montoFacturable)} + IVA</div>
+    </div>
+    <div class="cobro-flag"><span class="k" style="background:${facturables>0?'var(--done)':'var(--wait)'}"></span>
+      ${facturables>0?`Se pueden facturar <b style="margin:0 3px">${facturables}</b> lecherías`:`Aún no se alcanza el mínimo de ${MIN_FACTURA} para facturar`}</div>
+    ${enEspera>0?`<div class="cobro-flag"><span class="k" style="background:var(--wait)"></span>Cobrables en espera de completar el siguiente bloque de ${MIN_FACTURA}: <b style="margin-left:4px">${enEspera}</b></div>`:''}
+
+    <div class="sectlabel">Cobro a la dependencia (precio fijo por unidad estándar)</div>
+    <div class="estim-row"><span class="l">Atendidas con Vo.Bo.</span><span class="v">${d.unidades}</span></div>
+    <div class="estim-row"><span class="l">Con acta aprobada (cobrable)</span><span class="v">${d.cobUnid}</span></div>
+    <div class="estim-row"><span class="l">Facturables (múltiplos de ${MIN_FACTURA})</span><span class="v">${facturables}</span></div>
+    <div class="estim-row"><span class="l">Precio unitario (21 m²)</span><span class="v">${money(PRECIO_FACHADA)}</span></div>
+    <div class="estim-row"><span class="l">Subtotal</span><span class="v">${money(montoFacturable)}</span></div>
+    <div class="estim-row"><span class="l">IVA (16%)</span><span class="v">${money(montoFacturable*IVA)}</span></div>
+    <div class="estim-row tot"><span class="l">Total a facturar</span><span class="v">${money(montoFacturable*(1+IVA))}</span></div>
+    <div style="font-size:11px;color:var(--mut);padding:4px 2px 0">No se pueden ingresar facturas por menos de ${MIN_FACTURA} lecherías (ajustable con la dependencia). El CFDI se emite por fuera; el sistema arma acta + reporte fotográfico + monto.</div>
+
+    <div class="sectlabel">Excedentes — pago a subcontratistas (control interno)</div>
+    <div style="font-size:11px;color:var(--mut);margin-bottom:6px">La dependencia NO paga esto. Es lo que tú pagas a cada subcontratista por m² adicional ejecutado, con evidencia.</div>
+    ${extraRows}
+    <div class="estim-row tot" style="border-left:3px solid var(--extra)"><span class="l">Total excedentes (${d.m2extra} m²)</span><span class="v">${money(d.costoExtra)}</span></div>
+
+    <div class="sectlabel">Reportes</div>
+    <div style="font-size:11px;color:var(--mut);margin-bottom:8px">Interno: control del contratista general. Externo: paquete para la dependencia.</div>
+    <div class="expbtns">
+      <button class="expbtn exp-xlsx" onclick="exportXLSX()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Excel interno</button>
+      <button class="expbtn exp-pdf" onclick="exportEstimPDF()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>PDF dependencia</button>
+    </div>
+    <button class="expbtn" style="background:var(--navy);color:#fff;width:100%;margin:2px 0" onclick="exportReporteInterno()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Reporte interno completo (Excel)</button>
+    <div class="expbtns">
+      <button class="expbtn" style="background:var(--steel);color:#fff" onclick="reporteSemanal()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Reporte semanal</button>
+      <button class="expbtn" style="background:var(--steel);color:#fff" onclick="reporteMensual()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Reporte mensual</button>
+    </div>`;
+  sc.appendChild(wrap);
+}
+function reporteSemanal(){ reportePeriodo('semanal'); }
+function reporteMensual(){ reportePeriodo('mensual'); }
+function reportePeriodo(tipo){
+  const {jsPDF}=window.jspdf; const doc=new jsPDF();
+  const pts=visiblePts();
+  doc.setFillColor(13,27,42); doc.rect(0,0,210,26,'F');
+  doc.setTextColor(255); doc.setFontSize(15); doc.setFont(undefined,'bold');
+  doc.text(`Reporte ${tipo} de avance`,12,13);
+  doc.setFontSize(9); doc.setFont(undefined,'normal');
+  doc.text('SISCS · Pintura de fachadas · '+(ROLE==='sub'?CURSUB:'Nacional'),12,20);
+  doc.setTextColor(20); let y=38;
+  const at=pts.filter(p=>p.status==='at').length, ok=pts.filter(p=>p.vobo==='ok').length;
+  const cob=pts.filter(p=>p.acta==='aprobada').length;
+  doc.setFontSize(11); doc.setFont(undefined,'bold'); doc.text('Servicios terminados en el periodo',12,y); y+=7;
+  doc.setFont(undefined,'normal'); doc.setFontSize(10);
+  const L=[['Total en alcance',String(pts.length)],['Atendidas (terminadas)',String(at)],['Con Vo.Bo.',String(ok)],['Con acta aprobada (cobrable)',String(cob)],['Avance',(Math.round(at/pts.length*100))+'%']];
+  L.forEach(([k,v])=>{ doc.text(k,14,y); doc.text(v,150,y); y+=6; });
+  y+=4; doc.setFont(undefined,'bold'); doc.text('Detalle por '+(ROLE==='sub'?'estado':'subcontratista'),12,y); y+=6;
+  doc.setFontSize(8);
+  const grp={};
+  pts.forEach(p=>{const k=ROLE==='sub'?p.estado:p.sub;(grp[k]=grp[k]||[]).push(p);});
+  Object.entries(grp).forEach(([k,arr])=>{
+    if(y>282){doc.addPage();y=18;}
+    doc.setFont(undefined,'bold'); doc.text(String(k).slice(0,30),14,y);
+    doc.setFont(undefined,'normal'); doc.text(`${arr.filter(p=>p.status==='at').length}/${arr.length} atendidas`,120,y); y+=5;
+  });
+  doc.save(`Reporte_${tipo}_${new Date().toISOString().slice(0,10)}.pdf`);
+  toast(`Reporte ${tipo} generado`);
+}
+function exportReporteInterno(){
+  const wb=XLSX.utils.book_new();
+  // 1) Avance por subcontratista
+  const bySub={}; visiblePts().forEach(p=>{(bySub[p.sub||'(s/a)']=bySub[p.sub||'(s/a)']||[]).push(p);});
+  const rSub=Object.entries(bySub).map(([s,arr])=>({
+    'Subcontratista':s,'Zona':(arr[0]&&arr[0].zona)||'','Total':arr.length,
+    'Atendidas':arr.filter(p=>p.status==='at').length,
+    'Con Vo.Bo.':arr.filter(p=>p.vobo==='ok').length,
+    'Acta aprobada':arr.filter(p=>p.acta==='aprobada').length,
+    'Rechazadas':arr.filter(p=>p.vobo==='rej').length,
+    'Sin atender':arr.filter(p=>p.status==='no').length
+  }));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rSub),'Por subcontratista');
+  // 2) Avance por zona
+  const byZona={}; visiblePts().forEach(p=>{(byZona[p.zona]=byZona[p.zona]||[]).push(p);});
+  const rZona=Object.entries(byZona).map(([z,arr])=>({
+    'Zona':z,'Total':arr.length,'Atendidas':arr.filter(p=>p.status==='at').length,
+    'Con Vo.Bo.':arr.filter(p=>p.vobo==='ok').length,'Cobrable':arr.filter(p=>p.acta==='aprobada').length
+  }));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rZona),'Por zona');
+  // 3) Desviaciones (programa)
+  const rDesv=visiblePts().filter(p=>p.fcomp).map(p=>{const d=desvio(p);return{
+    'Clave P.V.':p.pv,'Municipio':p.municipio,'Subcontratista':p.sub,
+    'Compromiso':p.fcomp,'Real':p.freal||'','Desviación días':d.dias,'Estatus':d.txt
+  };});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rDesv),'Desviaciones');
+  // 4) Definidas/liberadas vs atendidas
+  const rGlob=[{'Concepto':'Rango contrato (mín)','Valor':MIN},{'Concepto':'Rango contrato (máx)','Valor':MAX},{'Concepto':'Definidas','Valor':DEFINIDAS},{'Concepto':'Cargadas en sistema','Valor':LECH.length},{'Concepto':'Atendidas','Valor':LECH.filter(p=>p.status==='at').length},{'Concepto':'Con Vo.Bo.','Valor':LECH.filter(p=>p.vobo==='ok').length},{'Concepto':'Cobrables (acta ok)','Valor':LECH.filter(p=>p.acta==='aprobada').length}];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rGlob),'Definidas vs atendidas');
+  XLSX.writeFile(wb,`Reporte_interno_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('Reporte interno completo generado');
+}
+function exportXLSX(){
+  const d=estimData();
+  const rows=d.aprob.map(p=>({
+    'Clave P.V.':p.pv,'Entidad':p.estado,'Municipio':p.municipio,'Calle':p.calle,
+    'Zona':p.zona,'Subcontratista':p.sub,'m² estándar':M2_STD,'m² real':p.m2,
+    'Excedente m²':Math.max(0,p.m2-M2_STD),'Precio unitario':PRECIO_FACHADA,'Acta':p.acta,'Estatus':'Aprobado Vo.Bo.'
+  }));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Cobro dependencia');
+  // hoja de excedentes internos (pago a subcontratistas)
+  const ex=d.extras.map(e=>({'Clave P.V.':e.pv,'Entidad':e.estado,'Municipio':e.municipio,'Subcontratista':e.sub,'Excedente m²':e.exc,'Precio m²':e.precio,'Importe a pagar':e.importe,'Evidencia':e.evidencia?'Sí':'FALTA'}));
+  if(ex.length){ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ex),'Excedentes (a subcontr.)'); }
+  // resumen
+  const fact=Math.floor(d.cobUnid/MIN_FACTURA)*MIN_FACTURA;
+  const res=[
+    {'Concepto':'Atendidas con Vo.Bo.','Valor':d.unidades},
+    {'Concepto':'Cobrables (acta ok)','Valor':d.cobUnid},
+    {'Concepto':'Facturables (múltiplos de '+MIN_FACTURA+')','Valor':fact},
+    {'Concepto':'Precio unitario (21 m²)','Valor':PRECIO_FACHADA},
+    {'Concepto':'Subtotal a facturar','Valor':fact*PRECIO_FACHADA},
+    {'Concepto':'IVA 16%','Valor':fact*PRECIO_FACHADA*IVA},
+    {'Concepto':'Total a facturar','Valor':fact*PRECIO_FACHADA*(1+IVA)},
+    {'Concepto':'— Excedentes a subcontratistas (interno) —','Valor':''},
+    {'Concepto':'m² excedentes','Valor':d.m2extra},
+    {'Concepto':'Costo excedentes','Valor':d.costoExtra}
+  ];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(res),'Resumen');
+  const tag = ROLE==='sub'?CURSUB.replace(/[^0-9A-Za-z]/g,''):'Nacional';
+  XLSX.writeFile(wb,`Estimacion_${tag}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('Excel de estimación generado');
+}
+function exportEstimPDF(){
+  const {jsPDF}=window.jspdf; const doc=new jsPDF();
+  const d=estimData();
+  const alcance = ROLE==='sub' ? CURSUB : 'Nacional';
+  doc.setFillColor(13,27,42); doc.rect(0,0,210,32,'F');
+  doc.setTextColor(255); doc.setFontSize(15); doc.setFont(undefined,'bold');
+  doc.text('Estimación de obra — Pintura de fachadas',12,12);
+  doc.setFontSize(8); doc.setFont(undefined,'normal');
+  doc.text('Proc. '+PROCEDIMIENTO+' · Alcance: '+alcance,12,18);
+  doc.text('Prestador: '+EMPRESA+' · RFC '+EMPRESA_RFC,12,23);
+  doc.text('Dependencia: '+DEPENDENCIA,12,28);
+  doc.setTextColor(20);
+  let y=44;
+  doc.setFontSize(11); doc.setFont(undefined,'bold'); doc.text('Resumen',12,y); y+=7;
+  doc.setFont(undefined,'normal'); doc.setFontSize(10);
+  const fact=Math.floor(d.cobUnid/MIN_FACTURA)*MIN_FACTURA;
+  const L=[['Atendidas con Vo.Bo.',String(d.unidades)],['Cobrables (acta aprobada)',String(d.cobUnid)],['Facturables (múltiplos de '+MIN_FACTURA+')',String(fact)],['Precio unitario (21 m²)',money(PRECIO_FACHADA)],['Subtotal',money(fact*PRECIO_FACHADA)],['IVA (16%)',money(fact*PRECIO_FACHADA*IVA)],['Total a facturar',money(fact*PRECIO_FACHADA*(1+IVA))]];
+  L.forEach(([k,v])=>{ doc.text(k,14,y); doc.text(v,150,y); y+=6; });
+  y+=4; doc.setFont(undefined,'bold'); doc.setFontSize(11); doc.text('Detalle de lecherías aprobadas',12,y); y+=6;
+  doc.setFontSize(8); doc.setFont(undefined,'bold');
+  doc.text('P.V.',12,y); doc.text('Entidad',40,y); doc.text('Municipio',75,y); doc.text('m²',150,y); doc.text('Exc.',168,y); y+=1;
+  doc.setDrawColor(200); doc.line(12,y,198,y); y+=4;
+  doc.setFont(undefined,'normal');
+  d.aprob.slice(0,300).forEach(p=>{
+    if(y>282){ doc.addPage(); y=18; }
+    doc.text(p.pv,12,y); doc.text((p.estado||'').slice(0,18),40,y); doc.text((p.municipio||'').slice(0,28),75,y);
+    doc.text(String(p.m2),150,y); doc.text(p.m2>M2_STD?('+'+(p.m2-M2_STD)):'—',168,y); y+=5;
+  });
+  const tag = ROLE==='sub'?CURSUB.replace(/[^0-9A-Za-z]/g,''):'Nacional';
+  doc.save(`Estimacion_${tag}_${new Date().toISOString().slice(0,10)}.pdf`);
+  toast('PDF de estimación generado');
+}
+
+/* ============ REPORTE PDF antes/después por punto ============ */
+async function reportePDF(){
+  const p=CUR; const {jsPDF}=window.jspdf; const doc=new jsPDF();
+  doc.setFillColor(13,27,42); doc.rect(0,0,210,26,'F');
+  doc.setTextColor(255); doc.setFontSize(14); doc.setFont(undefined,'bold');
+  doc.text('Reporte fotográfico — '+p.pv,12,12);
+  doc.setFontSize(9); doc.setFont(undefined,'normal');
+  doc.text('Pintura de fachadas · '+DEPENDENCIA,12,19);
+  doc.setTextColor(20); let y=34; doc.setFontSize(9);
+  const now=new Date().toLocaleString('es-MX');
+  const info=[['Domicilio',(p.calle||'')+(p.colonia?', '+p.colonia:'')],['Municipio',p.municipio+', '+p.estado],['Coordenadas GPS',p.lat+', '+p.lng],['Fecha y hora reporte',now],['Zona / Subcontratista',(p.zona||'')+' / '+(p.sub||'')],['Superficie',p.m2+' m²'+(p.m2>M2_STD?' (+'+(p.m2-M2_STD)+' extra)':'')],['Vo.Bo.',p.vobo==='ok'?'Aprobado':p.vobo==='rej'?'Rechazado':p.vobo==='wait'?'Por revisar':'—']];
+  info.forEach(([k,v])=>{ doc.setFont(undefined,'bold'); doc.text(k+':',14,y); doc.setFont(undefined,'normal'); doc.text(String(v),58,y); y+=5.5; });
+  y+=2;
+  async function loadImg(url){ return new Promise(res=>{ const img=new Image(); img.crossOrigin='anonymous'; img.onload=()=>res(img); img.onerror=()=>res(null); img.src=url; }); }
+  // hasta 3 antes + 3 después en rejilla, con etiqueta de categoría
+  async function grid(titulo,kind,fotos){
+    doc.setFont(undefined,'bold'); doc.setFontSize(11); doc.text(titulo,12,y); y+=5;
+    const sub=fotos.slice(0,3);
+    const w=58,h=46,gap=6; const y0=y;
+    for(let i=0;i<sub.length;i++){
+      const x=14+i*(w+gap);
+      const url=`https://picsum.photos/seed/${kind}${p.id}_${i}/240/190${kind==='prev'?'?grayscale':''}`;
+      const img=await loadImg(url);
+      try{ if(img) doc.addImage(img,'JPEG',x,y0,w,h); }catch(e){}
+      doc.setFontSize(7); doc.setTextColor(60);
+      doc.setFont(undefined,'bold');
+      doc.text(CAT_LABEL[sub[i].tipo]||'General',x,y0+h+4);
+      doc.setFont(undefined,'normal'); doc.setTextColor(120);
+      doc.text('◉ '+p.lat+','+p.lng,x,y0+h+8);
+      doc.setTextColor(20);
+    }
+    y=y0+h+13;
+  }
+  await grid('ANTES','prev',p.fotosPrev||[]);
+  if(y>210){ doc.addPage(); y=18; }
+  await grid('DESPUÉS (incluye fachada global y letrero)','fin',p.fotosFin||[]);
+  if(p.adjuntos&&p.adjuntos.length){ doc.setFontSize(9); doc.setFont(undefined,'bold'); doc.text('Documentos adjuntos: ',14,y); doc.setFont(undefined,'normal'); doc.text(p.adjuntos.join(', '),58,y); y+=6; }
+  if(p.motivo){ doc.setTextColor(192,54,44); doc.setFontSize(9); doc.setFont(undefined,'bold'); doc.text('Motivo de rechazo: ',14,y); doc.setFont(undefined,'normal'); doc.text(p.motivo,54,y); }
+  doc.save(`Reporte_${p.pv}.pdf`);
+  toast('Reporte fotográfico generado');
+}
+
+/* ============ PROGRAMA DE OBRA (fechas, desviaciones, curva) ============ */
+function desvio(p){
+  // devuelve {clase, txt, dias}
+  if(p.status!=='at' || !p.fcomp){
+    // no atendida: ¿ya venció el compromiso?
+    if(p.fcomp && daysBetween(p.fcomp, HOY.toISOString().slice(0,10))>0)
+      return {cls:'d-late',txt:'Vencida', dias:daysBetween(p.fcomp,HOY.toISOString().slice(0,10))};
+    return {cls:'d-none',txt:'Programada', dias:0};
+  }
+  const d=daysBetween(p.fcomp,p.freal); // + = atrasado
+  if(d>2) return {cls:'d-late',txt:'+'+d+'d tarde',dias:d};
+  if(d< -1) return {cls:'d-soon',txt:Math.abs(d)+'d antes',dias:d};
+  return {cls:'d-on',txt:'A tiempo',dias:d};
+}
+function renderPrograma(){
+  document.getElementById('crumbs').style.display='none';
+  document.getElementById('filters').style.display='none';
+  const pts=visiblePts().filter(p=>p.fcomp);
+  const hoy=HOY.toISOString().slice(0,10);
+  // programado a la fecha = compromisos <= hoy ; real = atendidas <= hoy
+  const programado=pts.filter(p=>daysBetween(p.fcomp,hoy)>=0).length;
+  const real=pts.filter(p=>p.status==='at'&&p.freal&&daysBetween(p.freal,hoy)>=0).length;
+  const atrasadas=pts.filter(p=>{const d=desvio(p);return d.cls==='d-late';}).length;
+  const aTiempo=pts.filter(p=>{const d=desvio(p);return d.cls==='d-on'||d.cls==='d-soon';}).length;
+  const desvGlobal=real-programado; // negativo = atraso
+
+  const sc=document.getElementById('scroll'); sc.innerHTML='';
+  const wrap=document.createElement('div');
+
+  // curva programado vs real (por semana)
+  const curva=buildCurva(pts);
+  wrap.innerHTML=`
+    <div class="progsum">
+      <div class="s"><div class="v">${programado}</div><div class="k">Programado a hoy</div></div>
+      <div class="s"><div class="v" style="color:var(--leche)">${real}</div><div class="k">Real a hoy</div></div>
+      <div class="s"><div class="v" style="color:${desvGlobal<0?'var(--rej)':'var(--done)'}">${desvGlobal>=0?'+':''}${desvGlobal}</div><div class="k">Desviación</div></div>
+    </div>
+    <div class="curvebox">
+      <h4>Avance programado vs real (acumulado)</h4>
+      ${curva}
+      <div style="display:flex;gap:16px;font-size:10.5px;margin-top:8px;color:var(--mut)">
+        <span><span style="display:inline-block;width:14px;height:3px;background:#9aa7b4;vertical-align:middle;margin-right:5px"></span>Programado</span>
+        <span><span style="display:inline-block;width:14px;height:3px;background:var(--leche);vertical-align:middle;margin-right:5px"></span>Real</span>
+      </div>
+    </div>
+    <div class="progsum" style="margin-top:2px">
+      <div class="s"><div class="v" style="color:var(--rej)">${atrasadas}</div><div class="k">Atrasadas</div></div>
+      <div class="s"><div class="v" style="color:var(--done)">${aTiempo}</div><div class="k">A tiempo</div></div>
+      <div class="s"><div class="v">${pts.length}</div><div class="k">Con fecha</div></div>
+    </div>
+    <div class="sectlabel">Detalle por lechería (desviaciones)</div>`;
+  sc.appendChild(wrap);
+
+  // ordenar: más atrasadas primero
+  const sorted=[...pts].sort((a,b)=>desvio(b).dias-desvio(a).dias).slice(0,120);
+  sorted.forEach(p=>{
+    const d=desvio(p);
+    const row=document.createElement('div'); row.className='progrow'; row.style.cursor='pointer';
+    row.onclick=()=>openSheet(p.id);
+    row.innerHTML=`
+      <div class="t"><b>${p.pv} · ${p.municipio}</b><span class="desv-badge ${d.cls}">${d.txt}</span></div>
+      <div class="dates">
+        <div class="dt"><div class="v">${p.fcomp||'—'}</div><div class="k">Compromiso</div></div>
+        <div class="dt"><div class="v">${p.freal||'—'}</div><div class="k">Real</div></div>
+        <div class="dt"><div class="v">${p.sub||'—'}</div><div class="k">Subcontr.</div></div>
+      </div>`;
+    sc.appendChild(row);
+  });
+}
+function buildCurva(pts){
+  // acumulado semanal de programado (por fcomp) y real (por freal)
+  const hoy=HOY.toISOString().slice(0,10);
+  const dates=pts.map(p=>p.fcomp).concat(pts.filter(p=>p.freal).map(p=>p.freal)).sort();
+  if(!dates.length) return '<div style="color:var(--mut);font-size:12px">Sin datos de fechas</div>';
+  const t0=new Date(dates[0]), t1=new Date(dates[dates.length-1]);
+  const weeks=Math.max(1,Math.ceil(daysBetween(dates[0],dates[dates.length-1])/7));
+  const prog=[], real=[];
+  for(let w=0;w<=weeks;w++){
+    const cut=new Date(t0); cut.setDate(cut.getDate()+w*7); const ci=cut.toISOString().slice(0,10);
+    prog.push(pts.filter(p=>p.fcomp&&daysBetween(p.fcomp,ci)>=0).length);
+    real.push(pts.filter(p=>p.status==='at'&&p.freal&&daysBetween(p.freal,ci)>=0&&daysBetween(ci,hoy)>=0).length);
+  }
+  const maxV=Math.max(...prog,...real,1);
+  const W=300,H=130,pad=6;
+  const x=i=>pad+i*(W-2*pad)/Math.max(1,weeks);
+  const y=v=>H-pad-v*(H-2*pad)/maxV;
+  const line=(arr,col)=>{
+    let d='M'+arr.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' L');
+    return `<path d="${d}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round"/>`;
+  };
+  return `<svg class="curve-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="#e0e5ec"/>
+    ${line(prog,'#9aa7b4')}${line(real,'#1f6feb')}</svg>`;
+}
+
+/* ============ ACTAS DE CONFORMIDAD ============ */
+const OBS_OPCIONES=['Falta sello','Falta firma','Falta fecha','Acta ilegible','Datos incompletos','Firma no coincide'];
+let ACTA_CUR=null, ACTA_OBS_SEL=[];
+function loteStatusBadge(e){
+  if(e==='aprobada')return['ab-ap','Aprobada'];
+  if(e==='en_revision')return['ab-rev','En revisión'];
+  if(e==='rechazada')return['ab-rej','Rechazada'];
+  return['ab-arm','Por armar'];
+}
+function visibleLotes(){
+  if(ROLE==='sub') return LOTES.filter(l=>l.tipo==='contratista'&&l.sub===CURSUB);
+  return LOTES;
+}
+function renderActas(){
+  document.getElementById('crumbs').style.display='none';
+  document.getElementById('filters').style.display='none';
+  const sc=document.getElementById('scroll'); sc.innerHTML='';
+  const lotes=visibleLotes();
+  const wrap=document.createElement('div');
+  wrap.innerHTML=`<div class="note"><b>Actas y documentos.</b> La <b>Carta Entrega-Recepción</b> firmada por las partes da fe de la finalización a entera satisfacción y <b>detona el cobro</b>.
+    Con la dependencia se arma cada <b>50 lecherías o más</b>; con cada subcontratista es un <b>corte quincenal</b>.</div>
+    <button class="expbtn" style="background:var(--navy);color:#fff;width:100%;margin-bottom:10px" onclick="reporteInicioPDF()"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M9 11l3 3 8-8M4 12v6a2 2 0 002 2h12"/></svg>Generar reporte de inicio de trabajos (junta de arranque)</button>
+    <div class="sectlabel">Cartas Entrega-Recepción con la dependencia (cobro)</div>`;
+  sc.appendChild(wrap);
+  const dep=lotes.filter(l=>l.tipo==='dependencia');
+  if(!dep.length) sc.insertAdjacentHTML('beforeend','<div style="font-size:12px;color:var(--mut);padding:2px 2px 10px">Aún no hay lotes de 50+ listos.</div>');
+  dep.forEach(l=>sc.appendChild(loteCard(l)));
+  const lbl=document.createElement('div'); lbl.className='sectlabel'; lbl.textContent='Actas con subcontratistas (corte quincenal)'; sc.appendChild(lbl);
+  lotes.filter(l=>l.tipo==='contratista').forEach(l=>sc.appendChild(loteCard(l)));
+}
+function reporteInicioPDF(){
+  const {jsPDF}=window.jspdf; const doc=new jsPDF();
+  doc.setFillColor(13,27,42); doc.rect(0,0,210,28,'F');
+  doc.setTextColor(255); doc.setFontSize(15); doc.setFont(undefined,'bold');
+  doc.text('Reporte de inicio de trabajos',12,13);
+  doc.setFontSize(9); doc.setFont(undefined,'normal');
+  doc.text('Junta de arranque · Actividades preliminares',12,20);
+  doc.setTextColor(20); let y=42; doc.setFontSize(11); doc.setFont(undefined,'bold');
+  doc.text('Responsables de las partes',12,y); y+=8; doc.setFontSize(10); doc.setFont(undefined,'normal');
+  const rows=[
+    ['Procedimiento',PROCEDIMIENTO],
+    ['Fecha de junta de arranque','2026-07-06'],
+    ['Supervisor del prestador de servicios','(nombre y firma)'],
+    ['Administrador del Punto de Venta/Lechería','(nombre y firma)'],
+    ['Contratista (prestador)',EMPRESA+' · RFC '+EMPRESA_RFC],
+    ['Dependencia',DEPENDENCIA],
+    ['Alcance',(ROLE==='sub'?CURSUB:'Nacional')],
+    ['Objeto','Coordinación para disposición del inmueble e inicio de servicios'],
+  ];
+  rows.forEach(([k,v])=>{ doc.setFont(undefined,'bold'); doc.text(k+':',14,y); doc.setFont(undefined,'normal'); doc.text(String(v),95,y); y+=7; });
+  y+=10; doc.setDrawColor(150);
+  doc.line(20,y,90,y); doc.line(120,y,190,y); y+=5;
+  doc.setFontSize(9); doc.text('Supervisor del prestador',30,y); doc.text('Administrador de la dependencia',128,y);
+  doc.save('Reporte_inicio_trabajos.pdf');
+  toast('Reporte de inicio generado');
+}
+function loteCard(l){
+  const [bcls,btxt]=loteStatusBadge(l.estado);
+  const d=document.createElement('div'); d.className='lotecard'; d.onclick=()=>openActa(l.id);
+  const monto=l.pvs.length*PRECIO_FACHADA;
+  d.innerHTML=`
+    <div class="top">
+      <div class="ic ${l.tipo==='dependencia'?'ic-dep':'ic-con'}">${l.tipo==='dependencia'?'🏛️':'👷'}</div>
+      <div class="nm"><b>Acta ${l.tipo==='dependencia'?'DEP':'SUB'}-${String(l.id).padStart(3,'0')}</b>
+        <span>${l.tipo==='dependencia'?l.zona:l.sub} · ${l.pvs.length} lecherías</span></div>
+      <span class="acta-badge ${bcls}">${btxt}</span>
+    </div>
+    <div class="foot">
+      <div class="f"><div class="v">${l.pvs.length}</div><div class="k">Lecherías</div></div>
+      <div class="f"><div class="v">${money(monto)}</div><div class="k">Monto</div></div>
+      <div class="f"><div class="v">${l.ffin||'—'}</div><div class="k">Término</div></div>
+    </div>`;
+  return d;
+}
+function openActa(id){
+  ACTA_CUR=LOTES.find(l=>l.id===id); ACTA_OBS_SEL=[...(ACTA_CUR.obs||[])];
+  const l=ACTA_CUR;
+  document.getElementById('shTitle').textContent=`Acta ${l.tipo==='dependencia'?'DEP':'SUB'}-${String(l.id).padStart(3,'0')}`;
+  document.getElementById('shSub').textContent=`${l.tipo==='dependencia'?'Con la dependencia':'Corte quincenal'} · ${l.pvs.length} lecherías`;
+  const [bcls,btxt]=loteStatusBadge(l.estado);
+  const bd=document.getElementById('shBadge'); bd.className='acta-badge '+bcls; bd.textContent=btxt;
+  const monto=l.pvs.length*PRECIO_FACHADA;
+
+  const meta=`<div class="sect"><h3>Datos del acta</h3>
+    <div class="acta-meta">
+      <div class="ib"><div class="k">Inicio de obra</div><div class="v">${l.fini||'—'}</div></div>
+      <div class="ib"><div class="k">Término de obra</div><div class="v">${l.ffin||'—'}</div></div>
+      <div class="ib full"><div class="k">Administrador del contrato</div><div class="v" style="font-size:12.5px">${l.admin}</div></div>
+      <div class="ib full"><div class="k">Contratista</div><div class="v" style="font-size:12.5px">${l.contratista}</div></div>
+      <div class="ib"><div class="k">Lecherías amparadas</div><div class="v">${l.pvs.length}</div></div>
+      <div class="ib"><div class="k">Monto</div><div class="v">${money(monto)}</div></div>
+    </div></div>`;
+
+  // carga del documento (simulada)
+  const uploaded = l.estado!=='por_armar';
+  const upload=`<div class="sect"><h3>Documento del acta firmada</h3>
+    <div class="acta-upload ${uploaded?'done':''}" onclick="uploadActa()">
+      ${uploaded?'✓ acta_firmada_'+l.id+'.pdf cargada':'📎 Toca para cargar el acta firmada (PDF o foto)'}
+    </div></div>`;
+
+  // observaciones (admin) o vista de observaciones
+  let obsBlock='';
+  if(ROLE==='admin' && l.estado==='en_revision'){
+    obsBlock=`<div class="sect"><h3>Revisión del administrador</h3>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:8px">Si rechazas, marca las observaciones:</div>
+      <div class="obschips" id="obschips">
+        ${OBS_OPCIONES.map(o=>`<div class="obschip ${ACTA_OBS_SEL.includes(o)?'on':''}" onclick="toggleObs('${o}',this)">${o}</div>`).join('')}
+      </div>
+      <textarea id="obsLibre" placeholder="Observación adicional (opcional)…" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit;font-size:13px;min-height:48px"></textarea>
+    </div>`;
+  } else if(l.obs&&l.obs.length){
+    obsBlock=`<div class="sect"><h3>Observaciones</h3><div class="rejmotivo"><b>El acta fue rechazada</b>${l.obs.join(' · ')}</div></div>`;
+  }
+
+  // flag de cobrable
+  const cobrable = l.estado==='aprobada';
+  const cobro=`<div class="cobro-flag"><span class="k" style="background:${cobrable?'var(--done)':'var(--wait)'}"></span>
+    ${cobrable?'Acta aprobada — <b style="margin-left:3px">lista para cobro</b>':'Pendiente de aprobación para detonar cobro'}</div>`;
+
+  // acciones por rol
+  let act='';
+  if(ROLE==='admin'){
+    if(l.estado==='en_revision') act=`
+      <button class="btn btn-done" onclick="aprobarActa()">Aprobar acta</button>
+      <button class="btn btn-rej" onclick="rechazarActa()">Rechazar con observaciones</button>`;
+    else if(l.estado==='aprobada') act=`<button class="btn btn-done" disabled>✓ Acta aprobada</button>`;
+    else if(l.estado==='rechazada') act=`<div class="lock">Rechazada. En espera de corrección y reenvío.</div>`;
+    else act=`<div class="lock">Acta aún por armar.</div>`;
+  } else if(ROLE==='sub'||ROLE==='gen'){
+    if(l.estado==='rechazada') act=`<button class="btn btn-leche" onclick="reenviarActa()">Corregir y reenviar</button>`;
+    else if(l.estado==='en_revision') act=`<div class="lock">En revisión del administrador.</div>`;
+    else if(l.estado==='aprobada') act=`<button class="btn btn-done" disabled>✓ Aprobada — cobrable</button>`;
+    else act=`<button class="btn btn-leche" onclick="uploadActa()">Cargar acta firmada</button>`;
+  } else {
+    act=`<div class="lock">Dependencia · consulta</div>`;
+  }
+  const repBtn=`<button class="btn" style="background:var(--steel);color:#fff" onclick="actaPDF()">📄 Descargar carátula del acta</button>`;
+
+  document.getElementById('sbody').innerHTML=cobro+meta+upload+obsBlock+`<div class="actions">${act}${repBtn}</div>`;
+  document.getElementById('sheet').classList.add('show');
+}
+function toggleObs(o,el){
+  const i=ACTA_OBS_SEL.indexOf(o);
+  if(i>=0){ACTA_OBS_SEL.splice(i,1);el.classList.remove('on');}
+  else{ACTA_OBS_SEL.push(o);el.classList.add('on');}
+}
+function uploadActa(){ if(ACTA_CUR.estado==='por_armar')ACTA_CUR.estado='en_revision'; toast('Acta cargada — pasa a revisión'); openActa(ACTA_CUR.id); render(); }
+async function aprobarActa(){ ACTA_CUR.estado='aprobada'; ACTA_CUR.obs=[]; toast('✅ Acta aprobada — lista para cobro'); openActa(ACTA_CUR.id); render();
+  await guardarActa(ACTA_CUR.id, estado, obs); 
+}
+async function rechazarActa(){
+  const libre=document.getElementById('obsLibre'); const extra=libre?libre.value.trim():'';
+  const obs=[...ACTA_OBS_SEL]; if(extra)obs.push(extra);
+  if(!obs.length){ toast('Marca al menos una observación'); return; }
+  ACTA_CUR.estado='rechazada'; ACTA_CUR.obs=obs; toast('Acta rechazada con observaciones'); openActa(ACTA_CUR.id); render();
+  await guardarActa(ACTA_CUR.id, estado, obs);
+}
+function reenviarActa(){ ACTA_CUR.estado='en_revision'; ACTA_CUR.obs=[]; toast('Acta corregida y reenviada'); openActa(ACTA_CUR.id); render(); }
+function actaPDF(){
+  const {jsPDF}=window.jspdf; const doc=new jsPDF(); const l=ACTA_CUR;
+  doc.setFillColor(13,27,42); doc.rect(0,0,210,28,'F');
+  doc.setTextColor(255); doc.setFontSize(15); doc.setFont(undefined,'bold');
+  doc.text('Acta de conformidad',12,13);
+  doc.setFontSize(9); doc.setFont(undefined,'normal');
+  doc.text(`${l.tipo==='dependencia'?'Con la dependencia':'Corte con subcontratista'} · ${l.pvs.length} lecherías`,12,20);
+  doc.setTextColor(20); let y=40; doc.setFontSize(10);
+  const rows=[['Acta',(l.tipo==='dependencia'?'DEP-':'SUB-')+String(l.id).padStart(3,'0')],['Inicio de obra',l.fini],['Término de obra',l.ffin],['Administrador',l.admin],['Contratista',l.contratista],['Lecherías amparadas',String(l.pvs.length)],['Monto',money(l.pvs.length*PRECIO_FACHADA)],['Estatus',loteStatusBadge(l.estado)[1]]];
+  rows.forEach(([k,v])=>{ doc.setFont(undefined,'bold'); doc.text(k+':',14,y); doc.setFont(undefined,'normal'); doc.text(String(v),70,y); y+=7; });
+  if(l.obs&&l.obs.length){ y+=3; doc.setTextColor(192,54,44); doc.setFont(undefined,'bold'); doc.text('Observaciones:',14,y); doc.setFont(undefined,'normal'); y+=6; l.obs.forEach(o=>{doc.text('• '+o,16,y);y+=6;}); doc.setTextColor(20); }
+  y+=4; doc.setFont(undefined,'bold'); doc.text('Lecherías (Clave P.V.):',14,y); y+=6; doc.setFont(undefined,'normal'); doc.setFontSize(8);
+  let line=''; l.pvs.forEach((pv,i)=>{ line+=pv+'   '; if((i+1)%6===0){doc.text(line,16,y);y+=5;line='';if(y>285){doc.addPage();y=18;}} });
+  if(line)doc.text(line,16,y);
+  doc.save(`Acta_${l.tipo}_${l.id}.pdf`);
+  toast('Carátula del acta generada');
+}
+
+let tt; function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2200);}
+// teclas demo: o=offline, 1-6 cambia zona del subcontratista
+document.addEventListener('keydown',e=>{
+  if(e.key==='o'){OFFLINE=!OFFLINE;document.getElementById('offlineBar').classList.toggle('show',OFFLINE);toast(OFFLINE?'Modo sin conexión':'Conexión restablecida');}
+  const subKeys=Object.keys(SUBS);
+  if(ROLE==='sub'&&/^[1-9]$/.test(e.key)&&subKeys[+e.key-1]){ CURSUB=subKeys[+e.key-1]; setRole('sub'); toast('Subcontratista: '+CURSUB); }
+});
+
+//setRole('sub'); render();
+arrancarApp();   // revisa sesión; si no hay, muestra login
+</script>
+</body>
+</html>
