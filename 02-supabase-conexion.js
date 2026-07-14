@@ -80,7 +80,10 @@ async function cargarLecherias() {
       motivo: av.motivo || '',
       freal: av.freal || '',
       // fotos y actas se cargan aparte según se necesiten
-      fotosPrev: [], fotosFin: [], adjuntos: [], extraEvidencia: []
+      fotosPrev: [], 
+      fotosFin: [], 
+      adjuntos: [], 
+      extraEvidencia: []
     };
   });
 }
@@ -91,6 +94,19 @@ async function cargarFotos(pv) {
   const prev = (data || []).filter(f => f.momento === 'prev').map(f => ({ tipo: f.tipo, url: f.archivo_url }));
   const fin  = (data || []).filter(f => f.momento === 'fin').map(f => ({ tipo: f.tipo, url: f.archivo_url }));
   return { prev, fin };
+}
+
+//carga las actas
+async function cargarActas() {
+  const { data, error } = await sb
+    .from('actas')
+    .select('*');
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
 }
 
 // ---- 4. GUARDAR CAMBIOS ----
@@ -131,12 +147,22 @@ async function guardarVobo(pv, aprobado, motivo) {
 }
 
 // Registrar excedente (control interno hacia subcontratista)
-async function guardarExcedente(pv, m2Excedente, evidenciaUrl) {
-  const uid = (await sb.auth.getUser()).data.user.id;
-  const { error } = await sb.from('excedentes').upsert({
-    pv, m2_excedente: m2Excedente, evidencia_url: evidenciaUrl, registrado_por: uid
-  });
-  if (error) { throw error; }
+async function guardarExcedente(pv,m2Excedente,evidenciaUrl){
+  const uid=(await sb.auth.getUser()).data.user.id;
+  const {error}=await sb
+    .from('excedentes')
+    .upsert({
+      pv:pv,
+      m2_excedente:m2Excedente,
+      precio_m2: null,
+      evidencia_url:evidenciaUrl,
+      registrado_por:uid
+    });
+  if(error){
+    console.error(error);
+    toast(error.message);
+    return;
+  }
 }
 
 // Aprobar / rechazar acta
@@ -153,10 +179,10 @@ async function arrancarApp() {
     mostrarLogin();   // función de la pantalla de login (ver 03-cambios)
     return;
   }
-  // ya hay sesión: cargar datos y arrancar la interfaz
   window.LECH = await cargarLecherias();
-  // el rol viene del perfil, NO del selector de la maqueta
-  window.ROLE = perfil.rol;
-  if (perfil.rol === 'sub') { window.CURSUB = perfil.sub; }
-  render();  // función que ya existe en la app
+  ROLE = perfil.rol;
+  if (ROLE === 'sub') {
+      CURSUB = perfil.sub;
+  }
+  setRole(ROLE);
 }

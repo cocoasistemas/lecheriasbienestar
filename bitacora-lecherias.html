@@ -643,17 +643,40 @@ function renderPuntos(){
 }
 
 /* ---- detail ---- */
-function fakeGeo(p,k){
-  const dl=(rnd()-.5)*0.0008, dn=(rnd()-.5)*0.0008;
-  return {lat:(p.lat+dl).toFixed(5),lng:(p.lng+dn).toFixed(5),fecha:`2026-06-${(10+(p.id%15)).toString().padStart(2,'0')} ${(8+p.id%9)}:${(10+(p.id*7+k)%50).toString().padStart(2,'0')}`};
+function fakeGeo(f){
+  return{
+    lat: f.lat || '',
+    lng: f.lng || '',
+    fecha: ''
+  };
 }
-function photoCard(p,kind,k,tipo){
-  const g=fakeGeo(p,k);
-  const tone = kind==='prev'?'?grayscale':'';
-  const src=`https://picsum.photos/seed/${kind}${p.id}_${k}/220/280${tone}`;
-  const catBadge = (tipo&&tipo!=='general') ? `<div style="position:absolute;top:5px;left:5px;background:${tipo==='fachada'?'var(--leche)':tipo==='letrero'?'var(--extra)':'var(--steel)'};color:#fff;font-size:8px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:.3px">${CAT_LABEL[tipo]||tipo}</div>` : '';
-  return `<div class="ph"><img loading="lazy" src="${src}">${catBadge}
-    <div class="geo"><div class="c">◉ ${g.lat}, ${g.lng}</div>${g.fecha}</div></div>`;
+function photoCard(f){
+  const g = fakeGeo(f);
+  const catBadge = (f.tipo && f.tipo !== 'general')
+    ? `<div style="position:absolute;top:5px;left:5px;
+        background:${f.tipo==='fachada'
+          ?'var(--leche)'
+          :f.tipo==='letrero'
+          ?'var(--extra)'
+          :'var(--steel)'};
+        color:#fff;
+        font-size:8px;
+        font-weight:800;
+        padding:2px 6px;
+        border-radius:4px;
+        letter-spacing:.3px">
+        ${CAT_LABEL[f.tipo] || f.tipo}
+      </div>`
+    : '';
+
+  return `
+    <div class="ph">
+      <img loading="lazy" src="${f.url}">
+      ${catBadge}
+      <div class="geo">
+        <div class="c">◉ ${g.lat}, ${g.lng}</div>
+      </div>
+    </div>`;
 }
 function openSheet(id){
   CUR=LECH.find(p=>p.id===id); const p=CUR;
@@ -667,8 +690,15 @@ function openSheet(id){
   const canPintor = ROLE==='sub';
   const isAdmin = ROLE==='admin';
 
-  let prevImgs=''; (p.fotosPrev||[]).forEach((f,k)=>prevImgs+=photoCard(p,'prev',k,f.tipo));
-  let finImgs=''; (p.fotosFin||[]).forEach((f,k)=>finImgs+=photoCard(p,'fin',k,f.tipo));
+  let prevImgs='';
+  (p.fotosPrev||[]).forEach(f=>{
+    prevImgs += photoCard(f);
+  });
+
+  let finImgs='';
+  (p.fotosFin||[]).forEach(f=>{
+    finImgs += photoCard(f);
+  });
 
   const nPrev=(p.fotosPrev||[]).length, nFin=(p.fotosFin||[]).length;
   const faltantesCat=faltanCatFin(p);
@@ -688,14 +718,24 @@ function openSheet(id){
       :p.m2+' m²'}</div></div></div>`;
   if(exc>0){
     const precioSub=precioExtraSub(p.sub);
-    const evOk=(p.extraEvidencia||[]).length>0;
+    const evOk = p.m2_excedente > 0;
     sup+=`<div style="height:8px"></div><div class="extra-box">
       <div class="top"><div class="t">Excedente (pago a subcontratista)</div><div class="badge">+${exc} m²</div></div>
       <div class="calc">La dependencia paga fijo por unidad estándar; este excedente <b>no se cobra a la dependencia</b>.<br>
       Es un <b>registro interno</b> para el pago a <b>${p.sub}</b>: ${exc} m² × $${precioSub.toFixed(2)} = <b>$${(exc*precioSub).toLocaleString('es-MX',{minimumFractionDigits:2})}</b><br>
       <span style="color:var(--mut);font-size:10px">Precio por m² configurable al cerrar el subcontrato.</span></div>
       <div style="margin-top:8px">
-        ${(p.extraEvidencia||[]).map(a=>`<div class="estim-row" style="margin-bottom:4px"><span class="l">📎 ${a}</span><span class="v" style="color:var(--done)">✓</span></div>`).join('')}
+        ${p.evidencia_url
+        ?
+        `
+        <div class="estim-row">
+        <span class="l">📎 Evidencia cargada</span>
+        <span class="v" style="color:var(--done)">✓</span>
+        </div>
+        `
+        :
+        ''
+        }
         ${canPintor?`<div class="acta-upload" style="padding:10px;margin:0" onclick="addExtraEvidencia()">📎 Adjuntar evidencia del excedente${evOk?' (agregar más)':' (obligatoria)'}</div>`:(!evOk?'<div class="photo-req">Sin evidencia del excedente</div>':'')}
       </div></div>`;
   }
@@ -844,8 +884,10 @@ async function addPhoto(kind,tipo){
     const fotos = await cargarFotos(CUR.pv);
   CUR.fotosPrev = fotos.prev;
   CUR.fotosFin = fotos.fin;
-  openSheet(CUR.id);
+  console.log(CUR.fotosPrev);
+  console.log(CUR.fotosFin);
   toast('Foto subida correctamente');
+  openSheet(CUR.id);
 }
 function addPhotoMenu(){
   // menú simple para elegir tipo de foto final
@@ -877,12 +919,36 @@ function addAdjunto(){
   toast('Documento adjuntado'); openSheet(CUR.id);
 }
 async function addExtraEvidencia(){
-  if(ROLE!=='sub')return;
-  const nombres=['medicion_m2.pdf','foto_medicion.jpg','levantamiento.pdf'];
-  const n=nombres[(CUR.extraEvidencia||[]).length%nombres.length];
-  (CUR.extraEvidencia=CUR.extraEvidencia||[]).push(n);
-  toast('Evidencia del excedente adjuntada'); openSheet(CUR.id);
-  await guardarExcedente(CUR.pv, exc, url);
+  if(ROLE!=='sub') return;
+  const input=document.createElement('input');
+  input.type='file';
+  input.accept='.jpg,.jpeg,.png,.pdf';
+  input.onchange=async()=>{
+    const file=input.files[0];
+    if(!file) return;
+    const uid=(await sb.auth.getUser()).data.user.id;
+    const nombre=`${CUR.pv}/excedente_${Date.now()}_${file.name}`;
+    const {error:errUpload}=await sb.storage
+      .from('evidencias')
+      .upload(nombre,file,{upsert:true});
+    if(errUpload){
+      console.error(errUpload);
+      toast('No fue posible subir el archivo');
+      return;
+    }
+    const {data}=sb.storage
+      .from('evidencias')
+      .getPublicUrl(nombre);
+    const url=data.publicUrl;
+    await guardarExcedente(
+      CUR.pv,
+      CUR.m2_excedente,
+      url
+    );
+    toast('Evidencia del excedente guardada');
+    openSheet(CUR.id);
+  };
+  input.click();
 }
 async function markAt(){
   const nP=(CUR.fotosPrev||[]).length, nF=(CUR.fotosFin||[]).length;
@@ -894,7 +960,16 @@ async function markAt(){
   toast('✓ Atendido — pasa a Vo.Bo.'); openSheet(CUR.id); render();
   await guardarAtendido(CUR.pv, CUR.m2);
 }
-function setM2(v){ CUR.m2=Math.max(21,parseInt(v)||21); openSheet(CUR.id); render(); }
+function setM2(v){
+  CUR.m2 = Math.max(21, parseInt(v) || 21);
+  if (CUR.m2 > M2_STD) {
+    CUR.m2_excedente = CUR.m2 - M2_STD;
+  } else {
+    CUR.m2_excedente = 0;
+  }
+  openSheet(CUR.id);
+  render();
+}
 async function vobo(ok){
   if(ok){ CUR.vobo='ok'; CUR.motivo=''; toast('✅ Vo.Bo. otorgado — entra a estimación'); openSheet(CUR.id); render(); return; }
   // rechazo: exigir motivo
@@ -1334,11 +1409,16 @@ function loteStatusBadge(e){
   if(e==='rechazada')return['ab-rej','Rechazada'];
   return['ab-arm','Por armar'];
 }
-function visibleLotes(){
-  if(ROLE==='sub') return LOTES.filter(l=>l.tipo==='contratista'&&l.sub===CURSUB);
-  return LOTES;
+async function visibleLotes() {
+  const lotes = await cargarActas();
+
+  if (ROLE === 'sub') {
+    return lotes.filter(l => l.tipo === 'contratista' && l.sub === CURSUB);
+  }
+
+  return lotes;
 }
-function renderActas(){
+async function renderActas(){
   document.getElementById('crumbs').style.display='none';
   document.getElementById('filters').style.display='none';
   const sc=document.getElementById('scroll'); sc.innerHTML='';
@@ -1502,11 +1582,14 @@ function actaPDF(){
 }
 
 let tt; function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2200);}
-// teclas demo: o=offline, 1-6 cambia zona del subcontratista
+
+// teclas demo: o=offline
 document.addEventListener('keydown',e=>{
-  if(e.key==='o'){OFFLINE=!OFFLINE;document.getElementById('offlineBar').classList.toggle('show',OFFLINE);toast(OFFLINE?'Modo sin conexión':'Conexión restablecida');}
-  const subKeys=Object.keys(SUBS);
-  if(ROLE==='sub'&&/^[1-9]$/.test(e.key)&&subKeys[+e.key-1]){ CURSUB=subKeys[+e.key-1]; setRole('sub'); toast('Subcontratista: '+CURSUB); }
+  if(e.key==='o'){
+    OFFLINE=!OFFLINE;
+    document.getElementById('offlineBar').classList.toggle('show',OFFLINE);
+    toast(OFFLINE?'Modo sin conexión':'Conexión restablecida');
+  }
 });
 
 //setRole('sub'); render();
