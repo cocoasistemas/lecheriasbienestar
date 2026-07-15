@@ -918,58 +918,118 @@ function addAdjunto(){
   (CUR.adjuntos=CUR.adjuntos||[]).push(n);
   toast('Documento adjuntado'); openSheet(CUR.id);
 }
-async function addExtraEvidencia(){
-  if(ROLE!=='sub') return;
-  const input=document.createElement('input');
-  input.type='file';
-  input.accept='.jpg,.jpeg,.png,.pdf';
-  input.onchange=async()=>{
-    const file=input.files[0];
-    if(!file) return;
-    const uid=(await sb.auth.getUser()).data.user.id;
-    const nombre=`${CUR.pv}/excedente_${Date.now()}_${file.name}`;
-    const {error:errUpload}=await sb.storage
-      .from('evidencias')
-      .upload(nombre,file,{upsert:true});
-    if(errUpload){
-      console.error(errUpload);
-      toast('No fue posible subir el archivo');
-      return;
+
+async function addExtraEvidencia() {
+  if (ROLE !== 'sub') return;
+
+  const excedente = Math.max(0, CUR.m2 - M2_STD);
+
+  if (excedente <= 0) {
+    toast('Primero captura una superficie mayor a 21 m²');
+    return;
+  }
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.jpg,.jpeg,.png,.pdf';
+
+  input.onchange = async () => {
+    const archivo = input.files?.[0];
+    if (!archivo) return;
+
+    try {
+      /*
+       * Ruta fija: si se vuelve a cargar una evidencia,
+       * sustituye la anterior en lugar de crear archivos huérfanos.
+       */
+      const ruta = `${CUR.pv}/excedente/evidencia`;
+
+      const { error: errorSubida } = await sb.storage
+        .from('evidencias')
+        .upload(ruta, archivo, {
+          upsert: true,
+          contentType: archivo.type || undefined
+        });
+
+      if (errorSubida) {
+        throw errorSubida;
+      }
+
+      const { data: publica } = sb.storage
+        .from('evidencias')
+        .getPublicUrl(ruta);
+
+      const url = publica.publicUrl;
+      const precio = precioExtraSub(CUR.sub);
+
+      await guardarExcedente(
+        CUR.pv,
+        excedente,
+        precio,
+        url
+      );
+
+      CUR.m2_excedente = excedente;
+      CUR.precio_m2 = precio;
+      CUR.evidencia_url = url;
+      CUR.extraEvidencia = [url];
+
+      toast('Evidencia del excedente guardada');
+      openSheet(CUR.id);
+      render();
+    } catch (error) {
+      console.error(error);
+      toast('No fue posible guardar la evidencia');
     }
-    const {data}=sb.storage
-      .from('evidencias')
-      .getPublicUrl(nombre);
-    const url=data.publicUrl;
-    await guardarExcedente(
-      CUR.pv,
-      CUR.m2_excedente,
-      url
-    );
-    toast('Evidencia del excedente guardada');
-    openSheet(CUR.id);
   };
+
   input.click();
 }
+
 async function markAt(){
   const nP=(CUR.fotosPrev||[]).length, nF=(CUR.fotosFin||[]).length;
   if(nP<MIN_FOTOS_PREV){ toast(`Faltan fotos previas (${nP}/${MIN_FOTOS_PREV})`); return; }
   if(nF<MIN_FOTOS_FIN){ toast(`Faltan fotos finales (${nF}/${MIN_FOTOS_FIN})`); return; }
   const fc=faltanCatFin(CUR);
   if(fc.length){ toast('Falta foto obligatoria: '+fc.map(c=>CAT_LABEL[c]).join(', ')); return; }
+  const excedente = Math.max(0, CUR.m2 - M2_STD);
+  if (excedente > 0 && !(CUR.extraEvidencia || []).length) {
+    toast('Falta la evidencia obligatoria del excedente');
+    return;
+  }
   CUR.status='at'; CUR.vobo='wait'; CUR.freal=(new Date()).toISOString().slice(0,10);
   toast('✓ Atendido — pasa a Vo.Bo.'); openSheet(CUR.id); render();
   await guardarAtendido(CUR.pv, CUR.m2);
 }
-function setM2(v){
-  CUR.m2 = Math.max(21, parseInt(v) || 21);
-  if (CUR.m2 > M2_STD) {
-    CUR.m2_excedente = CUR.m2 - M2_STD;
-  } else {
-    CUR.m2_excedente = 0;
+async function setM2(v) {
+  const m2Anterior = CUR.m2;
+
+  CUR.m2 = Math.max(M2_STD, Number(v) || M2_STD);
+  CUR.m2_excedente = Math.max(0, CUR.m2 - M2_STD);
+
+  try {
+    await guardarM2(
+      CUR.pv,
+      CUR.m2,
+      CUR.status,
+      CUR.vobo,
+      CUR.motivo,
+      CUR.freal
+    );
+
+    openSheet(CUR.id);
+    render();
+  } catch (error) {
+    console.error(error);
+
+    CUR.m2 = m2Anterior;
+    CUR.m2_excedente = Math.max(0, m2Anterior - M2_STD);
+
+    toast('No se pudo guardar la superficie');
+    openSheet(CUR.id);
   }
-  openSheet(CUR.id);
-  render();
 }
+
 async function vobo(ok){
   if(ok){ CUR.vobo='ok'; CUR.motivo=''; toast('✅ Vo.Bo. otorgado — entra a estimación'); openSheet(CUR.id); render(); return; }
   // rechazo: exigir motivo

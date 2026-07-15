@@ -69,6 +69,7 @@ async function cargarLecherias() {
   // aplanar al formato que usa la app
   return data.map((r, i) => {
     const av = (r.avances && r.avances[0]) || {};
+    const ex = (r.excedentes && r.excedentes[0]) || {};
     return {
       id: i,
       pv: r.pv, estado: r.estado, municipio: r.municipio, localidad: r.localidad,
@@ -79,11 +80,16 @@ async function cargarLecherias() {
       vobo: av.vobo || '-',
       motivo: av.motivo || '',
       freal: av.freal || '',
-      // fotos y actas se cargan aparte según se necesiten
-      fotosPrev: [], 
-      fotosFin: [], 
-      adjuntos: [], 
-      extraEvidencia: []
+      
+      m2_excedente: Number(ex.m2_excedente) || 0,
+      precio_m2: Number(ex.precio_m2) || precioExtraSub(r.sub),
+      evidencia_url: ex.evidencia_url || '',
+      extraEvidencia: ex.evidencia_url ? [ex.evidencia_url] : [],
+
+      // fotos y adjuntos (actas) se cargan aparte según se necesiten
+      fotosPrev: [],
+      fotosFin: [],
+      adjuntos: []
     };
   });
 }
@@ -101,14 +107,25 @@ async function cargarActas() {
   const { data, error } = await sb
     .from('actas')
     .select('*');
-
   if (error) {
     throw error;
   }
-
   return data || [];
 }
-
+async function cargarPreciosSubcontrato() {
+  const { data, error } = await sb
+    .from('precios_subcontrato')
+    .select('sub, precio_m2');
+  if (error) {
+    throw error;
+  }
+  return Object.fromEntries(
+    (data || []).map(registro => [
+      registro.sub,
+      Number(registro.precio_m2) || 450
+    ])
+  );
+}
 // ---- 4. GUARDAR CAMBIOS ----
 
 // Subir una foto al Storage y registrar en la tabla
@@ -123,6 +140,29 @@ async function subirFoto(pv, momento, tipo, archivo, lat, lng) {
   });
   if (error) { throw error; }
   return pub.publicUrl;
+}
+
+async function guardarM2(pv, m2, status, vobo, motivo, freal) {
+  const uid = (await sb.auth.getUser()).data.user.id;
+
+  const { error } = await sb
+    .from('avances')
+    .upsert({
+      pv,
+      m2,
+      status: status || 'no',
+      vobo: vobo || '-',
+      motivo: motivo || null,
+      freal: freal || null,
+      actualizado_por: uid,
+      actualizado: new Date().toISOString()
+    }, {
+      onConflict: 'pv'
+    });
+
+  if (error) {
+    throw error;
+  }
 }
 
 // Marcar lechería como atendida
@@ -147,21 +187,26 @@ async function guardarVobo(pv, aprobado, motivo) {
 }
 
 // Registrar excedente (control interno hacia subcontratista)
-async function guardarExcedente(pv,m2Excedente,evidenciaUrl){
-  const uid=(await sb.auth.getUser()).data.user.id;
-  const {error}=await sb
-    .from('excedentes')
+async function guardarM2(pv, m2, status, vobo, motivo, freal) {
+  const uid = (await sb.auth.getUser()).data.user.id;
+
+  const { error } = await sb
+    .from('avances')
     .upsert({
-      pv:pv,
-      m2_excedente:m2Excedente,
-      precio_m2: null,
-      evidencia_url:evidenciaUrl,
-      registrado_por:uid
+      pv,
+      m2,
+      status: status || 'no',
+      vobo: vobo || '-',
+      motivo: motivo || null,
+      freal: freal || null,
+      actualizado_por: uid,
+      actualizado: new Date().toISOString()
+    }, {
+      onConflict: 'pv'
     });
-  if(error){
-    console.error(error);
-    toast(error.message);
-    return;
+
+  if (error) {
+    throw error;
   }
 }
 
@@ -184,5 +229,10 @@ async function arrancarApp() {
   if (ROLE === 'sub') {
       CURSUB = perfil.sub;
   }
+  const precios = await cargarPreciosSubcontrato();
+  Object.keys(PRECIO_M2_EXTRA_SUB).forEach(clave => {
+    delete PRECIO_M2_EXTRA_SUB[clave];
+  });
+  Object.assign(PRECIO_M2_EXTRA_SUB, precios);
   setRole(ROLE);
 }
