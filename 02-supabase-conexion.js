@@ -142,6 +142,7 @@ async function subirFoto(pv, momento, tipo, archivo, lat, lng) {
   return pub.publicUrl;
 }
 
+// Registrar excedente (control interno hacia subcontratista)
 async function guardarM2(pv, m2, status, vobo, motivo, freal) {
   const uid = (await sb.auth.getUser()).data.user.id;
 
@@ -156,6 +157,32 @@ async function guardarM2(pv, m2, status, vobo, motivo, freal) {
       freal: freal || null,
       actualizado_por: uid,
       actualizado: new Date().toISOString()
+    }, {
+      onConflict: 'pv'
+    });
+
+  if (error) {
+    throw error;
+  }
+}
+
+async function guardarExcedente(
+  pv,
+  m2Excedente,
+  precioM2,
+  evidenciaUrl
+) {
+  const uid = (await sb.auth.getUser()).data.user.id;
+
+  const { error } = await sb
+    .from('excedentes')
+    .upsert({
+      pv,
+      m2_excedente: m2Excedente,
+      precio_m2: precioM2,
+      evidencia_url: evidenciaUrl,
+      registrado_por: uid,
+      fecha: new Date().toISOString()
     }, {
       onConflict: 'pv'
     });
@@ -186,29 +213,7 @@ async function guardarVobo(pv, aprobado, motivo) {
   if (error) { throw error; }
 }
 
-// Registrar excedente (control interno hacia subcontratista)
-async function guardarM2(pv, m2, status, vobo, motivo, freal) {
-  const uid = (await sb.auth.getUser()).data.user.id;
 
-  const { error } = await sb
-    .from('avances')
-    .upsert({
-      pv,
-      m2,
-      status: status || 'no',
-      vobo: vobo || '-',
-      motivo: motivo || null,
-      freal: freal || null,
-      actualizado_por: uid,
-      actualizado: new Date().toISOString()
-    }, {
-      onConflict: 'pv'
-    });
-
-  if (error) {
-    throw error;
-  }
-}
 
 // Aprobar / rechazar acta
 async function guardarActa(id, estado, obs) {
