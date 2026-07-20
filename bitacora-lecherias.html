@@ -29,7 +29,6 @@
   .brand .mk{width:30px;height:30px;border-radius:7px;background:var(--leche);display:flex;align-items:center;justify-content:center;font-size:16px;flex:0 0 auto}
   .brand b{font-size:14px;letter-spacing:.3px;font-weight:800;display:block;line-height:1.1}
   .brand span{font-size:9.5px;letter-spacing:1.5px;color:#8aa0b6;text-transform:uppercase}
-  .rolepick{background:var(--navy2);border:1px solid var(--steel);color:#fff;font:inherit;font-size:12px;padding:7px 8px;border-radius:7px;font-weight:600;max-width:165px}
 
   .contract{background:var(--navy2);color:#aebccb;padding:6px 15px;font-size:10.5px;display:flex;justify-content:space-between;flex:0 0 auto;letter-spacing:.3px}
   .contract b{color:#fff}
@@ -134,6 +133,25 @@
   .ph.add{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;border:2px dashed var(--line);background:#fff;color:var(--mut);cursor:pointer;font-size:10.5px;font-weight:600}
   .ph.add .plus{font-size:24px;font-weight:300;line-height:1}
 
+  .ph-delete{
+  position:absolute;
+  top:5px;
+  right:5px;
+  z-index:5;
+  width:25px;
+  height:25px;
+  border:none;
+  border-radius:50%;
+  background:rgba(192,54,44,.92);
+  color:#fff;
+  font-size:15px;
+  font-weight:800;
+  line-height:25px;
+  text-align:center;
+  cursor:pointer;
+  box-shadow:0 1px 4px rgba(0,0,0,.25);
+}
+
   .extra-box{background:#fff;border:1px solid var(--line);border-left:4px solid var(--extra);border-radius:8px;padding:11px 12px}
   .extra-box .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
   .extra-box .top .t{font-size:12px;font-weight:700}
@@ -149,7 +167,21 @@
   .tlrow .tx{flex:1}.tlrow .tx b{font-size:12px}.tlrow .tx span{display:block;font-size:10px;color:var(--mut)}
   .tlrow .when{font-size:10px;color:var(--mut);text-align:right}
 
-  .actions{position:sticky;bottom:0;background:linear-gradient(transparent,var(--paper) 22%);padding:13px 0 6px;display:flex;flex-direction:column;gap:8px}
+  .actions{
+  position:sticky;
+  bottom:0;
+  z-index:20;
+  background:linear-gradient(
+    transparent 0,
+    var(--paper) 22%,
+    var(--paper) 100%
+  );
+  padding:13px 0 6px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  isolation:isolate;
+  }
   .btn{border:none;border-radius:9px;padding:13px;font:inherit;font-size:13.5px;font-weight:800;letter-spacing:.3px;cursor:pointer;text-transform:uppercase;width:100%}
   .btn-leche{background:var(--leche);color:#fff}.btn-leche:active{background:var(--leche-d)}
   .btn-admin{background:var(--wait);color:#fff}
@@ -160,8 +192,6 @@
 
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;z-index:80;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
   .toast.show{opacity:1}
-  .offline{position:fixed;top:0;left:0;right:0;max-width:540px;margin:0 auto;background:var(--wait);color:#fff;font-size:11px;font-weight:700;text-align:center;padding:4px;z-index:60;display:none}
-  .offline.show{display:block}
 
   /* assign view */
   .assignrow{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
@@ -257,6 +287,44 @@
   .rejmotivo b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
   .photo-req{font-size:11px;color:var(--mut);text-align:center;padding:4px}
   .photo-req.ok{color:var(--done)}
+
+  .logout-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  min-width:62px;
+  height:34px;
+  padding:0 10px;
+  border:1px solid var(--steel);
+  border-radius:8px;
+  background:var(--navy2);
+  color:#fff;
+  font:inherit;
+  font-size:11px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.logout-btn:active{
+  transform:scale(.97);
+}
+
+.logout-icon{
+  font-size:16px;
+  line-height:1;
+}
+
+@media (max-width:380px){
+  .logout-btn{
+    min-width:38px;
+    padding:0 8px;
+  }
+
+  .logout-text{
+    display:none;
+  }
+}
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -271,30 +339,41 @@
   <div style="color:#fff;font-size:20px;font-weight:800">Bitácora de Lecherías</div>
   <div style="color:#8aa0b6;font-size:12px;margin-bottom:8px">LUMEN-OAX · Ingresa con tu cuenta</div>
   <input id="loginMail" placeholder="Correo" style="width:100%;max-width:300px;padding:12px;border-radius:8px;border:none">
-  <input id="loginPass" type="password" placeholder="Contraseña" style="width:100%;max-width:300px;padding:12px;border-radius:8px;border:none">
+  <input id="loginPass" type="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter') hacerLogin()" style="width:100%;max-width:300px;padding:12px;border-radius:8px;border:none">
   <button onclick="hacerLogin()" style="width:100%;max-width:300px;padding:12px;border-radius:8px;border:none;
      background:#1f6feb;color:#fff;font-weight:800;cursor:pointer">Entrar</button>
   <div id="loginError" style="color:#ff6b6b;font-size:12px;min-height:16px"></div>
 </div>
-<div class="offline" id="offlineBar">SIN CONEXION - los cambios se sincronizan al recuperar señal</div>
 <div class="app">
   <header class="top">
     <div class="brand">
       <div class="mk">&#129371;</div>
       <div><b>Bitacora</b><span>Lecherias &middot; Fachadas</span></div>
     </div>
-    <!--
-    <select class="rolepick" id="rolePick" onchange="setRole(this.value)">
-      <option value="sub">Subcontratista de zona</option>
-      <option value="gen">Contratista general</option>
-      <option value="admin">Administrador (Vo.Bo.)</option>
-      <option value="dep">Dependencia</option>
-    </select>
-    -->
+    <button
+      class="logout-btn"
+      onclick="confirmarCierreSesion()"
+      title="Cerrar sesión"
+    >
+  <span class="logout-icon">↪</span>
+  <span class="logout-text">Salir</span>
+</button>
   </header>
   <div class="contract">
-    <span>Proc. <b id="cNum">LA-08-VST-008VST977-N-54-2026</b></span>
-    <span id="zoneTag">Todas las zonas</span>
+  <span>
+    Proc.
+    <b id="cNum">
+      LA-08-VST-008VST977-N-54-2026
+    </b>
+  </span>
+
+  <span>
+    <span id="zoneTag">
+      Todas las zonas
+    </span>
+    ·
+    <b>Beta 1.0</b>
+  </span>
   </div>
   <div class="roleband rb-sub" id="roleBand"></div>
 
@@ -341,16 +420,84 @@
 
 <script>
 function mostrarLogin(){ document.getElementById('loginScreen').style.display='flex'; }
-async function hacerLogin(){
-  const mail=document.getElementById('loginMail').value.trim();
-  const pass=document.getElementById('loginPass').value;
-  try{
-    await iniciarSesion(mail,pass);
-    document.getElementById('loginScreen').style.display='none';
+
+async function hacerLogin() {
+  const mail =
+    document
+      .getElementById('loginMail')
+      .value
+      .trim();
+
+  const pass =
+    document
+      .getElementById('loginPass')
+      .value;
+
+  const boton =
+    document.querySelector(
+      '#loginScreen button'
+    );
+
+  const errorEl =
+    document.getElementById('loginError');
+
+  if (!mail || !pass) {
+    errorEl.textContent =
+      'Ingresa correo y contraseña';
+
+    return;
+  }
+
+  boton.disabled = true;
+  boton.textContent = 'Ingresando…';
+  errorEl.textContent = '';
+
+  try {
+    await iniciarSesion(mail, pass);
+
+    document
+      .getElementById('loginScreen')
+      .style
+      .display = 'none';
+
     await arrancarApp();
-  }catch(e){ document.getElementById('loginError').textContent='Correo o contraseña incorrectos'; }
+
+  } catch (error) {
+    console.error(
+      'Error de inicio de sesión:',
+      error
+    );
+
+    errorEl.textContent =
+      'Correo o contraseña incorrectos';
+
+  } finally {
+    boton.disabled = false;
+    boton.textContent = 'Entrar';
+  }
 }
-const ZONAS={"Z1 · Valle de México Pte.": ["CDMX"], "Z2 · Valle de México Or.": ["Edo. México"], "Z3 · Centro": ["Hidalgo", "Morelos", "Puebla", "Tlaxcala"], "Z4 · Bajío": ["Aguascalientes", "Colima", "Guanajuato", "Jalisco", "Michoacán", "Querétaro", "San Luis Potosí", "Zacatecas"], "Z5 · Norte": ["BCS", "Chihuahua", "Coahuila", "Durango", "Nuevo León", "Sinaloa", "Sonora", "Tamaulipas"], "Z6 · Sur/Golfo": ["Guerrero", "Nayarit", "Oaxaca", "Tabasco", "Veracruz"]};
+
+async function confirmarCierreSesion() {
+  const confirmar = window.confirm(
+    '¿Deseas cerrar la sesión actual?'
+  );
+
+  if (!confirmar) {
+    return;
+  }
+
+  try {
+    await cerrarSesion();
+  } catch (error) {
+    console.error(
+      'No fue posible cerrar la sesión:',
+      error
+    );
+
+    toast('No fue posible cerrar la sesión');
+  }
+}
+
 const SUBS={"SUB-4": "Z4 · Bajío", "SUB-5": "Z5 · Norte", "SUB-1": "Z1 · Valle de México Pte.", "SUB-2": "Z2 · Valle de México Or.", "SUB-6": "Z6 · Sur/Golfo", "SUB-3": "Z3 · Centro"};
 const METAS={"SUB-1": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-2": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-3": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-4": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-5": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-6": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}};
 
@@ -393,93 +540,26 @@ function addDays(iso, d) {
 function daysBetween(a, b) {
     return Math.round((new Date(b)-new Date(a))/86400000);
 }
-/*
-// la zona y el subcontratista YA vienen del Excel maestro (columna Zona / Subcontratista)
-let seed=7; const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
-const HOY=new Date('2026-08-15'); // fecha de corte simulada para el piloto
-function addDays(iso,d){ const dt=new Date(iso); dt.setDate(dt.getDate()+d); return dt.toISOString().slice(0,10); }
-function daysBetween(a,b){ return Math.round((new Date(b)-new Date(a))/86400000); }
-LECH.forEach((p,i)=>{
-  p.id=i;
-  const r=rnd();
-  if(r>.55){ p.status='at';
-    p.vobo = rnd()>.6?'ok':(rnd()>.5?'wait':'rej');
-    p.m2 = rnd()>.78 ? M2_STD+Math.floor(rnd()*16) : M2_STD;
-    // fecha real de atención: cerca de la comprometida ±desvío
-    if(p.fcomp){ const desv=Math.floor((rnd()-0.45)*18); p.freal=addDays(p.fcomp,desv); }
-    else p.freal='';
-  } else { p.status='no'; p.vobo='-'; p.m2=M2_STD; p.freal=''; }
-  // ===== FOTOS: arrays con categorías =====
-  // previa: cualquier tipo. final: debe incluir 'fachada' (global) y 'letrero'.
-  p.fotosPrev=[]; p.fotosFin=[]; p.adjuntos=[];
-  if(p.status==='at'){
-    // 3 previas
-    for(let k=0;k<3;k++) p.fotosPrev.push({tipo:'general',k});
-    // 3 finales cubriendo las obligatorias
-    p.fotosFin.push({tipo:'fachada',k:0});
-    p.fotosFin.push({tipo:'letrero',k:1});
-    p.fotosFin.push({tipo:'general',k:2});
-    if(rnd()>.7) p.fotosFin.push({tipo:'detalle',k:3});
-  } else {
-    const np = rnd()>.5 ? 1+Math.floor(rnd()*2) : 0;
-    for(let k=0;k<np;k++) p.fotosPrev.push({tipo:'general',k});
-  }
-  p.cuadrilla='Cuadrilla '+(1+(i%5));
-  // evidencia del excedente (si aplica) — control interno hacia subcontratista
-  p.extraEvidencia = (p.m2>M2_STD && rnd()>.4) ? ['medicion_m2.pdf'] : [];
-  // estado del acta de conformidad (solo relevante si tiene Vo.Bo.)
-  // acta: 'ninguna' | 'cargada' (pend. revisión) | 'aprobada' | 'rechazada'
-  if(p.vobo==='ok'){
-    const a=rnd();
-    p.acta = a>.55?'aprobada':(a>.30?'cargada':(a>.18?'rechazada':'ninguna'));
-    p.actaObs = p.acta==='rechazada' ? ['Falta sello de la dependencia'] : [];
-  } else { p.acta='ninguna'; p.actaObs=[]; }
-  p.motivo = p.vobo==='rej' ? 'Foto final no cubre toda la fachada' : '';
-});
 
-/* ---- LOTES DE ACTAS (simulados) ---- *
-// acta-dependencia: agrupa 50+ lecherías cobrables. acta-contratista: corte quincenal.
-let LOTES=[];
-(function seedLotes(){
-  let lid=1;
-  // ACTAS CON LA DEPENDENCIA: acumular lecherías con Vo.Bo. en lotes de 50 (pueden cruzar zonas)
-  const okAll=LECH.filter(p=>p.vobo==='ok');
-  const estadosDep=['aprobada','en_revision','rechazada'];
-  let di=0;
-  for(let i=0;i+50<=okAll.length;i+=50){
-    const bloque=okAll.slice(i,i+50);
-    const est=estadosDep[di%estadosDep.length]; di++;
-    const zc={}; bloque.forEach(p=>{zc[p.zona]=(zc[p.zona]||0)+1;});
-    const zonaDom=Object.entries(zc).sort((a,b)=>b[1]-a[1])[0][0];
-    LOTES.push({id:lid++,tipo:'dependencia',zona:zonaDom+(Object.keys(zc).length>1?' +':''),sub:'',pvs:bloque.map(p=>p.pv),
-      estado:est, obs: est==='rechazada'?['Falta sello de la dependencia','Falta fecha en hoja 2']:[],
-      fini:'2026-07-06',ffin:'2026-08-10',
-      admin:'Administrador · '+DEPENDENCIA, contratista:EMPRESA});
-  }
-  // ACTAS CON SUBCONTRATISTAS: corte quincenal, variando estados
-  const estadosCon=['aprobada','en_revision','rechazada','por_armar'];
-  let ci=0;
-  Object.keys(SUBS).forEach(s=>{
-    const arr=LECH.filter(p=>p.sub===s&&p.vobo==='ok');
-    if(arr.length){
-      const est=estadosCon[ci%estadosCon.length]; ci++;
-      LOTES.push({id:lid++,tipo:'contratista',zona:SUBS[s],sub:s,pvs:arr.slice(0,15).map(p=>p.pv),
-        estado:est, obs: est==='rechazada'?['Falta firma del residente']:[],
-        fini:'2026-07-06',ffin:'2026-07-20',
-        admin:'Administrador · '+DEPENDENCIA, contratista:s});
-    }
-  });
-})();
-*/
 let LOTES=[];
 /* ---- state ---- */
-let ROLE='sub', CURSUB=Object.keys(SUBS)[0]||'', VIEW='estados', CUR_EST=null, CUR=null, FILTER='all', OFFLINE=false;
+let ROLE='sub',
+    CURSUB=Object.keys(SUBS)[0]||'',
+    VIEW='estados',
+    CUR_EST=null,
+    CUR=null,
+    FILTER='all',
+    SEARCH='';
 let TAB='lista', MAP=null, MAPLAYER=null, MAP_READY=false;
 const ROLEINFO={
   sub:{band:'rb-sub',txt:()=>'Subcontratista · '+CURSUB,hint:'Toca un estado para ver tus lecherías asignadas'},
   gen:{band:'rb-gen',txt:()=>'Contratista general · panel completo',hint:'Vista nacional de los 32 estados y 6 zonas'},
   admin:{band:'rb-admin',txt:()=>'Administrador del contrato · validación',hint:'Otorga Vo.Bo. a lecherías atendidas'},
-  dep:{band:'rb-dep',txt:()=>'Dependencia · solo consulta',hint:'Vista nacional de lectura, sin edición'}
+  dep:{
+  band:'rb-dep',
+  txt:()=>'Dependencia · consulta y revisión de cartas',
+  hint:'Consulta nacional y revisión de cartas DEP'
+  }
 };
 
 function visiblePts(){
@@ -535,7 +615,7 @@ function renderKPI(){
     <div class="kpi"><div class="n">${tot}</div><div class="l">${ROLE==='sub'?'Mi zona':'Cargadas'}</div></div>
     <div class="kpi"><div class="n">${at}</div><div class="l">Atendidas</div></div>
     <div class="kpi"><div class="n acc">${ok}</div><div class="l">Con Vo.Bo.</div></div>
-    <div class="kpi"><div class="n">${ext}</div><div class="l">Extra m²</div></div>`;
+    <div class="kpi"><div class="n">${ext}</div><div class="l">Con Extra</div></div>`;
 }
 
 /* ---- tabs ---- */
@@ -567,19 +647,64 @@ function renderCrumbs(){
   if(VIEW==='estados'){ c.innerHTML=`<b style="color:var(--ink)">${ROLE==='sub'?'Estados de mi zona':'Estados'}</b>`; }
   else c.innerHTML=`<a onclick="goEstados()">Estados</a><span class="sep">›</span><b style="color:var(--ink)">${CUR_EST}</b>`;
 }
+
 function renderFilters(){
-  const f=document.getElementById('filters');
-  if(VIEW==='estados'){ f.innerHTML=`<div class="search"><input placeholder="Buscar estado…" oninput="render()" id="searchBox"></div>`; return; }
-  const cur=FILTER;
-  f.innerHTML=`
+  const f = document.getElementById('filters');
+
+  if(VIEW === 'estados'){
+    f.innerHTML = `
+      <div class="search">
+        <input
+          placeholder="Buscar estado…"
+          oninput="setSearch(this.value)"
+          id="searchBox"
+        >
+      </div>`;
+
+    document.getElementById('searchBox').value = SEARCH;
+    return;
+  }
+
+  const cur = FILTER;
+
+  f.innerHTML = `
     <div class="chip ${cur==='all'?'on':''}" onclick="setFilter('all',this)">Todas</div>
     <div class="chip ${cur==='no'?'on':''}" onclick="setFilter('no',this)">No atendido</div>
     <div class="chip ${cur==='at'?'on':''}" onclick="setFilter('at',this)">Atendido</div>
     <div class="chip ${cur==='wait'?'on':''}" onclick="setFilter('wait',this)">Por Vo.Bo.</div>
     <div class="chip ${cur==='ext'?'on':''}" onclick="setFilter('ext',this)">Extra m²</div>
-    <div class="search"><input placeholder="P.V., calle, colonia…" oninput="render()" id="searchBox"></div>`;
+
+    <div class="search">
+      <input
+        placeholder="P.V., calle, colonia…"
+        oninput="setSearch(this.value)"
+        id="searchBox"
+      >
+    </div>`;
+
+  document.getElementById('searchBox').value = SEARCH;
 }
-function getQ(){ const b=document.getElementById('searchBox'); return b?(b.value||'').toLowerCase():''; }
+
+function getQ(){
+  return SEARCH.trim().toLowerCase();
+}
+
+function setSearch(valor){
+  SEARCH = valor;
+
+  render();
+
+  requestAnimationFrame(() => {
+    const input = document.getElementById('searchBox');
+
+    if(input){
+      input.focus();
+
+      const final = input.value.length;
+      input.setSelectionRange(final, final);
+    }
+  });
+}
 
 function renderEstados(){
   renderCrumbs(); renderFilters();
@@ -604,8 +729,22 @@ function renderEstados(){
     sc.appendChild(d);
   });
 }
-function openEstado(e){ CUR_EST=e; VIEW='puntos'; FILTER='all'; render(); }
-function goEstados(){ VIEW='estados'; CUR_EST=null; render(); }
+
+function openEstado(e){
+  CUR_EST = e;
+  VIEW = 'puntos';
+  FILTER = 'all';
+  SEARCH = '';
+  render();
+}
+
+function goEstados(){
+  VIEW = 'estados';
+  CUR_EST = null;
+  FILTER = 'all';
+  SEARCH = '';
+  render();
+}
 
 function matchF(p){
   if(FILTER==='no')return p.status==='no';
@@ -643,22 +782,26 @@ function renderPuntos(){
 }
 
 /* ---- detail ---- */
-function fakeGeo(f){
-  return{
-    lat: f.lat || '',
-    lng: f.lng || '',
-    fecha: ''
+function fakeGeo(f) {
+  return {
+    lat: f.lat ?? '',
+    lng: f.lng ?? '',
+    fecha: f.fecha
+      ? new Date(f.fecha).toLocaleString('es-MX')
+      : ''
   };
 }
-function photoCard(f){
+
+function photoCard(f) {
   const g = fakeGeo(f);
+
   const catBadge = (f.tipo && f.tipo !== 'general')
     ? `<div style="position:absolute;top:5px;left:5px;
-        background:${f.tipo==='fachada'
-          ?'var(--leche)'
-          :f.tipo==='letrero'
-          ?'var(--extra)'
-          :'var(--steel)'};
+        background:${f.tipo === 'fachada'
+          ? 'var(--leche)'
+          : f.tipo === 'letrero'
+          ? 'var(--extra)'
+          : 'var(--steel)'};
         color:#fff;
         font-size:8px;
         font-weight:800;
@@ -669,17 +812,101 @@ function photoCard(f){
       </div>`
     : '';
 
+  /*
+   * El subcontratista puede borrar mientras el punto
+   * todavía no tenga Vo.Bo. aprobado.
+   */
+  const puedeEliminar =
+    ROLE === 'sub' &&
+    CUR &&
+    CUR.vobo !== 'ok' &&
+    f.id;
+
+  const botonEliminar = puedeEliminar
+    ? `<button
+         type="button"
+         class="ph-delete"
+         title="Eliminar fotografía"
+         onclick="confirmarEliminarFoto(
+           ${Number(f.id)},
+           '${encodeURIComponent(f.url)}'
+         )">×</button>`
+    : '';
+
   return `
     <div class="ph">
       <img loading="lazy" src="${f.url}">
       ${catBadge}
+      ${botonEliminar}
+
       <div class="geo">
-        <div class="c">◉ ${g.lat}, ${g.lng}</div>
+        <div class="c">
+          ${g.lat !== '' && g.lng !== ''
+            ? `◉ ${g.lat}, ${g.lng}`
+            : 'Sin coordenadas'}
+        </div>
+
+        ${g.fecha ? `<div>${g.fecha}</div>` : ''}
       </div>
     </div>`;
 }
-function openSheet(id){
-  CUR=LECH.find(p=>p.id===id); const p=CUR;
+
+async function confirmarEliminarFoto(idFoto, urlCodificada) {
+  if (ROLE !== 'sub' || !CUR) return;
+
+  if (CUR.vobo === 'ok') {
+    toast('No se pueden borrar fotos con Vo.Bo. aprobado');
+    return;
+  }
+
+  const confirmado = window.confirm(
+    '¿Eliminar esta fotografía? Esta acción no se puede deshacer.'
+  );
+
+  if (!confirmado) return;
+
+  const archivoUrl = decodeURIComponent(urlCodificada);
+
+  try {
+    await eliminarFoto(idFoto, archivoUrl);
+
+    const fotos = await cargarFotos(CUR.pv);
+
+    CUR.fotosPrev = fotos.prev;
+    CUR.fotosFin = fotos.fin;
+
+    toast('Fotografía eliminada');
+    await openSheet(CUR.id);
+    render();
+  } catch (error) {
+    console.error(error);
+    toast('No fue posible eliminar la fotografía');
+  }
+}
+
+async function openSheet(id){
+   CUR = LECH.find(p => p.id === id);
+
+  if (!CUR) {
+    toast('No se encontró la lechería');
+    return;
+  }
+
+  try {
+  const [fotos, adjuntos] = await Promise.all([
+    cargarFotos(CUR.pv),
+    cargarAdjuntos(CUR.pv)
+  ]);
+
+  CUR.fotosPrev = fotos.prev;
+  CUR.fotosFin = fotos.fin;
+  CUR.adjuntos = adjuntos;
+  } catch (error) {
+  console.error(error);
+  toast('No fue posible cargar toda la información de la lechería');
+  }
+
+  const p = CUR;
   document.getElementById('shTitle').textContent='P.V. '+p.pv;
   document.getElementById('shSub').textContent=`${p.calle||''} · ${p.municipio}, ${p.estado}`;
   const bd=document.getElementById('shBadge');
@@ -729,8 +956,17 @@ function openSheet(id){
         ?
         `
         <div class="estim-row">
-        <span class="l">📎 Evidencia cargada</span>
-        <span class="v" style="color:var(--done)">✓</span>
+          <a
+            class="l"
+            href="${p.evidencia_url}"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="text-decoration:none"
+          >
+            📎 Abrir evidencia del excedente
+          </a>
+
+          <span class="v" style="color:var(--done)">✓</span>
         </div>
         `
         :
@@ -744,7 +980,14 @@ function openSheet(id){
   const vo=p.vobo;
   const nPrevTL=(p.fotosPrev||[]).length, nFinTL=(p.fotosFin||[]).length;
   const tl=`<div class="sect"><h3>Estatus y validación</h3><div class="tl">
-    <div class="tlrow"><div class="tldot on"></div><div class="tx"><b>Capturado</b><span>${p.cuadrilla} · ${p.zona}</span></div><div class="when">${nPrevTL?'✓':'—'}</div></div>
+    <div class="tlrow">
+    <div class="tldot on"></div>
+    <div class="tx">
+      <b>Capturado</b>
+      <span>${p.sub || 'Sin subcontratista'} · ${p.zona || 'Sin zona'}</span>
+    </div>
+    <div class="when">${nPrevTL ? '✓' : '—'}</div>
+    </div>
     <div class="tlrow"><div class="tldot ${p.status==='at'?'on':''}"></div><div class="tx"><b>Atendido</b><span>${p.status==='at'?nFinTL+' fotos finales':'Pendiente de ejecución'}</span></div><div class="when">${p.status==='at'?'✓':'—'}</div></div>
     <div class="tlrow"><div class="tldot ${vo==='ok'?'on':(vo==='wait'?'wait':'')}"></div><div class="tx"><b>Vo.Bo. administrador</b><span>${
       vo==='ok'?'Aprobado · entra a estimación':vo==='rej'?'Rechazado · corregir':vo==='wait'?'Esperando revisión':'No disponible aún'}</span></div>
@@ -777,11 +1020,96 @@ function openSheet(id){
   const reqTxt = `<div class="photo-req ${reqOk?'ok':''}">${reqDetalle}</div>`;
 
   // adjuntos (documentos y mapas) — el anexo lo exige
-  const adjBlock=`<div class="sect"><h3>Documentos y mapas adjuntos</h3>
+  const adjBlock = `
+  <div class="sect">
+    <h3>Documentos y mapas adjuntos</h3>
     <div style="display:flex;flex-direction:column;gap:6px">
-      ${(p.adjuntos||[]).map(a=>`<div class="estim-row"><span class="l">📎 ${a}</span><span class="v" style="color:var(--done)">cargado</span></div>`).join('')||'<div style="font-size:11px;color:var(--mut)">Sin documentos adjuntos</div>'}
-      ${canPintor?`<div class="acta-upload" style="padding:12px" onclick="addAdjunto()">📎 Adjuntar documento o mapa (PDF, imagen)</div>`:''}
-    </div></div>`;
+      ${
+        (p.adjuntos || []).length
+          ? p.adjuntos.map(adjunto => `
+              <div class="estim-row">
+                <a
+                  class="l"
+                  href="${adjunto.url}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="
+                    flex:1;
+                    min-width:0;
+                    overflow:hidden;
+                    text-overflow:ellipsis;
+                    white-space:nowrap;
+                    text-decoration:none;
+                  "
+                  title="${adjunto.nombre}"
+                >
+                  ${adjunto.tipo === 'mapa' ? '🗺️' : '📎'}
+                  ${adjunto.nombre}
+                </a>
+
+                ${
+                  canPintor &&
+                  p.vobo !== 'ok' &&
+                  adjunto.id
+                    ? `
+                      <button
+                        type="button"
+                        title="Eliminar adjunto"
+                        onclick="
+                          event.preventDefault();
+                          event.stopPropagation();
+                          confirmarEliminarAdjunto(
+                            ${Number(adjunto.id)},
+                            '${encodeURIComponent(adjunto.url)}'
+                          );
+                        "
+                        style="
+                          width:27px;
+                          height:27px;
+                          margin-left:8px;
+                          border:none;
+                          border-radius:50%;
+                          background:var(--rej);
+                          color:#fff;
+                          font-size:16px;
+                          font-weight:800;
+                          cursor:pointer;
+                          flex:0 0 auto;
+                        "
+                      >×</button>
+                    `
+                    : `
+                      <span
+                        class="v"
+                        style="color:var(--done);margin-left:8px"
+                      >✓</span>
+                    `
+                }
+                </div>
+              `).join('')
+            : `
+              <div style="font-size:11px;color:var(--mut)">
+                Sin documentos adjuntos
+              </div>
+            `
+        }
+
+        ${
+          canPintor && p.vobo !== 'ok'
+            ? `
+              <div
+                class="acta-upload"
+                style="padding:12px"
+                onclick="addAdjunto()"
+              >
+                📎 Adjuntar documento o mapa (PDF, imagen)
+              </div>
+            `
+            : ''
+        }
+      </div>
+    </div>
+  `;
 
   let actions='';
   if(ROLE==='sub'){
@@ -910,13 +1238,100 @@ function showMenu(title,html){
     <div class="obschips" style="flex-direction:column">${html}</div></div>`;
   document.body.appendChild(MENU);
 }
+
 function closeMenu(){ if(MENU){MENU.remove();MENU=null;} }
-function addAdjunto(){
-  if(ROLE!=='sub')return;
-  const nombres=['plano_ubicacion.pdf','croquis_acceso.jpg','oficio_dependencia.pdf','mapa_zona.png'];
-  const n=nombres[(CUR.adjuntos||[]).length%nombres.length];
-  (CUR.adjuntos=CUR.adjuntos||[]).push(n);
-  toast('Documento adjuntado'); openSheet(CUR.id);
+
+async function addAdjunto() {
+  if (ROLE !== 'sub' || !CUR) return;
+
+  if (CUR.vobo === 'ok') {
+    toast('No se pueden agregar documentos con Vo.Bo. aprobado');
+    return;
+  }
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf,.jpg,.jpeg,.png';
+
+  input.onchange = async () => {
+    const archivo = input.files?.[0];
+    if (!archivo) return;
+
+    const tiposPermitidos = [
+      'application/pdf',
+      'image/jpeg',
+      'image/png'
+    ];
+
+    if (
+      archivo.type &&
+      !tiposPermitidos.includes(archivo.type)
+    ) {
+      toast('Solo se permiten archivos PDF, JPG o PNG');
+      return;
+    }
+
+    const limiteBytes = 15 * 1024 * 1024;
+
+    if (archivo.size > limiteBytes) {
+      toast('El archivo no debe superar 15 MB');
+      return;
+    }
+
+    const esImagen = archivo.type.startsWith('image/');
+    const tipo = esImagen ? 'mapa' : 'documento';
+
+    try {
+      const adjunto = await subirAdjunto(
+        CUR.pv,
+        tipo,
+        archivo
+      );
+
+      CUR.adjuntos = CUR.adjuntos || [];
+      CUR.adjuntos.push(adjunto);
+
+      toast('Documento adjuntado');
+      await openSheet(CUR.id);
+      render();
+    } catch (error) {
+      console.error(error);
+      toast('No fue posible adjuntar el documento');
+    }
+  };
+
+  input.click();
+}
+
+async function confirmarEliminarAdjunto(idAdjunto, urlCodificada) {
+  if (ROLE !== 'sub' || !CUR) return;
+
+  if (CUR.vobo === 'ok') {
+    toast('No se pueden borrar documentos con Vo.Bo. aprobado');
+    return;
+  }
+
+  const confirmado = window.confirm(
+    '¿Eliminar este documento? Esta acción no se puede deshacer.'
+  );
+
+  if (!confirmado) return;
+
+  try {
+    const archivoUrl = decodeURIComponent(urlCodificada);
+
+    await eliminarAdjunto(idAdjunto, archivoUrl);
+
+    CUR.adjuntos = (CUR.adjuntos || [])
+      .filter(adjunto => adjunto.id !== idAdjunto);
+
+    toast('Documento eliminado');
+    await openSheet(CUR.id);
+    render();
+  } catch (error) {
+    console.error(error);
+    toast('No fue posible eliminar el documento');
+  }
 }
 
 async function addExtraEvidencia() {
@@ -986,21 +1401,49 @@ async function addExtraEvidencia() {
   input.click();
 }
 
-async function markAt(){
-  const nP=(CUR.fotosPrev||[]).length, nF=(CUR.fotosFin||[]).length;
-  if(nP<MIN_FOTOS_PREV){ toast(`Faltan fotos previas (${nP}/${MIN_FOTOS_PREV})`); return; }
-  if(nF<MIN_FOTOS_FIN){ toast(`Faltan fotos finales (${nF}/${MIN_FOTOS_FIN})`); return; }
-  const fc=faltanCatFin(CUR);
-  if(fc.length){ toast('Falta foto obligatoria: '+fc.map(c=>CAT_LABEL[c]).join(', ')); return; }
-  const excedente = Math.max(0, CUR.m2 - M2_STD);
-  if (excedente > 0 && !(CUR.extraEvidencia || []).length) {
-    toast('Falta la evidencia obligatoria del excedente');
+async function markAt() {
+  if (!CUR || ROLE !== 'sub') return;
+
+  const nP = (CUR.fotosPrev || []).length;
+  const nF = (CUR.fotosFin || []).length;
+
+  if (nP < MIN_FOTOS_PREV) {
+    toast(`Faltan fotos previas (${nP}/${MIN_FOTOS_PREV})`);
     return;
   }
-  CUR.status='at'; CUR.vobo='wait'; CUR.freal=(new Date()).toISOString().slice(0,10);
-  toast('✓ Atendido — pasa a Vo.Bo.'); openSheet(CUR.id); render();
-  await guardarAtendido(CUR.pv, CUR.m2);
+
+  if (nF < MIN_FOTOS_FIN) {
+    toast(`Faltan fotos finales (${nF}/${MIN_FOTOS_FIN})`);
+    return;
+  }
+
+  const categoriasFaltantes = faltanCatFin(CUR);
+
+  if (categoriasFaltantes.length) {
+    toast(
+      'Falta foto obligatoria: ' +
+      categoriasFaltantes.map(c => CAT_LABEL[c]).join(', ')
+    );
+    return;
+  }
+
+  try {
+    await guardarAtendido(CUR.pv, CUR.m2);
+
+    CUR.status = 'at';
+    CUR.vobo = 'wait';
+    CUR.motivo = '';
+    CUR.freal = new Date().toISOString().slice(0, 10);
+
+    toast('✓ Atendido — pasa a Vo.Bo.');
+    await openSheet(CUR.id);
+    render();
+  } catch (error) {
+    console.error(error);
+    toast('No fue posible marcar la lechería como atendida');
+  }
 }
+
 async function setM2(v) {
   const m2Anterior = CUR.m2;
 
@@ -1030,17 +1473,102 @@ async function setM2(v) {
   }
 }
 
-async function vobo(ok){
-  if(ok){ CUR.vobo='ok'; CUR.motivo=''; toast('✅ Vo.Bo. otorgado — entra a estimación'); openSheet(CUR.id); render(); return; }
-  // rechazo: exigir motivo
-  const ta=document.getElementById('rejMotivo');
-  const m=ta?ta.value.trim():'';
-  if(!m){ toast('Escribe el motivo del rechazo'); if(ta) ta.focus(); return; }
-  CUR.vobo='rej'; CUR.motivo=m; toast('Rechazado — regresa a cuadrilla'); openSheet(CUR.id); render();
-  await guardarVobo(CUR.pv, ok, motivo);
+async function vobo(aprobado) {
+  if (!CUR || ROLE !== 'admin') return;
+
+  if (aprobado) {
+    try {
+      await guardarVobo(CUR.pv, 'ok');
+
+      CUR.vobo = 'ok';
+      CUR.motivo = '';
+
+      toast('✅ Vo.Bo. otorgado — entra a estimación');
+      await openSheet(CUR.id);
+      render();
+    } catch (error) {
+      console.error(error);
+      toast('No fue posible otorgar el Vo.Bo.');
+    }
+
+    return;
+  }
+
+  const textarea = document.getElementById('rejMotivo');
+  const motivo = textarea ? textarea.value.trim() : '';
+
+  if (!motivo) {
+    toast('Escribe el motivo del rechazo');
+
+    if (textarea) {
+      textarea.focus();
+    }
+
+    return;
+  }
+
+  try {
+    await guardarVobo(CUR.pv, 'rej', motivo);
+
+    CUR.vobo = 'rej';
+    CUR.motivo = motivo;
+
+    toast('Rechazado — regresa al subcontratista');
+    await openSheet(CUR.id);
+    render();
+  } catch (error) {
+    console.error(error);
+    toast('No fue posible rechazar la lechería');
+  }
 }
+
 function toggleRej(){ const b=document.getElementById('rejWrap'); if(b) b.style.display = b.style.display==='none'?'block':'none'; }
-function resend(){ CUR.vobo='wait'; toast('Reenviado a Vo.Bo.'); openSheet(CUR.id); render(); }
+
+async function resend() {
+  if (!CUR || ROLE !== 'sub') return;
+
+  if (CUR.vobo !== 'rej') {
+    toast('Esta lechería no está rechazada');
+    return;
+  }
+
+  const nP = (CUR.fotosPrev || []).length;
+  const nF = (CUR.fotosFin || []).length;
+  const categoriasFaltantes = faltanCatFin(CUR);
+
+  if (nP < MIN_FOTOS_PREV) {
+    toast(`Faltan fotos previas (${nP}/${MIN_FOTOS_PREV})`);
+    return;
+  }
+
+  if (nF < MIN_FOTOS_FIN) {
+    toast(`Faltan fotos finales (${nF}/${MIN_FOTOS_FIN})`);
+    return;
+  }
+
+  if (categoriasFaltantes.length) {
+    toast(
+      'Falta foto obligatoria: ' +
+      categoriasFaltantes.map(c => CAT_LABEL[c]).join(', ')
+    );
+    return;
+  }
+
+  try {
+    await guardarVobo(CUR.pv, 'wait');
+
+    CUR.vobo = 'wait';
+    CUR.motivo = '';
+
+    toast('Reenviado a revisión');
+    await openSheet(CUR.id);
+    render();
+  } catch (error) {
+    console.error(error);
+    toast('No fue posible reenviar la lechería');
+  }
+}
+
 function closeSheet(){ document.getElementById('sheet').classList.remove('show'); CUR=null; }
 
 /* ============ MAPA ============ */
@@ -1117,89 +1645,546 @@ function renderTablero(){
   });
 }
 
-/* ============ ESTIMACIÓN + exportación ============ */
-function estimData(){
-  const pts=visiblePts();
-  const aprob=pts.filter(p=>p.vobo==='ok');
-  const cobrable=aprob.filter(p=>p.acta==='aprobada');
-  const unidades=aprob.length;
-  const cobUnid=cobrable.length;
-  const monto=unidades*PRECIO_FACHADA;
-  const montoCob=cobUnid*PRECIO_FACHADA;
-  const ivaCob=montoCob*IVA, totalCob=montoCob+ivaCob;
-  // EXTRAORDINARIOS = costo interno hacia subcontratistas (NO a la dependencia)
-  // se calcula sobre lo atendido con excedente, agrupado por subcontratista con su precio
-  const extras=pts.filter(p=>p.status==='at'&&p.m2>M2_STD).map(p=>({pv:p.pv,estado:p.estado,municipio:p.municipio,sub:p.sub,exc:p.m2-M2_STD,precio:precioExtraSub(p.sub),importe:(p.m2-M2_STD)*precioExtraSub(p.sub),evidencia:(p.extraEvidencia||[]).length>0}));
-  const m2extra=extras.reduce((s,e)=>s+e.exc,0);
-  const costoExtra=extras.reduce((s,e)=>s+e.importe,0);
-  // agrupado por subcontratista
-  const extraPorSub={};
-  extras.forEach(e=>{ (extraPorSub[e.sub]=extraPorSub[e.sub]||{m2:0,importe:0,n:0,sinEv:0}); extraPorSub[e.sub].m2+=e.exc; extraPorSub[e.sub].importe+=e.importe; extraPorSub[e.sub].n++; if(!e.evidencia)extraPorSub[e.sub].sinEv++; });
-  return {pts,aprob,cobrable,unidades,cobUnid,monto,montoCob,ivaCob,totalCob,extras,m2extra,costoExtra,extraPorSub};
+function money(valor) {
+  const numero = Number(valor || 0);
+
+  return numero.toLocaleString(
+    'es-MX',
+    {
+      style: 'currency',
+      currency: 'MXN',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }
+  );
 }
-function money(n){ return '$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function renderEstim(){
-  document.getElementById('crumbs').style.display='none';
-  document.getElementById('filters').style.display='none';
-  const d=estimData();
-  const sc=document.getElementById('scroll'); sc.innerHTML='';
-  const alcance = ROLE==='sub' ? CURSUB : 'Nacional (todas las zonas)';
-  // facturación: solo cobrable, en múltiplos del mínimo (50)
-  const facturables=Math.floor(d.cobUnid/MIN_FACTURA)*MIN_FACTURA;
-  const montoFacturable=facturables*PRECIO_FACHADA;
-  const enEspera=d.cobUnid-facturables; // cobrables que aún no llegan a otro bloque de 50
-  const wrap=document.createElement('div');
-  // extraordinarios internos por subcontratista
-  let extraRows='';
-  const subsExtra=Object.keys(d.extraPorSub).sort();
-  if(subsExtra.length){
-    extraRows=subsExtra.map(s=>{
-      const e=d.extraPorSub[s];
-      return `<div class="estim-row extra-row"><span class="l">${s} · ${e.m2} m² (${e.n} lech.)${e.sinEv?` · <span style="color:var(--rej)">${e.sinEv} sin evidencia</span>`:''}</span><span class="v">${money(e.importe)}</span></div>`;
-    }).join('');
-  } else {
-    extraRows='<div style="font-size:12px;color:var(--mut);padding:2px">Sin excedentes registrados.</div>';
+
+function etiquetaEstadoCarta(estado) {
+  const etiquetas = {
+    aprobada: 'Aprobada',
+    en_revision: 'En revisión',
+    rechazada: 'Rechazada',
+    por_armar: 'Por armar'
+  };
+
+  return etiquetas[estado] || estado || 'Sin estado';
+}
+
+function claseEstadoCarta(estado) {
+  const clases = {
+    aprobada: 'ab-ap',
+    en_revision: 'ab-rev',
+    rechazada: 'ab-rej',
+    por_armar: 'ab-arm'
+  };
+
+  return clases[estado] || 'ab-arm';
+}
+
+function detalleExcedentes(datos) {
+  const grupos = {};
+
+  (datos.extras || []).forEach(extra => {
+    const sub = extra.sub || 'Sin subcontratista';
+
+    if (!grupos[sub]) {
+      grupos[sub] = {
+        m2: 0,
+        importe: 0,
+        cantidad: 0,
+        sinEvidencia: 0
+      };
+    }
+
+    const precio =
+      Number(extra.precio_m2) ||
+      precioExtraSub(sub);
+
+    const m2 =
+      Number(extra.m2_excedente) || 0;
+
+    grupos[sub].m2 += m2;
+
+    grupos[sub].importe +=
+      m2 * precio;
+
+    grupos[sub].cantidad += 1;
+
+    if (!extra.evidencia_url) {
+      grupos[sub].sinEvidencia += 1;
+    }
+  });
+
+  return grupos;
+}
+
+async function renderEstim() {
+  document.getElementById('crumbs').style.display =
+    'none';
+
+  document.getElementById('filters').style.display =
+    'none';
+
+  const sc =
+    document.getElementById('scroll');
+
+  sc.innerHTML = `
+    <div
+      style="
+        text-align:center;
+        color:var(--mut);
+        padding:45px 15px
+      "
+    >
+      Cargando estimación…
+    </div>
+  `;
+
+  try {
+    ESTIMACION =
+      await obtenerEstimacion();
+
+  } catch (error) {
+    console.error(
+      'No fue posible cargar la estimación:',
+      error
+    );
+
+    ESTIMACION = null;
+
+    sc.innerHTML = `
+      <div
+        style="
+          text-align:center;
+          color:var(--rej);
+          padding:40px 15px
+        "
+      >
+        No fue posible cargar la estimación.
+        <br><br>
+
+        <button
+          class="btn btn-leche"
+          onclick="renderEstim()"
+        >
+          Reintentar
+        </button>
+      </div>
+    `;
+
+    toast(
+      error.message ||
+      'No fue posible cargar la estimación'
+    );
+
+    return;
   }
-  wrap.innerHTML=`
+
+  /*
+   * Evita pintar la estimación si el usuario cambió
+   * de pestaña mientras cargaba.
+   */
+  if (TAB !== 'estim') {
+    return;
+  }
+
+  const datos = ESTIMACION;
+
+  const resumen =
+    datos.resumen || {};
+
+  const cartas =
+    Array.isArray(datos.cartas)
+      ? datos.cartas
+      : [];
+
+  const extras =
+    Array.isArray(datos.extras)
+      ? datos.extras
+      : [];
+
+  const gruposExtra =
+    detalleExcedentes(datos);
+
+  const totalM2Extra =
+    extras.reduce(
+      (suma, extra) =>
+        suma +
+        Number(extra.m2_excedente || 0),
+      0
+    );
+
+  const totalCostoExtra =
+    Object.values(gruposExtra).reduce(
+      (suma, grupo) =>
+        suma + grupo.importe,
+      0
+    );
+
+  const cartasHTML =
+    cartas.length
+      ? cartas.map(carta => `
+          <div class="lotecard">
+            <div class="top">
+              <div class="ic ic-dep">
+                📄
+              </div>
+
+              <div class="nm">
+                <b>
+                  ${carta.numero || 'Carta sin folio'}
+                </b>
+
+                <span>
+                  ${carta.fini || '—'}
+                  al
+                  ${carta.ffin || '—'}
+                </span>
+              </div>
+
+              <span
+                class="
+                  acta-badge
+                  ${claseEstadoCarta(carta.estado)}
+                "
+              >
+                ${etiquetaEstadoCarta(carta.estado)}
+              </span>
+            </div>
+
+            <div class="foot">
+              <div class="f">
+                <div class="v">
+                  ${Number(
+                    carta.cantidad_visible || 0
+                  )}
+                </div>
+
+                <div class="k">
+                  Lecherías
+                </div>
+              </div>
+
+              <div class="f">
+                <div class="v">
+                  ${money(carta.monto_visible)}
+                </div>
+
+                <div class="k">
+                  Importe
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('')
+      : `
+          <div
+            style="
+              font-size:12px;
+              color:var(--mut);
+              padding:8px 2px
+            "
+          >
+            Todavía no existen cartas para la dependencia.
+          </div>
+        `;
+
+  const extrasHTML =
+    Object.keys(gruposExtra).length
+      ? Object.keys(gruposExtra)
+          .sort()
+          .map(sub => {
+            const grupo =
+              gruposExtra[sub];
+
+            return `
+              <div class="estim-row extra-row">
+                <span class="l">
+                  ${sub}
+                  ·
+                  ${grupo.m2.toFixed(2)} m²
+                  (${grupo.cantidad} lech.)
+
+                  ${
+                    grupo.sinEvidencia
+                      ? `
+                        ·
+                        <span
+                          style="color:var(--rej)"
+                        >
+                          ${grupo.sinEvidencia}
+                          sin evidencia
+                        </span>
+                      `
+                      : ''
+                  }
+                </span>
+
+                <span class="v">
+                  ${money(grupo.importe)}
+                </span>
+              </div>
+            `;
+          })
+          .join('')
+      : `
+          <div
+            style="
+              font-size:12px;
+              color:var(--mut);
+              padding:4px 2px
+            "
+          >
+            Sin excedentes registrados.
+          </div>
+        `;
+
+  const wrap =
+    document.createElement('div');
+
+  wrap.innerHTML = `
     <div class="estim-hero">
-      <div class="lbl">Facturable a la dependencia · ${alcance}</div>
-      <div class="amt">${money(montoFacturable*(1+IVA))}</div>
-      <div class="sub">${facturables} lecherías · ${money(montoFacturable)} + IVA</div>
+      <div class="lbl">
+        Total aprobado para cobro
+        ·
+        ${datos.alcance || 'Nacional'}
+      </div>
+
+      <div class="amt">
+        ${money(resumen.total)}
+      </div>
+
+      <div class="sub">
+        ${Number(resumen.cobrables || 0)}
+        lecherías
+        ·
+        ${money(resumen.subtotal)}
+        + IVA
+      </div>
     </div>
-    <div class="cobro-flag"><span class="k" style="background:${facturables>0?'var(--done)':'var(--wait)'}"></span>
-      ${facturables>0?`Se pueden facturar <b style="margin:0 3px">${facturables}</b> lecherías`:`Aún no se alcanza el mínimo de ${MIN_FACTURA} para facturar`}</div>
-    ${enEspera>0?`<div class="cobro-flag"><span class="k" style="background:var(--wait)"></span>Cobrables en espera de completar el siguiente bloque de ${MIN_FACTURA}: <b style="margin-left:4px">${enEspera}</b></div>`:''}
 
-    <div class="sectlabel">Cobro a la dependencia (precio fijo por unidad estándar)</div>
-    <div class="estim-row"><span class="l">Atendidas con Vo.Bo.</span><span class="v">${d.unidades}</span></div>
-    <div class="estim-row"><span class="l">Con acta aprobada (cobrable)</span><span class="v">${d.cobUnid}</span></div>
-    <div class="estim-row"><span class="l">Facturables (múltiplos de ${MIN_FACTURA})</span><span class="v">${facturables}</span></div>
-    <div class="estim-row"><span class="l">Precio unitario (21 m²)</span><span class="v">${money(PRECIO_FACHADA)}</span></div>
-    <div class="estim-row"><span class="l">Subtotal</span><span class="v">${money(montoFacturable)}</span></div>
-    <div class="estim-row"><span class="l">IVA (16%)</span><span class="v">${money(montoFacturable*IVA)}</span></div>
-    <div class="estim-row tot"><span class="l">Total a facturar</span><span class="v">${money(montoFacturable*(1+IVA))}</span></div>
-    <div style="font-size:11px;color:var(--mut);padding:4px 2px 0">No se pueden ingresar facturas por menos de ${MIN_FACTURA} lecherías (ajustable con la dependencia). El CFDI se emite por fuera; el sistema arma acta + reporte fotográfico + monto.</div>
+    <div class="cobro-flag">
+      <span
+        class="k"
+        style="
+          background:
+          ${
+            Number(resumen.cartas_aprobadas || 0) > 0
+              ? 'var(--done)'
+              : 'var(--wait)'
+          }
+        "
+      ></span>
 
-    <div class="sectlabel">Excedentes — pago a subcontratistas (control interno)</div>
-    <div style="font-size:11px;color:var(--mut);margin-bottom:6px">La dependencia NO paga esto. Es lo que tú pagas a cada subcontratista por m² adicional ejecutado, con evidencia.</div>
-    ${extraRows}
-    <div class="estim-row tot" style="border-left:3px solid var(--extra)"><span class="l">Total excedentes (${d.m2extra} m²)</span><span class="v">${money(d.costoExtra)}</span></div>
+      ${
+        Number(resumen.cartas_aprobadas || 0) > 0
+          ? `
+            <b>
+              ${Number(resumen.cartas_aprobadas || 0)}
+            </b>
 
-    <div class="sectlabel">Reportes</div>
-    <div style="font-size:11px;color:var(--mut);margin-bottom:8px">Interno: control del contratista general. Externo: paquete para la dependencia.</div>
-    <div class="expbtns">
-      <button class="expbtn exp-xlsx" onclick="exportXLSX()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Excel interno</button>
-      <button class="expbtn exp-pdf" onclick="exportEstimPDF()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>PDF dependencia</button>
+            ${
+              Number(resumen.cartas_aprobadas || 0) === 1
+                ? 'carta aprobada lista para cobro.'
+                : 'cartas aprobadas listas para cobro.'
+            }
+          `
+          : `
+            Aún no hay cartas DEP aprobadas para cobro.
+          `
+      }
     </div>
-    <button class="expbtn" style="background:var(--navy);color:#fff;width:100%;margin:2px 0" onclick="exportReporteInterno()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Reporte interno completo (Excel)</button>
+
+    <div class="sectlabel">
+      Resumen financiero
+    </div>
+
+    <div class="estim-row">
+      <span class="l">
+        Lecherías con Vo.Bo.
+      </span>
+
+      <span class="v">
+        ${Number(resumen.con_vobo || 0)}
+      </span>
+    </div>
+
+    <div class="estim-row">
+      <span class="l">
+        Lecherías en cartas aprobadas
+      </span>
+
+      <span class="v">
+        ${Number(resumen.cobrables || 0)}
+      </span>
+    </div>
+
+    <div class="estim-row">
+      <span class="l">
+        Subtotal aprobado
+      </span>
+
+      <span class="v">
+        ${money(resumen.subtotal)}
+      </span>
+    </div>
+
+    <div class="estim-row">
+      <span class="l">
+        IVA 16%
+      </span>
+
+      <span class="v">
+        ${money(resumen.iva)}
+      </span>
+    </div>
+
+    <div class="estim-row tot">
+      <span class="l">
+        Total aprobado
+      </span>
+
+      <span class="v">
+        ${money(resumen.total)}
+      </span>
+    </div>
+
+    <div class="sectlabel">
+      Estado de las cartas DEP
+    </div>
+
+    <div class="progsum">
+      <div class="s">
+        <div
+          class="v"
+          style="color:var(--done)"
+        >
+          ${Number(resumen.cartas_aprobadas || 0)}
+        </div>
+
+        <div class="k">
+          Aprobadas
+        </div>
+      </div>
+
+      <div class="s">
+        <div
+          class="v"
+          style="color:var(--wait)"
+        >
+          ${Number(resumen.cartas_revision || 0)}
+        </div>
+
+        <div class="k">
+          En revisión
+        </div>
+      </div>
+
+      <div class="s">
+        <div
+          class="v"
+          style="color:var(--rej)"
+        >
+          ${Number(resumen.cartas_rechazadas || 0)}
+        </div>
+
+        <div class="k">
+          Rechazadas
+        </div>
+      </div>
+
+      <div class="s">
+        <div
+          class="v"
+          style="color:var(--mut)"
+        >
+          ${Number(resumen.cartas_por_armar || 0)}
+        </div>
+
+        <div class="k">
+          Por armar
+        </div>
+      </div>
+    </div>
+
+    <div class="sectlabel">
+      Cartas para la dependencia
+    </div>
+
+    ${cartasHTML}
+
+    <div class="sectlabel">
+      Excedentes
+      ·
+      pago interno a subcontratistas
+    </div>
+
+    <div
+      style="
+        font-size:11px;
+        color:var(--mut);
+        margin-bottom:7px
+      "
+    >
+      Estos importes no forman parte del cobro a la
+      dependencia.
+    </div>
+
+    ${extrasHTML}
+
+    <div
+      class="estim-row tot"
+      style="
+        border-left:
+        3px solid var(--extra)
+      "
+    >
+      <span class="l">
+        Total excedentes
+        (${totalM2Extra.toFixed(2)} m²)
+      </span>
+
+      <span class="v">
+        ${money(totalCostoExtra)}
+      </span>
+    </div>
+
+    <div class="sectlabel">
+      Exportación
+    </div>
+
     <div class="expbtns">
-      <button class="expbtn" style="background:var(--steel);color:#fff" onclick="reporteSemanal()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Reporte semanal</button>
-      <button class="expbtn" style="background:var(--steel);color:#fff" onclick="reporteMensual()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Reporte mensual</button>
-    </div>`;
+      <button
+        class="expbtn exp-xlsx"
+        onclick="exportXLSX()"
+      >
+        <svg viewBox="0 0 24 24">
+          <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
+        </svg>
+
+        Excel
+      </button>
+
+      <button
+        class="expbtn exp-pdf"
+        onclick="exportEstimPDF()"
+      >
+        <svg viewBox="0 0 24 24">
+          <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
+        </svg>
+
+        PDF
+      </button>
+    </div>
+  `;
+
+  sc.innerHTML = '';
   sc.appendChild(wrap);
 }
+
 function reporteSemanal(){ reportePeriodo('semanal'); }
 function reporteMensual(){ reportePeriodo('mensual'); }
+
 function reportePeriodo(tipo){
   const {jsPDF}=window.jspdf; const doc=new jsPDF();
   const pts=visiblePts();
@@ -1259,67 +2244,529 @@ function exportReporteInterno(){
   XLSX.writeFile(wb,`Reporte_interno_${new Date().toISOString().slice(0,10)}.xlsx`);
   toast('Reporte interno completo generado');
 }
-function exportXLSX(){
-  const d=estimData();
-  const rows=d.aprob.map(p=>({
-    'Clave P.V.':p.pv,'Entidad':p.estado,'Municipio':p.municipio,'Calle':p.calle,
-    'Zona':p.zona,'Subcontratista':p.sub,'m² estándar':M2_STD,'m² real':p.m2,
-    'Excedente m²':Math.max(0,p.m2-M2_STD),'Precio unitario':PRECIO_FACHADA,'Acta':p.acta,'Estatus':'Aprobado Vo.Bo.'
-  }));
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Cobro dependencia');
-  // hoja de excedentes internos (pago a subcontratistas)
-  const ex=d.extras.map(e=>({'Clave P.V.':e.pv,'Entidad':e.estado,'Municipio':e.municipio,'Subcontratista':e.sub,'Excedente m²':e.exc,'Precio m²':e.precio,'Importe a pagar':e.importe,'Evidencia':e.evidencia?'Sí':'FALTA'}));
-  if(ex.length){ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ex),'Excedentes (a subcontr.)'); }
-  // resumen
-  const fact=Math.floor(d.cobUnid/MIN_FACTURA)*MIN_FACTURA;
-  const res=[
-    {'Concepto':'Atendidas con Vo.Bo.','Valor':d.unidades},
-    {'Concepto':'Cobrables (acta ok)','Valor':d.cobUnid},
-    {'Concepto':'Facturables (múltiplos de '+MIN_FACTURA+')','Valor':fact},
-    {'Concepto':'Precio unitario (21 m²)','Valor':PRECIO_FACHADA},
-    {'Concepto':'Subtotal a facturar','Valor':fact*PRECIO_FACHADA},
-    {'Concepto':'IVA 16%','Valor':fact*PRECIO_FACHADA*IVA},
-    {'Concepto':'Total a facturar','Valor':fact*PRECIO_FACHADA*(1+IVA)},
-    {'Concepto':'— Excedentes a subcontratistas (interno) —','Valor':''},
-    {'Concepto':'m² excedentes','Valor':d.m2extra},
-    {'Concepto':'Costo excedentes','Valor':d.costoExtra}
+
+function exportXLSX() {
+  if (!ESTIMACION) {
+    toast('Abre primero el módulo de estimaciones');
+    return;
+  }
+
+  const datos =
+    ESTIMACION;
+
+  const resumen =
+    datos.resumen || {};
+
+  const cartas =
+    datos.cartas || [];
+
+  const lecherias =
+    datos.lecherias || [];
+
+  const extras =
+    datos.extras || [];
+
+  const wb =
+    XLSX.utils.book_new();
+
+  /*
+   * Hoja 1: resumen.
+   */
+  const filasResumen = [
+    {
+      Concepto: 'Alcance',
+      Valor: datos.alcance || 'Nacional'
+    },
+    {
+      Concepto: 'Lecherías con Vo.Bo.',
+      Valor: Number(resumen.con_vobo || 0)
+    },
+    {
+      Concepto: 'Lecherías cobrables',
+      Valor: Number(resumen.cobrables || 0)
+    },
+    {
+      Concepto: 'Cartas aprobadas',
+      Valor: Number(
+        resumen.cartas_aprobadas || 0
+      )
+    },
+    {
+      Concepto: 'Cartas en revisión',
+      Valor: Number(
+        resumen.cartas_revision || 0
+      )
+    },
+    {
+      Concepto: 'Cartas rechazadas',
+      Valor: Number(
+        resumen.cartas_rechazadas || 0
+      )
+    },
+    {
+      Concepto: 'Subtotal',
+      Valor: Number(resumen.subtotal || 0)
+    },
+    {
+      Concepto: 'IVA 16%',
+      Valor: Number(resumen.iva || 0)
+    },
+    {
+      Concepto: 'Total',
+      Valor: Number(resumen.total || 0)
+    }
   ];
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(res),'Resumen');
-  const tag = ROLE==='sub'?CURSUB.replace(/[^0-9A-Za-z]/g,''):'Nacional';
-  XLSX.writeFile(wb,`Estimacion_${tag}_${new Date().toISOString().slice(0,10)}.xlsx`);
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.json_to_sheet(filasResumen),
+    'Resumen'
+  );
+
+  /*
+   * Hoja 2: cartas.
+   */
+  const filasCartas =
+    cartas.map(carta => ({
+      Folio:
+        carta.numero || '',
+
+      Estado:
+        etiquetaEstadoCarta(carta.estado),
+
+      Inicio:
+        carta.fini || '',
+
+      Termino:
+        carta.ffin || '',
+
+      Zona:
+        carta.zona || '',
+
+      'Lecherías':
+        Number(carta.cantidad_visible || 0),
+
+      Importe:
+        Number(carta.monto_visible || 0),
+
+      Documento:
+        carta.documento_url || ''
+    }));
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.json_to_sheet(filasCartas),
+    'Cartas DEP'
+  );
+
+  /*
+   * Hoja 3: P.V. cobrables.
+   */
+  const filasLecherias =
+    lecherias.map(p => ({
+      Carta:
+        p.numero || '',
+
+      'Clave P.V.':
+        p.pv || '',
+
+      Entidad:
+        p.estado || '',
+
+      Municipio:
+        p.municipio || '',
+
+      Localidad:
+        p.localidad || '',
+
+      Zona:
+        p.zona || '',
+
+      Subcontratista:
+        p.sub || '',
+
+      'm²':
+        Number(p.m2 || M2_STD),
+
+      'Fecha real':
+        p.freal || '',
+
+      'Monto unitario':
+        Number(p.monto_unitario || 0)
+    }));
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.json_to_sheet(filasLecherias),
+    'Lecherías cobrables'
+  );
+
+  /*
+   * Hoja 4: excedentes.
+   */
+  const filasExtras =
+    extras.map(extra => {
+      const precio =
+        Number(extra.precio_m2) ||
+        precioExtraSub(extra.sub);
+
+      const m2 =
+        Number(extra.m2_excedente || 0);
+
+      return {
+        'Clave P.V.':
+          extra.pv || '',
+
+        Entidad:
+          extra.estado || '',
+
+        Municipio:
+          extra.municipio || '',
+
+        Zona:
+          extra.zona || '',
+
+        Subcontratista:
+          extra.sub || '',
+
+        'm² real':
+          Number(extra.m2_real || M2_STD),
+
+        'm² excedente':
+          m2,
+
+        'Precio por m²':
+          precio,
+
+        Importe:
+          m2 * precio,
+
+        Evidencia:
+          extra.evidencia_url
+            ? 'Sí'
+            : 'FALTA',
+
+        'URL evidencia':
+          extra.evidencia_url || ''
+      };
+    });
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.json_to_sheet(filasExtras),
+    'Excedentes'
+  );
+
+  const fecha =
+    new Date()
+      .toISOString()
+      .slice(0, 10);
+
+  const alcanceSeguro =
+    String(datos.alcance || 'Nacional')
+      .replace(/[^0-9A-Za-z_-]/g, '_');
+
+  XLSX.writeFile(
+    wb,
+    `Estimacion_${alcanceSeguro}_${fecha}.xlsx`
+  );
+
   toast('Excel de estimación generado');
 }
-function exportEstimPDF(){
-  const {jsPDF}=window.jspdf; const doc=new jsPDF();
-  const d=estimData();
-  const alcance = ROLE==='sub' ? CURSUB : 'Nacional';
-  doc.setFillColor(13,27,42); doc.rect(0,0,210,32,'F');
-  doc.setTextColor(255); doc.setFontSize(15); doc.setFont(undefined,'bold');
-  doc.text('Estimación de obra — Pintura de fachadas',12,12);
-  doc.setFontSize(8); doc.setFont(undefined,'normal');
-  doc.text('Proc. '+PROCEDIMIENTO+' · Alcance: '+alcance,12,18);
-  doc.text('Prestador: '+EMPRESA+' · RFC '+EMPRESA_RFC,12,23);
-  doc.text('Dependencia: '+DEPENDENCIA,12,28);
-  doc.setTextColor(20);
-  let y=44;
-  doc.setFontSize(11); doc.setFont(undefined,'bold'); doc.text('Resumen',12,y); y+=7;
-  doc.setFont(undefined,'normal'); doc.setFontSize(10);
-  const fact=Math.floor(d.cobUnid/MIN_FACTURA)*MIN_FACTURA;
-  const L=[['Atendidas con Vo.Bo.',String(d.unidades)],['Cobrables (acta aprobada)',String(d.cobUnid)],['Facturables (múltiplos de '+MIN_FACTURA+')',String(fact)],['Precio unitario (21 m²)',money(PRECIO_FACHADA)],['Subtotal',money(fact*PRECIO_FACHADA)],['IVA (16%)',money(fact*PRECIO_FACHADA*IVA)],['Total a facturar',money(fact*PRECIO_FACHADA*(1+IVA))]];
-  L.forEach(([k,v])=>{ doc.text(k,14,y); doc.text(v,150,y); y+=6; });
-  y+=4; doc.setFont(undefined,'bold'); doc.setFontSize(11); doc.text('Detalle de lecherías aprobadas',12,y); y+=6;
-  doc.setFontSize(8); doc.setFont(undefined,'bold');
-  doc.text('P.V.',12,y); doc.text('Entidad',40,y); doc.text('Municipio',75,y); doc.text('m²',150,y); doc.text('Exc.',168,y); y+=1;
-  doc.setDrawColor(200); doc.line(12,y,198,y); y+=4;
-  doc.setFont(undefined,'normal');
-  d.aprob.slice(0,300).forEach(p=>{
-    if(y>282){ doc.addPage(); y=18; }
-    doc.text(p.pv,12,y); doc.text((p.estado||'').slice(0,18),40,y); doc.text((p.municipio||'').slice(0,28),75,y);
-    doc.text(String(p.m2),150,y); doc.text(p.m2>M2_STD?('+'+(p.m2-M2_STD)):'—',168,y); y+=5;
+
+function exportEstimPDF() {
+  if (!ESTIMACION) {
+    toast('Abre primero el módulo de estimaciones');
+    return;
+  }
+
+  const { jsPDF } =
+    window.jspdf;
+
+  const doc =
+    new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+  const datos =
+    ESTIMACION;
+
+  const resumen =
+    datos.resumen || {};
+
+  const cartas =
+    datos.cartas || [];
+
+  const lecherias =
+    datos.lecherias || [];
+
+  /*
+   * Encabezado.
+   */
+  doc.setFillColor(13, 27, 42);
+  doc.rect(0, 0, 210, 34, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont(undefined, 'bold');
+  doc.setFontSize(15);
+
+  doc.text(
+    'Estimación de obra',
+    12,
+    12
+  );
+
+  doc.setFont(undefined, 'normal');
+  doc.setFontSize(8);
+
+  doc.text(
+    `Proc. ${PROCEDIMIENTO}`,
+    12,
+    19
+  );
+
+  doc.text(
+    `Prestador: ${EMPRESA} · RFC ${EMPRESA_RFC}`,
+    12,
+    24
+  );
+
+  doc.text(
+    `Dependencia: ${DEPENDENCIA}`,
+    12,
+    29
+  );
+
+  doc.setTextColor(20, 20, 20);
+
+  let y = 44;
+
+  /*
+   * Resumen.
+   */
+  doc.setFont(undefined, 'bold');
+  doc.setFontSize(11);
+
+  doc.text(
+    `Resumen · ${datos.alcance || 'Nacional'}`,
+    12,
+    y
+  );
+
+  y += 8;
+
+  doc.setFont(undefined, 'normal');
+  doc.setFontSize(10);
+
+  const filas = [
+    [
+      'Lecherías con Vo.Bo.',
+      String(resumen.con_vobo || 0)
+    ],
+    [
+      'Lecherías en cartas aprobadas',
+      String(resumen.cobrables || 0)
+    ],
+    [
+      'Cartas DEP aprobadas',
+      String(resumen.cartas_aprobadas || 0)
+    ],
+    [
+      'Subtotal',
+      money(resumen.subtotal)
+    ],
+    [
+      'IVA 16%',
+      money(resumen.iva)
+    ],
+    [
+      'Total aprobado',
+      money(resumen.total)
+    ]
+  ];
+
+  filas.forEach(([etiqueta, valor]) => {
+    doc.text(
+      etiqueta,
+      14,
+      y
+    );
+
+    doc.text(
+      valor,
+      196,
+      y,
+      {
+        align: 'right'
+      }
+    );
+
+    y += 7;
   });
-  const tag = ROLE==='sub'?CURSUB.replace(/[^0-9A-Za-z]/g,''):'Nacional';
-  doc.save(`Estimacion_${tag}_${new Date().toISOString().slice(0,10)}.pdf`);
+
+  /*
+   * Cartas DEP.
+   */
+  y += 4;
+
+  doc.setFont(undefined, 'bold');
+  doc.setFontSize(11);
+
+  doc.text(
+    'Relación de cartas DEP',
+    12,
+    y
+  );
+
+  y += 7;
+
+  doc.setFontSize(8);
+
+  doc.text('Folio', 12, y);
+  doc.text('Periodo', 43, y);
+  doc.text('Estado', 100, y);
+  doc.text('P.V.', 145, y);
+  doc.text('Importe', 196, y, {
+    align: 'right'
+  });
+
+  y += 5;
+
+  doc.setFont(undefined, 'normal');
+
+  cartas.forEach(carta => {
+    if (y > 282) {
+      doc.addPage();
+      y = 18;
+    }
+
+    doc.text(
+      String(carta.numero || '').slice(0, 18),
+      12,
+      y
+    );
+
+    doc.text(
+      `${carta.fini || '—'} / ${carta.ffin || '—'}`,
+      43,
+      y
+    );
+
+    doc.text(
+      etiquetaEstadoCarta(carta.estado),
+      100,
+      y
+    );
+
+    doc.text(
+      String(carta.cantidad_visible || 0),
+      145,
+      y
+    );
+
+    doc.text(
+      money(carta.monto_visible),
+      196,
+      y,
+      {
+        align: 'right'
+      }
+    );
+
+    y += 5;
+  });
+
+  /*
+   * Lecherías cobrables.
+   */
+  if (lecherias.length) {
+    y += 6;
+
+    if (y > 275) {
+      doc.addPage();
+      y = 18;
+    }
+
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(11);
+
+    doc.text(
+      'P.V. incluidos en cartas aprobadas',
+      12,
+      y
+    );
+
+    y += 7;
+
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(8);
+
+    let linea = '';
+
+    lecherias.forEach((p, indice) => {
+      linea += `${p.pv}   `;
+
+      const finFila =
+        (indice + 1) % 6 === 0;
+
+      const ultimo =
+        indice === lecherias.length - 1;
+
+      if (finFila || ultimo) {
+        if (y > 285) {
+          doc.addPage();
+          y = 18;
+        }
+
+        doc.text(
+          linea.trim(),
+          14,
+          y
+        );
+
+        linea = '';
+        y += 5;
+      }
+    });
+  }
+
+  /*
+   * Pie de página.
+   */
+  const paginas =
+    doc.getNumberOfPages();
+
+  for (
+    let pagina = 1;
+    pagina <= paginas;
+    pagina++
+  ) {
+    doc.setPage(pagina);
+
+    doc.setFontSize(8);
+    doc.setTextColor(107, 123, 140);
+
+    doc.text(
+      `Página ${pagina} de ${paginas}`,
+      105,
+      292,
+      {
+        align: 'center'
+      }
+    );
+  }
+
+  const fecha =
+    new Date()
+      .toISOString()
+      .slice(0, 10);
+
+  doc.save(
+    `Estimacion_${fecha}.pdf`
+  );
+
   toast('PDF de estimación generado');
 }
 
@@ -1462,39 +2909,371 @@ function buildCurva(pts){
 
 /* ============ ACTAS DE CONFORMIDAD ============ */
 const OBS_OPCIONES=['Falta sello','Falta firma','Falta fecha','Acta ilegible','Datos incompletos','Firma no coincide'];
-let ACTA_CUR=null, ACTA_OBS_SEL=[];
+let ACTA_CUR=null, ACTA_DETALLE = null, ACTA_OBS_SEL=[], ESTIMACION = null;
 function loteStatusBadge(e){
   if(e==='aprobada')return['ab-ap','Aprobada'];
   if(e==='en_revision')return['ab-rev','En revisión'];
   if(e==='rechazada')return['ab-rej','Rechazada'];
   return['ab-arm','Por armar'];
 }
+
+function nombreDocumento(tipo) {
+  return tipo === 'dependencia'
+    ? 'Carta'
+    : 'Acta';
+}
+
+function nombreDocumentoCompleto(tipo) {
+  return tipo === 'dependencia'
+    ? 'Carta Entrega-Recepción'
+    : 'Acta de conformidad';
+}
+
+/*FUNCION TEMPORAL PARA EL MODULO DE ACTAS*/
+async function generarActaSubDesdeUI() {
+  if (ROLE !== 'admin' && ROLE !== 'gen') {
+    toast('Tu perfil no puede generar actas');
+    return;
+  }
+
+  const subSugerido = CURSUB || Object.keys(SUBS)[0] || 'SUB-1';
+
+  const sub = window.prompt(
+    'Subcontratista para el corte (ejemplo: SUB-6):',
+    subSugerido
+  );
+
+  if (sub === null) return;
+
+  const subNormalizado = sub.trim().toUpperCase();
+
+  if (!SUBS[subNormalizado]) {
+    toast('El subcontratista indicado no existe');
+    return;
+  }
+
+  const fechaInicio = window.prompt(
+    'Fecha inicial del corte (AAAA-MM-DD):',
+    '2026-07-01'
+  );
+
+  if (fechaInicio === null) return;
+
+  const fechaFin = window.prompt(
+    'Fecha final del corte (AAAA-MM-DD):',
+    '2026-07-31'
+  );
+
+  if (fechaFin === null) return;
+
+  const formatoFecha = /^\d{4}-\d{2}-\d{2}$/;
+
+  if (
+    !formatoFecha.test(fechaInicio.trim()) ||
+    !formatoFecha.test(fechaFin.trim())
+  ) {
+    toast('Las fechas deben tener formato AAAA-MM-DD');
+    return;
+  }
+
+  if (fechaInicio > fechaFin) {
+    toast('La fecha inicial no puede ser posterior a la final');
+    return;
+  }
+
+  const confirmado = window.confirm(
+    `¿Generar el acta de ${subNormalizado} para el periodo ` +
+    `${fechaInicio} a ${fechaFin}?`
+  );
+
+  if (!confirmado) return;
+
+  try {
+    toast('Generando acta…');
+
+    const acta = await generarActaSub(
+      subNormalizado,
+      fechaInicio.trim(),
+      fechaFin.trim(),
+      PRECIO_FACHADA
+    );
+
+    toast(
+      `${acta.numero} generada con ` +
+      `${acta.cantidad_lecherias} lecherías`
+    );
+
+    await renderActas();
+  } catch (error) {
+    console.error(error);
+
+    toast(
+      error.message ||
+      'No fue posible generar el acta'
+    );
+  }
+}
+
+//FUNCION TEMPORAL PARA EL MODULO CARTAS
+async function generarCartaDepDesdeUI() {
+  if (ROLE !== 'admin' && ROLE !== 'gen') {
+    toast('Tu perfil no puede generar cartas');
+    return;
+  }
+
+  const fechaInicio = window.prompt(
+    'Fecha inicial del periodo (AAAA-MM-DD):',
+    '2026-07-01'
+  );
+
+  if (fechaInicio === null) return;
+
+  const fechaFin = window.prompt(
+    'Fecha final del periodo (AAAA-MM-DD):',
+    '2026-07-31'
+  );
+
+  if (fechaFin === null) return;
+
+  const cantidadTexto = window.prompt(
+    'Cantidad de lecherías para la carta:',
+    '50'
+  );
+
+  if (cantidadTexto === null) return;
+
+  const cantidad = Number(cantidadTexto);
+  const formatoFecha = /^\d{4}-\d{2}-\d{2}$/;
+
+  if (
+    !formatoFecha.test(fechaInicio.trim()) ||
+    !formatoFecha.test(fechaFin.trim())
+  ) {
+    toast('Las fechas deben tener formato AAAA-MM-DD');
+    return;
+  }
+
+  if (
+    !Number.isInteger(cantidad) ||
+    cantidad < 50
+  ) {
+    toast('La cantidad mínima es 50');
+    return;
+  }
+
+  const confirmado = window.confirm(
+    `¿Generar una carta con ${cantidad} lecherías ` +
+    `del periodo ${fechaInicio} a ${fechaFin}?`
+  );
+
+  if (!confirmado) return;
+
+  try {
+    toast('Generando carta…');
+
+    const carta = await generarCartaDep(
+      fechaInicio.trim(),
+      fechaFin.trim(),
+      cantidad,
+      PRECIO_FACHADA
+    );
+
+    toast(
+      `${carta.numero} generada con ` +
+      `${carta.cantidad_lecherias} lecherías`
+    );
+
+    await renderActas();
+  } catch (error) {
+    console.error(error);
+
+    toast(
+      error.message ||
+      'No fue posible generar la carta'
+    );
+  }
+}
+
 async function visibleLotes() {
   const lotes = await cargarActas();
 
   if (ROLE === 'sub') {
-    return lotes.filter(l => l.tipo === 'contratista' && l.sub === CURSUB);
+    return lotes.filter(
+      lote =>
+        lote.tipo === 'contratista' &&
+        lote.sub === CURSUB
+    );
+  }
+
+  if (ROLE === 'dep') {
+    return lotes.filter(
+      lote => lote.tipo === 'dependencia'
+    );
   }
 
   return lotes;
 }
-async function renderActas(){
-  document.getElementById('crumbs').style.display='none';
-  document.getElementById('filters').style.display='none';
-  const sc=document.getElementById('scroll'); sc.innerHTML='';
-  const lotes=visibleLotes();
-  const wrap=document.createElement('div');
-  wrap.innerHTML=`<div class="note"><b>Actas y documentos.</b> La <b>Carta Entrega-Recepción</b> firmada por las partes da fe de la finalización a entera satisfacción y <b>detona el cobro</b>.
-    Con la dependencia se arma cada <b>50 lecherías o más</b>; con cada subcontratista es un <b>corte quincenal</b>.</div>
-    <button class="expbtn" style="background:var(--navy);color:#fff;width:100%;margin-bottom:10px" onclick="reporteInicioPDF()"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M9 11l3 3 8-8M4 12v6a2 2 0 002 2h12"/></svg>Generar reporte de inicio de trabajos (junta de arranque)</button>
-    <div class="sectlabel">Cartas Entrega-Recepción con la dependencia (cobro)</div>`;
-  sc.appendChild(wrap);
-  const dep=lotes.filter(l=>l.tipo==='dependencia');
-  if(!dep.length) sc.insertAdjacentHTML('beforeend','<div style="font-size:12px;color:var(--mut);padding:2px 2px 10px">Aún no hay lotes de 50+ listos.</div>');
-  dep.forEach(l=>sc.appendChild(loteCard(l)));
-  const lbl=document.createElement('div'); lbl.className='sectlabel'; lbl.textContent='Actas con subcontratistas (corte quincenal)'; sc.appendChild(lbl);
-  lotes.filter(l=>l.tipo==='contratista').forEach(l=>sc.appendChild(loteCard(l)));
+
+async function renderActas() {
+  document.getElementById('crumbs').style.display = 'none';
+  document.getElementById('filters').style.display = 'none';
+
+  const sc = document.getElementById('scroll');
+  sc.innerHTML = `
+    <div style="
+      text-align:center;
+      color:var(--mut);
+      padding:30px 0;
+      font-size:12px
+    ">
+      Cargando actas…
+    </div>
+  `;
+
+  try {
+    const lotes = await visibleLotes();
+
+    // openActa() todavía busca el registro dentro de LOTES.
+    LOTES = lotes;
+
+    sc.innerHTML = '';
+
+    const puedeGenerar =
+      ROLE === 'admin' ||
+      ROLE === 'gen';
+
+    const wrap = document.createElement('div');
+
+    wrap.innerHTML = `
+      <div class="note">
+        <b>Actas y documentos.</b>
+        La <b>Carta Entrega-Recepción</b> firmada por las partes
+        da fe de la finalización a entera satisfacción y
+        <b>detona el cobro</b>.
+        Con la dependencia se arma cada <b>50 lecherías o más</b>;
+        con cada subcontratista es un <b>corte quincenal</b>.
+      </div>
+
+      <button
+        class="expbtn"
+        style="
+          background:var(--navy);
+          color:#fff;
+          width:100%;
+          margin-bottom:10px
+        "
+        onclick="reporteInicioPDF()"
+      >
+        Generar reporte de inicio de trabajos
+        (junta de arranque)
+      </button>
+
+      ${
+        puedeGenerar
+          ? `
+            <button
+              class="expbtn"
+              style="
+                background:var(--leche);
+                color:#fff;
+                width:100%;
+                margin-bottom:10px
+              "
+              onclick="generarActaSubDesdeUI()"
+            >
+              + Generar acta de subcontratista
+            </button>
+            <button
+              class="expbtn"
+              style="
+                background:var(--steel);
+                color:#fff;
+                width:100%;
+                margin-bottom:10px
+              "
+              onclick="generarCartaDepDesdeUI()"
+            >
+              + Generar carta para dependencia
+            </button>
+          `
+          : ''
+      }
+
+      <div class="sectlabel">
+        Cartas Entrega-Recepción con la dependencia (cobro)
+      </div>
+    `;
+
+    sc.appendChild(wrap);
+
+    const dependencia = lotes.filter(
+      lote => lote.tipo === 'dependencia'
+    );
+
+    if (!dependencia.length) {
+      sc.insertAdjacentHTML(
+        'beforeend',
+        `
+          <div style="
+            font-size:12px;
+            color:var(--mut);
+            padding:2px 2px 10px
+          ">
+            Aún no hay lotes de 50+ listos.
+          </div>
+        `
+      );
+    }
+
+    dependencia.forEach(
+      lote => sc.appendChild(loteCard(lote))
+    );
+
+    const etiqueta = document.createElement('div');
+    etiqueta.className = 'sectlabel';
+    etiqueta.textContent =
+      'Actas con subcontratistas (corte quincenal)';
+
+    sc.appendChild(etiqueta);
+
+    const contratistas = lotes.filter(
+      lote => lote.tipo === 'contratista'
+    );
+
+    if (!contratistas.length) {
+      sc.insertAdjacentHTML(
+        'beforeend',
+        `
+          <div style="
+            font-size:12px;
+            color:var(--mut);
+            padding:2px 2px 10px
+          ">
+            Aún no hay actas de subcontratistas.
+          </div>
+        `
+      );
+    }
+
+    contratistas.forEach(
+      lote => sc.appendChild(loteCard(lote))
+    );
+  } catch (error) {
+    console.error(error);
+
+    sc.innerHTML = `
+      <div style="
+        text-align:center;
+        color:var(--rej);
+        padding:35px 10px;
+        font-size:12px
+      ">
+        No fue posible cargar las actas.
+      </div>
+    `;
+  }
 }
+
 function reporteInicioPDF(){
   const {jsPDF}=window.jspdf; const doc=new jsPDF();
   doc.setFillColor(13,27,42); doc.rect(0,0,210,28,'F');
@@ -1521,138 +3300,1017 @@ function reporteInicioPDF(){
   doc.save('Reporte_inicio_trabajos.pdf');
   toast('Reporte de inicio generado');
 }
-function loteCard(l){
-  const [bcls,btxt]=loteStatusBadge(l.estado);
-  const d=document.createElement('div'); d.className='lotecard'; d.onclick=()=>openActa(l.id);
-  const monto=l.pvs.length*PRECIO_FACHADA;
-  d.innerHTML=`
+
+function loteCard(lote) {
+  const [claseBadge, textoBadge] =
+    loteStatusBadge(lote.estado);
+
+  const pvs = Array.isArray(lote.pvs)
+    ? lote.pvs
+    : [];
+
+  const cantidad = Number(
+    lote.cantidad_lecherias ?? pvs.length
+  );
+
+  const monto = Number(
+    lote.monto ?? cantidad * PRECIO_FACHADA
+  );
+
+  const numero = lote.numero ||
+    `${lote.tipo === 'dependencia' ? 'DEP' : 'SUB'}-` +
+    String(lote.id).padStart(3, '0');
+
+  const referencia = lote.tipo === 'dependencia'
+    ? (lote.zona || 'Nacional')
+    : (lote.sub || 'Sin subcontratista');
+
+  const tarjeta = document.createElement('div');
+
+  tarjeta.className = 'lotecard';
+  tarjeta.onclick = () => openActa(lote.id);
+
+  tarjeta.innerHTML = `
     <div class="top">
-      <div class="ic ${l.tipo==='dependencia'?'ic-dep':'ic-con'}">${l.tipo==='dependencia'?'🏛️':'👷'}</div>
-      <div class="nm"><b>Acta ${l.tipo==='dependencia'?'DEP':'SUB'}-${String(l.id).padStart(3,'0')}</b>
-        <span>${l.tipo==='dependencia'?l.zona:l.sub} · ${l.pvs.length} lecherías</span></div>
-      <span class="acta-badge ${bcls}">${btxt}</span>
-    </div>
-    <div class="foot">
-      <div class="f"><div class="v">${l.pvs.length}</div><div class="k">Lecherías</div></div>
-      <div class="f"><div class="v">${money(monto)}</div><div class="k">Monto</div></div>
-      <div class="f"><div class="v">${l.ffin||'—'}</div><div class="k">Término</div></div>
-    </div>`;
-  return d;
-}
-function openActa(id){
-  ACTA_CUR=LOTES.find(l=>l.id===id); ACTA_OBS_SEL=[...(ACTA_CUR.obs||[])];
-  const l=ACTA_CUR;
-  document.getElementById('shTitle').textContent=`Acta ${l.tipo==='dependencia'?'DEP':'SUB'}-${String(l.id).padStart(3,'0')}`;
-  document.getElementById('shSub').textContent=`${l.tipo==='dependencia'?'Con la dependencia':'Corte quincenal'} · ${l.pvs.length} lecherías`;
-  const [bcls,btxt]=loteStatusBadge(l.estado);
-  const bd=document.getElementById('shBadge'); bd.className='acta-badge '+bcls; bd.textContent=btxt;
-  const monto=l.pvs.length*PRECIO_FACHADA;
-
-  const meta=`<div class="sect"><h3>Datos del acta</h3>
-    <div class="acta-meta">
-      <div class="ib"><div class="k">Inicio de obra</div><div class="v">${l.fini||'—'}</div></div>
-      <div class="ib"><div class="k">Término de obra</div><div class="v">${l.ffin||'—'}</div></div>
-      <div class="ib full"><div class="k">Administrador del contrato</div><div class="v" style="font-size:12.5px">${l.admin}</div></div>
-      <div class="ib full"><div class="k">Contratista</div><div class="v" style="font-size:12.5px">${l.contratista}</div></div>
-      <div class="ib"><div class="k">Lecherías amparadas</div><div class="v">${l.pvs.length}</div></div>
-      <div class="ib"><div class="k">Monto</div><div class="v">${money(monto)}</div></div>
-    </div></div>`;
-
-  // carga del documento (simulada)
-  const uploaded = l.estado!=='por_armar';
-  const upload=`<div class="sect"><h3>Documento del acta firmada</h3>
-    <div class="acta-upload ${uploaded?'done':''}" onclick="uploadActa()">
-      ${uploaded?'✓ acta_firmada_'+l.id+'.pdf cargada':'📎 Toca para cargar el acta firmada (PDF o foto)'}
-    </div></div>`;
-
-  // observaciones (admin) o vista de observaciones
-  let obsBlock='';
-  if(ROLE==='admin' && l.estado==='en_revision'){
-    obsBlock=`<div class="sect"><h3>Revisión del administrador</h3>
-      <div style="font-size:12px;color:var(--mut);margin-bottom:8px">Si rechazas, marca las observaciones:</div>
-      <div class="obschips" id="obschips">
-        ${OBS_OPCIONES.map(o=>`<div class="obschip ${ACTA_OBS_SEL.includes(o)?'on':''}" onclick="toggleObs('${o}',this)">${o}</div>`).join('')}
+      <div class="ic ${
+        lote.tipo === 'dependencia'
+          ? 'ic-dep'
+          : 'ic-con'
+      }">
+        ${lote.tipo === 'dependencia' ? '🏛️' : '👷'}
       </div>
-      <textarea id="obsLibre" placeholder="Observación adicional (opcional)…" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit;font-size:13px;min-height:48px"></textarea>
-    </div>`;
-  } else if(l.obs&&l.obs.length){
-    obsBlock=`<div class="sect"><h3>Observaciones</h3><div class="rejmotivo"><b>El acta fue rechazada</b>${l.obs.join(' · ')}</div></div>`;
-  }
 
-  // flag de cobrable
-  const cobrable = l.estado==='aprobada';
-  const cobro=`<div class="cobro-flag"><span class="k" style="background:${cobrable?'var(--done)':'var(--wait)'}"></span>
-    ${cobrable?'Acta aprobada — <b style="margin-left:3px">lista para cobro</b>':'Pendiente de aprobación para detonar cobro'}</div>`;
+      <div class="nm">
+        <b>
+          ${lote.tipo === 'dependencia' ? 'Carta' : 'Acta'}
+          ${numero}
+        </b>
+        <span>
+          ${referencia} ·
+          ${cantidad} lecherías
+        </span>
+      </div>
 
-  // acciones por rol
-  let act='';
-  if(ROLE==='admin'){
-    if(l.estado==='en_revision') act=`
-      <button class="btn btn-done" onclick="aprobarActa()">Aprobar acta</button>
-      <button class="btn btn-rej" onclick="rechazarActa()">Rechazar con observaciones</button>`;
-    else if(l.estado==='aprobada') act=`<button class="btn btn-done" disabled>✓ Acta aprobada</button>`;
-    else if(l.estado==='rechazada') act=`<div class="lock">Rechazada. En espera de corrección y reenvío.</div>`;
-    else act=`<div class="lock">Acta aún por armar.</div>`;
-  } else if(ROLE==='sub'||ROLE==='gen'){
-    if(l.estado==='rechazada') act=`<button class="btn btn-leche" onclick="reenviarActa()">Corregir y reenviar</button>`;
-    else if(l.estado==='en_revision') act=`<div class="lock">En revisión del administrador.</div>`;
-    else if(l.estado==='aprobada') act=`<button class="btn btn-done" disabled>✓ Aprobada — cobrable</button>`;
-    else act=`<button class="btn btn-leche" onclick="uploadActa()">Cargar acta firmada</button>`;
-  } else {
-    act=`<div class="lock">Dependencia · consulta</div>`;
-  }
-  const repBtn=`<button class="btn" style="background:var(--steel);color:#fff" onclick="actaPDF()">📄 Descargar carátula del acta</button>`;
+      <span class="acta-badge ${claseBadge}">
+        ${textoBadge}
+      </span>
+    </div>
 
-  document.getElementById('sbody').innerHTML=cobro+meta+upload+obsBlock+`<div class="actions">${act}${repBtn}</div>`;
-  document.getElementById('sheet').classList.add('show');
+    <div class="foot">
+      <div class="f">
+        <div class="v">${cantidad}</div>
+        <div class="k">Lecherías</div>
+      </div>
+
+      <div class="f">
+        <div class="v">${money(monto)}</div>
+        <div class="k">Monto</div>
+      </div>
+
+      <div class="f">
+        <div class="v">${lote.ffin || '—'}</div>
+        <div class="k">Término</div>
+      </div>
+    </div>
+  `;
+
+  return tarjeta;
 }
+
+async function openActa(id) {
+  ACTA_CUR = LOTES.find(lote => lote.id === id);
+
+  if (!ACTA_CUR) {
+  toast('No se encontró el acta');
+  return;
+}
+
+try {
+  ACTA_DETALLE =
+    await obtenerDetalleActa(ACTA_CUR.id);
+
+  if (
+    !ACTA_DETALLE ||
+    !ACTA_DETALLE.acta ||
+    !Array.isArray(ACTA_DETALLE.lecherias)
+  ) {
+    throw new Error(
+      'La base de datos devolvió un detalle incompleto'
+    );
+  }
+
+  /*
+   * Usamos el registro devuelto por la RPC como fuente
+   * principal, porque contiene la información más reciente.
+   */
+  ACTA_CUR = ACTA_DETALLE.acta;
+
+} catch (error) {
+  console.error(
+    'No fue posible cargar el detalle del acta:',
+    error
+  );
+
+  ACTA_DETALLE = null;
+
+  toast(
+    error.message ||
+    'No fue posible cargar el detalle del acta'
+  );
+
+  return;
+}
+
+  if (!ACTA_CUR) {
+    toast('No se encontró el acta');
+    return;
+  }
+
+  ACTA_OBS_SEL = [...(ACTA_CUR.obs || [])];
+
+  const l = ACTA_CUR;
+  const pvs = Array.isArray(l.pvs) ? l.pvs : [];
+
+  const cantidad = Number(
+    l.cantidad_lecherias ?? pvs.length
+  );
+
+  const monto = Number(
+    l.monto ?? cantidad * PRECIO_FACHADA
+  );
+
+  const numero = l.numero ||
+    `${l.tipo === 'dependencia' ? 'DEP' : 'SUB'}-` +
+    String(l.id).padStart(3, '0');
+
+  const puedeRevisar =
+  (
+    l.tipo === 'contratista' &&
+    ROLE === 'admin'
+  ) ||
+  (
+    l.tipo === 'dependencia' &&
+    ROLE === 'dep'
+  );
+
+  document.getElementById('shTitle').textContent =
+  l.tipo === 'dependencia'
+    ? `Carta ${l.numero}`
+    : `Acta ${l.numero}`;
+
+  document.getElementById('shSub').textContent =
+  l.tipo === 'dependencia'
+    ? `Con la dependencia · ${Number(l.cantidad_lecherias || 0)} lecherías`
+    : `${l.sub || 'Subcontratista'} · ${Number(l.cantidad_lecherias || 0)} lecherías`;
+
+  const [claseBadge, textoBadge] =
+    loteStatusBadge(l.estado);
+
+  const badge = document.getElementById('shBadge');
+  badge.className = `acta-badge ${claseBadge}`;
+  badge.textContent = textoBadge;
+
+  const meta = `
+    <div class="sect">
+      <h3>Datos del acta</h3>
+
+      <div class="acta-meta">
+        <div class="ib">
+          <div class="k">Inicio de obra</div>
+          <div class="v">${l.fini || '—'}</div>
+        </div>
+
+        <div class="ib">
+          <div class="k">Término de obra</div>
+          <div class="v">${l.ffin || '—'}</div>
+        </div>
+
+        <div class="ib full">
+          <div class="k">Administrador del contrato</div>
+          <div class="v" style="font-size:12.5px">
+            ${l.admin || '—'}
+          </div>
+        </div>
+
+        <div class="ib full">
+          <div class="k">Contratista</div>
+          <div class="v" style="font-size:12.5px">
+            ${l.contratista || l.sub || '—'}
+          </div>
+        </div>
+
+        <div class="ib">
+          <div class="k">Lecherías amparadas</div>
+          <div class="v">${cantidad}</div>
+        </div>
+
+        <div class="ib">
+          <div class="k">Monto</div>
+          <div class="v">${money(monto)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const puedeCargar =
+    l.estado !== 'aprobada' &&
+    (
+      ROLE === 'gen' ||
+      (
+        ROLE === 'sub' &&
+        l.tipo === 'contratista' &&
+        l.sub === CURSUB
+      )
+    );
+
+  const documento = `
+    <div class="sect">
+      <h3>
+      ${
+        l.tipo === 'dependencia'
+          ? 'Carta Entrega-Recepción firmada'
+          : 'Documento del acta firmada'
+      }
+    </h3>
+
+      ${
+        l.documento_url
+          ? `
+            <a
+              class="acta-upload done"
+              href="${l.documento_url}"
+              target="_blank"
+              rel="noopener noreferrer"
+              style="
+                display:block;
+                text-decoration:none;
+                text-align:center;
+              "
+            >
+              ✓ Abrir documento firmado
+            </a>
+          `
+          : `
+            <div class="acta-upload">
+              Sin documento firmado
+            </div>
+          `
+      }
+
+      ${
+        puedeCargar
+          ? `
+            <div
+              class="acta-upload"
+              style="margin-top:8px"
+              onclick="uploadActa()"
+            >
+              📎 ${
+                l.documento_url
+                  ? (
+                      l.tipo === 'dependencia'
+                        ? 'Reemplazar carta y reenviar'
+                        : 'Reemplazar documento y reenviar'
+                    )
+                  : (
+                      l.tipo === 'dependencia'
+                        ? 'Cargar carta firmada'
+                        : 'Cargar acta firmada'
+                    )
+                  }
+            </div>
+          `
+          : ''
+      }
+    </div>
+  `;
+
+  let observaciones = '';
+
+  if (
+    puedeRevisar &&
+    l.estado === 'en_revision'
+    ) {
+    observaciones = `
+      <div class="sect">
+        <h3>Revisión del administrador</h3>
+
+        <div style="
+          font-size:12px;
+          color:var(--mut);
+          margin-bottom:8px
+        ">
+          Si rechazas, marca las observaciones:
+        </div>
+
+        <div class="obschips" id="obschips">
+          ${OBS_OPCIONES.map(opcion => `
+            <div
+              class="obschip ${
+                ACTA_OBS_SEL.includes(opcion)
+                  ? 'on'
+                  : ''
+              }"
+              onclick="toggleObs(
+                '${opcion.replace(/'/g, "\\'")}',
+                this
+              )"
+            >
+              ${opcion}
+            </div>
+          `).join('')}
+        </div>
+
+        <textarea
+          id="obsLibre"
+          placeholder="Observación adicional (opcional)…"
+          style="
+            width:100%;
+            border:1px solid var(--line);
+            border-radius:8px;
+            padding:9px;
+            font:inherit;
+            font-size:13px;
+            min-height:48px
+          "
+        ></textarea>
+      </div>
+    `;
+  } else if ((l.obs || []).length) {
+    observaciones = `
+      <div class="sect">
+        <h3>Observaciones</h3>
+
+        <div class="rejmotivo">
+          <b>El acta fue rechazada</b>
+          ${(l.obs || []).join(' · ')}
+        </div>
+      </div>
+    `;
+  }
+
+  const aprobada = l.estado === 'aprobada';
+
+  const bandera = `
+    <div class="cobro-flag">
+      <span
+        class="k"
+        style="
+          background:${
+            aprobada
+              ? 'var(--done)'
+              : 'var(--wait)'
+          }
+        "
+      ></span>
+
+      ${
+        aprobada
+          ? `Acta aprobada —
+             <b style="margin-left:3px">
+               lista para cobro
+             </b>`
+          : 'Pendiente de aprobación'
+      }
+    </div>
+  `;
+
+const lecheriasActa =
+  ACTA_DETALLE.lecherias || [];
+
+const listaLecherias = `
+  <div class="sect">
+    <h3>
+      Lecherías incluidas
+      (${lecheriasActa.length})
+    </h3>
+
+    <div class="tl">
+      ${
+        lecheriasActa.map((p, indice) => `
+          <div class="tlrow">
+            <div class="tldot on"></div>
+
+            <div class="tx">
+              <b>
+                ${indice + 1}. P.V. ${p.pv}
+              </b>
+
+              <span>
+                ${p.municipio || 'Municipio no registrado'}
+                ·
+                ${p.localidad || 'Localidad no registrada'}
+              </span>
+
+              <span>
+                ${p.sub || 'Sin subcontratista'}
+                ·
+                ${p.zona || 'Sin zona'}
+                ·
+                ${Number(p.m2 || M2_STD)} m²
+              </span>
+            </div>
+
+            <div class="when">
+              ${p.freal || ''}
+            </div>
+          </div>
+        `).join('')
+      }
+    </div>
+  </div>
+`;
+
+let acciones = '';
+
+if (puedeRevisar) {
+  if (l.estado === 'en_revision') {
+    acciones = `
+      <button
+        class="btn btn-done"
+        onclick="aprobarActa()"
+      >
+        Aprobar ${
+          l.tipo === 'dependencia'
+            ? 'carta'
+            : 'acta'
+        }
+      </button>
+
+      <button
+        class="btn btn-rej"
+        onclick="rechazarActa()"
+      >
+        Rechazar con observaciones
+      </button>
+    `;
+  } else if (l.estado === 'aprobada') {
+    acciones = `
+      <button class="btn btn-done" disabled>
+        ✓ ${
+          l.tipo === 'dependencia'
+            ? 'Carta aprobada'
+            : 'Acta aprobada'
+        }
+      </button>
+    `;
+  } else if (l.estado === 'rechazada') {
+    acciones = `
+      <div class="lock">
+        Documento rechazado. En espera de corrección.
+      </div>
+    `;
+  } else {
+    acciones = `
+      <div class="lock">
+        Documento pendiente de carga y envío.
+      </div>
+    `;
+  }
+} else if (
+  ROLE === 'admin' &&
+  l.tipo === 'dependencia'
+) {
+  if (l.estado === 'por_armar') {
+    acciones = `
+      <div class="lock">
+        Carta pendiente de carga por el contratista general.
+      </div>
+    `;
+  } else if (l.estado === 'en_revision') {
+    acciones = `
+      <div class="lock">
+        Carta enviada a la dependencia.
+        En espera de revisión.
+      </div>
+    `;
+  } else if (l.estado === 'rechazada') {
+    acciones = `
+      <div class="lock">
+        Carta rechazada por la dependencia.
+        En espera de corrección.
+      </div>
+    `;
+  } else if (l.estado === 'aprobada') {
+    acciones = `
+      <button class="btn btn-done" disabled>
+        ✓ Carta aprobada por la dependencia
+      </button>
+    `;
+  }
+} else if (
+  ROLE === 'sub' ||
+  ROLE === 'gen'
+) {
+  if (l.estado === 'rechazada') {
+    acciones = `
+      <button
+        class="btn btn-leche"
+        onclick="uploadActa()"
+      >
+        Corregir y reenviar
+      </button>
+    `;
+  } else if (l.estado === 'en_revision') {
+    acciones = `
+      <div class="lock">
+        ${
+          l.tipo === 'dependencia'
+            ? 'En revisión de la dependencia.'
+            : 'En revisión del administrador.'
+        }
+      </div>
+    `;
+  } else if (l.estado === 'aprobada') {
+    acciones = `
+      <button class="btn btn-done" disabled>
+        ✓ ${
+          l.tipo === 'dependencia'
+            ? 'Carta aprobada'
+            : 'Acta aprobada'
+        }
+      </button>
+    `;
+  } else if (puedeCargar) {
+    acciones = `
+      <button
+        class="btn btn-leche"
+        onclick="uploadActa()"
+      >
+        Cargar ${
+          l.tipo === 'dependencia'
+            ? 'carta firmada'
+            : 'acta firmada'
+        }
+      </button>
+    `;
+  }
+} else {
+  acciones = `
+    <div class="lock">
+      Documento disponible para consulta.
+    </div>
+  `;
+}
+
+  const botonPDF = `
+  <button
+    class="btn"
+    style="background:var(--steel);color:#fff"
+    onclick="actaPDF()"
+  >
+    📄 Descargar carátula ${
+      l.tipo === 'dependencia'
+        ? 'de la carta'
+        : 'del acta'
+    }
+  </button>
+  `;
+
+  document.getElementById('sbody').innerHTML =
+    bandera +
+    meta +
+    documento +
+    observaciones +
+    listaLecherias +
+    `<div class="actions">
+      ${acciones}
+      ${botonPDF}
+    </div>`;
+
+  document.getElementById('sheet')
+    .classList.add('show');
+}
+
 function toggleObs(o,el){
   const i=ACTA_OBS_SEL.indexOf(o);
   if(i>=0){ACTA_OBS_SEL.splice(i,1);el.classList.remove('on');}
   else{ACTA_OBS_SEL.push(o);el.classList.add('on');}
 }
-function uploadActa(){ if(ACTA_CUR.estado==='por_armar')ACTA_CUR.estado='en_revision'; toast('Acta cargada — pasa a revisión'); openActa(ACTA_CUR.id); render(); }
-async function aprobarActa(){ ACTA_CUR.estado='aprobada'; ACTA_CUR.obs=[]; toast('✅ Acta aprobada — lista para cobro'); openActa(ACTA_CUR.id); render();
-  await guardarActa(ACTA_CUR.id, estado, obs); 
+
+async function uploadActa() {
+  if (!ACTA_CUR) return;
+
+  if (ACTA_CUR.estado === 'aprobada') {
+    toast('No se puede modificar un acta aprobada');
+    return;
+  }
+
+  const input = document.createElement('input');
+
+  input.type = 'file';
+  input.accept = '.pdf,.jpg,.jpeg,.png';
+
+  input.onchange = async () => {
+    const archivo = input.files?.[0];
+
+    if (!archivo) return;
+
+    const limite = 20 * 1024 * 1024;
+
+    if (archivo.size > limite) {
+      toast('El archivo no debe superar 20 MB');
+      return;
+    }
+
+    try {
+      toast('Cargando documento…');
+
+      const actaActualizada =
+        await subirDocumentoActa(
+          ACTA_CUR,
+          archivo
+        );
+
+      const indice = LOTES.findIndex(
+        acta => acta.id === ACTA_CUR.id
+      );
+
+      if (indice !== -1) {
+        LOTES[indice] = actaActualizada;
+      }
+
+      ACTA_CUR = actaActualizada;
+
+      toast('Acta cargada — pasa a revisión');
+      openActa(ACTA_CUR.id);
+      await renderActas();
+    } catch (error) {
+      console.error(error);
+
+      toast(
+        error.message ||
+        'No fue posible cargar el acta'
+      );
+    }
+  };
+
+  input.click();
 }
-async function rechazarActa(){
-  const libre=document.getElementById('obsLibre'); const extra=libre?libre.value.trim():'';
-  const obs=[...ACTA_OBS_SEL]; if(extra)obs.push(extra);
-  if(!obs.length){ toast('Marca al menos una observación'); return; }
-  ACTA_CUR.estado='rechazada'; ACTA_CUR.obs=obs; toast('Acta rechazada con observaciones'); openActa(ACTA_CUR.id); render();
-  await guardarActa(ACTA_CUR.id, estado, obs);
+
+async function aprobarActa() {
+  if (!ACTA_CUR) return;
+
+  const esDependencia =
+    ACTA_CUR.tipo === 'dependencia';
+
+  const rolEsperado =
+    esDependencia ? 'dep' : 'admin';
+
+  if (ROLE !== rolEsperado) {
+    toast('Tu perfil no puede aprobar este documento');
+    return;
+  }
+
+  try {
+    const actaActualizada =
+      await revisarActaBD(
+        ACTA_CUR.id,
+        'aprobada',
+        []
+      );
+
+    const indice = LOTES.findIndex(
+      acta => acta.id === ACTA_CUR.id
+    );
+
+    if (indice !== -1) {
+      LOTES[indice] = actaActualizada;
+    }
+
+    ACTA_CUR = actaActualizada;
+
+    toast(
+      esDependencia
+        ? '✅ Carta aprobada por la dependencia'
+        : '✅ Acta aprobada — lista para cobro'
+    );
+
+    openActa(ACTA_CUR.id);
+    await renderActas();
+  } catch (error) {
+    console.error(error);
+
+    toast(
+      error.message ||
+      'No fue posible aprobar el documento'
+    );
+  }
 }
-function reenviarActa(){ ACTA_CUR.estado='en_revision'; ACTA_CUR.obs=[]; toast('Acta corregida y reenviada'); openActa(ACTA_CUR.id); render(); }
-function actaPDF(){
-  const {jsPDF}=window.jspdf; const doc=new jsPDF(); const l=ACTA_CUR;
-  doc.setFillColor(13,27,42); doc.rect(0,0,210,28,'F');
-  doc.setTextColor(255); doc.setFontSize(15); doc.setFont(undefined,'bold');
-  doc.text('Acta de conformidad',12,13);
-  doc.setFontSize(9); doc.setFont(undefined,'normal');
-  doc.text(`${l.tipo==='dependencia'?'Con la dependencia':'Corte con subcontratista'} · ${l.pvs.length} lecherías`,12,20);
-  doc.setTextColor(20); let y=40; doc.setFontSize(10);
-  const rows=[['Acta',(l.tipo==='dependencia'?'DEP-':'SUB-')+String(l.id).padStart(3,'0')],['Inicio de obra',l.fini],['Término de obra',l.ffin],['Administrador',l.admin],['Contratista',l.contratista],['Lecherías amparadas',String(l.pvs.length)],['Monto',money(l.pvs.length*PRECIO_FACHADA)],['Estatus',loteStatusBadge(l.estado)[1]]];
-  rows.forEach(([k,v])=>{ doc.setFont(undefined,'bold'); doc.text(k+':',14,y); doc.setFont(undefined,'normal'); doc.text(String(v),70,y); y+=7; });
-  if(l.obs&&l.obs.length){ y+=3; doc.setTextColor(192,54,44); doc.setFont(undefined,'bold'); doc.text('Observaciones:',14,y); doc.setFont(undefined,'normal'); y+=6; l.obs.forEach(o=>{doc.text('• '+o,16,y);y+=6;}); doc.setTextColor(20); }
-  y+=4; doc.setFont(undefined,'bold'); doc.text('Lecherías (Clave P.V.):',14,y); y+=6; doc.setFont(undefined,'normal'); doc.setFontSize(8);
-  let line=''; l.pvs.forEach((pv,i)=>{ line+=pv+'   '; if((i+1)%6===0){doc.text(line,16,y);y+=5;line='';if(y>285){doc.addPage();y=18;}} });
-  if(line)doc.text(line,16,y);
-  doc.save(`Acta_${l.tipo}_${l.id}.pdf`);
-  toast('Carátula del acta generada');
+
+async function rechazarActa() {
+    if (!ACTA_CUR) return;
+
+  const puedeRechazar =
+    (
+      ACTA_CUR.tipo === 'contratista' &&
+      ROLE === 'admin'
+    ) ||
+    (
+      ACTA_CUR.tipo === 'dependencia' &&
+      ROLE === 'dep'
+    );
+
+  if (!puedeRechazar) {
+    toast('Tu perfil no puede rechazar este documento');
+    return;
+  }
+  const libre =
+    document.getElementById('obsLibre');
+
+  const textoLibre =
+    libre ? libre.value.trim() : '';
+
+  const observaciones = [...ACTA_OBS_SEL];
+
+  if (textoLibre) {
+    observaciones.push(textoLibre);
+  }
+
+  if (!observaciones.length) {
+    toast('Marca al menos una observación');
+    return;
+  }
+
+  try {
+    const actaActualizada =
+      await revisarActaBD(
+        ACTA_CUR.id,
+        'rechazada',
+        observaciones
+      );
+
+    const indice = LOTES.findIndex(
+      acta => acta.id === ACTA_CUR.id
+    );
+
+    if (indice !== -1) {
+      LOTES[indice] = actaActualizada;
+    }
+
+    ACTA_CUR = actaActualizada;
+
+    toast('Acta rechazada con observaciones');
+    openActa(ACTA_CUR.id);
+    await renderActas();
+  } catch (error) {
+    console.error(error);
+
+    toast(
+      error.message ||
+      'No fue posible rechazar el acta'
+    );
+  }
+}
+
+
+function actaPDF() {
+  if (
+    !ACTA_CUR ||
+    !ACTA_DETALLE ||
+    !Array.isArray(ACTA_DETALLE.lecherias)
+  ) {
+    toast('Primero abre el detalle completo del documento');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const acta = ACTA_CUR;
+  const lecherias = ACTA_DETALLE.lecherias;
+
+  const esDependencia =
+    acta.tipo === 'dependencia';
+
+  const administradorDocumento =
+  esDependencia
+    ? (
+        acta.admin ||
+        `Administrador · ${DEPENDENCIA}`
+      )
+    : EMPRESA;
+
+  const nombreDocumento =
+    esDependencia
+      ? 'Carta de entrega-recepción'
+      : 'Acta de conformidad';
+
+  const contextoDocumento =
+    esDependencia
+      ? 'Con la dependencia'
+      : 'Corte con subcontratista';
+
+  const numero =
+    acta.numero ||
+    (
+      (esDependencia ? 'DEP-' : 'SUB-') +
+      String(acta.id).padStart(3, '0')
+    );
+
+  const cantidad =
+    lecherias.length;
+
+  const monto =
+    Number(acta.monto || 0);
+
+  const estadoTexto =
+    loteStatusBadge(acta.estado)[1];
+
+  /*
+   * Encabezado.
+   */
+  doc.setFillColor(13, 27, 42);
+  doc.rect(0, 0, 210, 28, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(15);
+  doc.setFont(undefined, 'bold');
+  doc.text(nombreDocumento, 12, 13);
+
+  doc.setFontSize(9);
+  doc.setFont(undefined, 'normal');
+  doc.text(
+    `${contextoDocumento} · ${cantidad} lecherías`,
+    12,
+    20
+  );
+
+  /*
+   * Datos generales.
+   */
+  doc.setTextColor(20, 20, 20);
+  doc.setFontSize(10);
+
+  let y = 40;
+
+  const filas = [
+    ['Documento', numero],
+    ['Inicio de obra', acta.fini || '—'],
+    ['Término de obra', acta.ffin || '—'],
+    ['Administrador', administradorDocumento],
+    ['Contratista', acta.contratista || '—'],
+    ['Lecherías amparadas', String(cantidad)],
+    ['Monto', money(monto)],
+    ['Estatus', estadoTexto]
+  ];
+
+  filas.forEach(([etiqueta, valor]) => {
+    doc.setFont(undefined, 'bold');
+    doc.text(`${etiqueta}:`, 14, y);
+
+    doc.setFont(undefined, 'normal');
+
+    const lineas =
+      doc.splitTextToSize(
+        String(valor),
+        120
+      );
+
+    doc.text(lineas, 70, y);
+
+    y += Math.max(
+      7,
+      lineas.length * 5
+    );
+  });
+
+  /*
+   * Observaciones del documento.
+   */
+  if (
+    Array.isArray(acta.obs) &&
+    acta.obs.length
+  ) {
+    y += 3;
+
+    doc.setTextColor(192, 54, 44);
+    doc.setFont(undefined, 'bold');
+    doc.text('Observaciones:', 14, y);
+
+    y += 6;
+
+    doc.setFont(undefined, 'normal');
+
+    acta.obs.forEach(observacion => {
+      const lineas =
+        doc.splitTextToSize(
+          `• ${observacion}`,
+          175
+        );
+
+      if (
+        y + lineas.length * 5 >
+        285
+      ) {
+        doc.addPage();
+        y = 18;
+      }
+
+      doc.text(lineas, 16, y);
+      y += lineas.length * 5;
+    });
+
+    doc.setTextColor(20, 20, 20);
+  }
+
+  /*
+   * Relación de P.V.
+   */
+  y += 5;
+
+  if (y > 275) {
+    doc.addPage();
+    y = 18;
+  }
+
+  doc.setFont(undefined, 'bold');
+  doc.setFontSize(10);
+  doc.text(
+    'Lecherías incluidas (Clave P.V.):',
+    14,
+    y
+  );
+
+  y += 7;
+
+  doc.setFont(undefined, 'normal');
+  doc.setFontSize(8);
+
+  let linea = '';
+
+  lecherias.forEach((lecheria, indice) => {
+    linea += `${lecheria.pv}   `;
+
+    const terminaFila =
+      (indice + 1) % 6 === 0;
+
+    const esUltima =
+      indice === lecherias.length - 1;
+
+    if (terminaFila || esUltima) {
+      if (y > 285) {
+        doc.addPage();
+        y = 18;
+      }
+
+      doc.text(linea.trim(), 16, y);
+
+      y += 5;
+      linea = '';
+    }
+  });
+
+  /*
+   * Numeración de páginas.
+   */
+  const paginas =
+    doc.getNumberOfPages();
+
+  for (
+    let pagina = 1;
+    pagina <= paginas;
+    pagina++
+  ) {
+    doc.setPage(pagina);
+
+    doc.setFontSize(8);
+    doc.setTextColor(107, 123, 140);
+
+    doc.text(
+      `${numero} · Página ${pagina} de ${paginas}`,
+      105,
+      292,
+      {
+        align: 'center'
+      }
+    );
+  }
+
+  /*
+   * Descarga.
+   */
+  const nombreArchivo =
+    esDependencia
+      ? `Carta_${numero}.pdf`
+      : `Acta_${numero}.pdf`;
+
+  doc.save(nombreArchivo);
+
+  toast(
+    esDependencia
+      ? 'Carátula de la carta generada'
+      : 'Carátula del acta generada'
+  );
 }
 
 let tt; function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2200);}
 
-// teclas demo: o=offline
-document.addEventListener('keydown',e=>{
-  if(e.key==='o'){
-    OFFLINE=!OFFLINE;
-    document.getElementById('offlineBar').classList.toggle('show',OFFLINE);
-    toast(OFFLINE?'Modo sin conexión':'Conexión restablecida');
-  }
-});
-
-//setRole('sub'); render();
 arrancarApp();   // revisa sesión; si no hay, muestra login
 </script>
 </body>
