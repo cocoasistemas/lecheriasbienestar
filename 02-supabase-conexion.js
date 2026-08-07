@@ -48,44 +48,125 @@ async function revisarSesion() {
 
 // ---- 3. CONSULTAS Y CARGA DE DATOS ----
 async function cargarLecherias() {
-  // Trae lecherías + su avance + su excedente en una sola consulta
-  const { data, error } = await sb
-    .from('lecherias')
-    .select(`
-      pv, estado, municipio, localidad, calle, colonia, familias, beneficiarios,
-      lat, lng, zona, sub, fcomp, activo,
-      avances ( status, m2, vobo, motivo, freal ),
-      excedentes ( m2_excedente, precio_m2, evidencia_url )
-    `)
-    .eq('activo', true);
-  if (error) { throw error; }
+  const TAMANO_PAGINA = 1000;
+  let desde = 0;
+  let registros = [];
 
-  // aplanar al formato que usa la app
-  return data.map((r, i) => {
-    const av = Array.isArray(r.avances)
-    ? (r.avances[0] || {})
-    : (r.avances || {});
+  while (true) {
+    const hasta =
+      desde + TAMANO_PAGINA - 1;
 
-    const ex = Array.isArray(r.excedentes)
-    ? (r.excedentes[0] || {})
-    : (r.excedentes || {});
+    const { data, error } = await sb
+      .from('lecherias')
+      .select(`
+        pv, estado, municipio, localidad, calle, colonia,
+        familias, beneficiarios, lat, lng, zona, sub,
+        fcomp, activo,
+        avances (
+          status,
+          m2,
+          vobo,
+          motivo,
+          freal
+        ),
+        excedentes (
+          m2_excedente,
+          precio_m2,
+          evidencia_url
+        )
+      `)
+      .eq('activo', true)
+      .order('pv', {
+        ascending: true
+      })
+      .range(desde, hasta);
+
+    if (error) {
+      throw error;
+    }
+
+    const pagina =
+      Array.isArray(data)
+        ? data
+        : [];
+
+    registros.push(...pagina);
+
+    if (pagina.length < TAMANO_PAGINA) {
+      break;
+    }
+
+    desde += TAMANO_PAGINA;
+  }
+
+  return registros.map((r, i) => {
+    const av =
+      Array.isArray(r.avances)
+        ? (r.avances[0] || {})
+        : (r.avances || {});
+
+    const ex =
+      Array.isArray(r.excedentes)
+        ? (r.excedentes[0] || {})
+        : (r.excedentes || {});
+
     return {
       id: i,
-      pv: r.pv, estado: r.estado, municipio: r.municipio, localidad: r.localidad,
-      calle: r.calle, colonia: r.colonia, beneficiarios: r.beneficiarios,
-      lat: r.lat, lng: r.lng, zona: r.zona, sub: r.sub, fcomp: r.fcomp,
+
+      pv: r.pv,
+      estado: r.estado,
+      municipio: r.municipio,
+      localidad: r.localidad,
+      calle: r.calle,
+      colonia: r.colonia,
+
+      familias:
+        r.familias === null
+          ? null
+          : Number(r.familias),
+
+      beneficiarios:
+        r.beneficiarios === null
+          ? null
+          : Number(r.beneficiarios),
+
+      lat:
+        r.lat === null ||
+        r.lat === ''
+          ? null
+          : Number(r.lat),
+
+      lng:
+        r.lng === null ||
+        r.lng === ''
+          ? null
+          : Number(r.lng),
+
+      zona: r.zona,
+      sub: r.sub,
+      fcomp: r.fcomp,
+
       status: av.status || 'no',
       m2: Number(av.m2) || M2_STD,
       vobo: av.vobo || '-',
       motivo: av.motivo || '',
       freal: av.freal || '',
-      
-      m2_excedente: Number(ex.m2_excedente) || 0,
-      precio_m2: Number(ex.precio_m2) || precioExtraSub(r.sub),
-      evidencia_url: ex.evidencia_url || '',
-      extraEvidencia: ex.evidencia_url ? [ex.evidencia_url] : [],
 
-      // fotos y adjuntos (actas) se cargan aparte según se necesiten
+      m2_excedente:
+        Number(ex.m2_excedente) || 0,
+
+      precio_m2:
+        Number(ex.precio_m2) ||
+        precioExtraSub(r.sub),
+
+      evidencia_url:
+        ex.evidencia_url || '',
+
+      extraEvidencia:
+        ex.evidencia_url
+          ? [ex.evidencia_url]
+          : [],
+
       fotosPrev: [],
       fotosFin: [],
       adjuntos: []
@@ -243,6 +324,423 @@ async function cargarActas() {
   }
 
   return data || [];
+}
+
+// ============================================================
+// ACTAS INDIVIDUALES POR LECHERÍA
+// ============================================================
+
+async function cargarActaIndividual(
+  pv,
+  clase
+) {
+  const { data, error } = await sb
+    .from('actas')
+    .select(`
+      id,
+      tipo,
+      zona,
+      sub,
+      pv,
+      clase,
+      pvs,
+      estado,
+      comentarios,
+      documento_url,
+      documento_generado_url,
+      documento_firmado_url,
+      fecha_firma,
+      fini,
+      ffin,
+      admin,
+      contratista,
+      creado
+    `)
+    .eq('pv', pv)
+    .eq('clase', clase)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data || null;
+}
+
+async function crearActaAperturaBD(
+  punto
+) {
+  const registro = {
+    tipo: 'dependencia',
+
+    zona:
+      punto.zona || null,
+
+    sub:
+      punto.sub || null,
+
+    pv:
+      punto.pv,
+
+    clase:
+      'apertura',
+
+    // Se conserva por compatibilidad con
+    // funciones antiguas que todavía utilizan pvs.
+    pvs: [
+      punto.pv
+    ],
+
+    estado:
+      'por_armar',
+
+    comentarios:
+      null,
+
+    contratista:
+      typeof EMPRESA !== 'undefined'
+        ? EMPRESA
+        : 'LUMEN-OAX PROYECTOS Y CONSTRUCCIÓN S.A. DE C.V.',
+
+    admin:
+      typeof DEPENDENCIA !== 'undefined'
+        ? DEPENDENCIA
+        : 'LECHE PARA EL BIENESTAR, S.A. DE C.V.'
+  };
+
+  const { data, error } = await sb
+    .from('actas')
+    .insert(registro)
+    .select('*')
+    .single();
+
+  if (error) {
+    /*
+     * Si por doble clic o recarga ya existe,
+     * recuperamos la existente.
+     */
+    if (error.code === '23505') {
+      return await cargarActaIndividual(
+        punto.pv,
+        'apertura'
+      );
+    }
+
+    throw error;
+  }
+
+  return data;
+}
+
+async function crearActaRecepcionBD(
+  punto
+) {
+  const registro = {
+    tipo: 'dependencia',
+
+    zona:
+      punto.zona || null,
+
+    sub:
+      punto.sub || null,
+
+    pv:
+      punto.pv,
+
+    clase:
+      'recepcion',
+
+    /*
+     * Compatibilidad con las funciones
+     * antiguas que todavía leen pvs.
+     */
+    pvs: [
+      punto.pv
+    ],
+
+    estado:
+      'por_armar',
+
+    comentarios:
+      null,
+
+    /*
+     * Para recepción utilizamos la fecha
+     * real de ejecución cuando ya existe.
+     */
+    fini:
+      punto.freal || null,
+
+    ffin:
+      punto.freal || null,
+
+    contratista:
+      typeof EMPRESA !== 'undefined'
+        ? EMPRESA
+        : 'LUMEN-OAX PROYECTOS Y CONSTRUCCIÓN S.A. DE C.V.',
+
+    admin:
+      typeof DEPENDENCIA !== 'undefined'
+        ? DEPENDENCIA
+        : 'LECHE PARA EL BIENESTAR, S.A. DE C.V.'
+  };
+
+  const { data, error } = await sb
+    .from('actas')
+    .insert(registro)
+    .select('*')
+    .single();
+
+  if (error) {
+    /*
+     * Nuestro índice único impide que
+     * exista dos veces:
+     *
+     * PV + recepcion
+     */
+    if (error.code === '23505') {
+      return await cargarActaIndividual(
+        punto.pv,
+        'recepcion'
+      );
+    }
+
+    throw error;
+  }
+
+  return data;
+}
+
+async function guardarPDFGeneradoActaIndividual(
+  acta,
+  blob
+) {
+  const pvSeguro =
+    String(acta.pv)
+      .replace(
+        /[^a-zA-Z0-9_-]/g,
+        '_'
+      );
+
+  const claseSeguro =
+    String(
+      acta.clase || 'acta'
+    )
+      .replace(
+        /[^a-zA-Z0-9_-]/g,
+        '_'
+      );
+
+  const ruta =
+    `${pvSeguro}/actas/${claseSeguro}/` +
+    `generada_${Date.now()}.pdf`;
+
+  const { error: errorStorage } =
+    await sb.storage
+      .from('evidencias')
+      .upload(
+        ruta,
+        blob,
+        {
+          contentType:
+            'application/pdf',
+
+          upsert:
+            false
+        }
+      );
+
+  if (errorStorage) {
+    throw errorStorage;
+  }
+
+  const { data: publica } =
+    sb.storage
+      .from('evidencias')
+      .getPublicUrl(ruta);
+
+  const url =
+    publica.publicUrl;
+
+  const { data, error } =
+    await sb
+      .from('actas')
+      .update({
+        documento_generado_url:
+          url
+      })
+      .eq(
+        'id',
+        acta.id
+      )
+      .select('*')
+      .single();
+
+  if (error) {
+    /*
+     * Evitamos archivo huérfano
+     * si falla la actualización.
+     */
+    await sb.storage
+      .from('evidencias')
+      .remove([
+        ruta
+      ]);
+
+    throw error;
+  }
+
+  return data;
+}
+
+async function guardarComentariosActaIndividual(
+  actaId,
+  comentarios
+) {
+  const { data, error } = await sb
+    .from('actas')
+    .update({
+      comentarios:
+        comentarios || null
+    })
+    .eq(
+      'id',
+      actaId
+    )
+    .select('*')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+async function subirActaIndividualFirmada(
+  acta,
+  archivo
+) {
+  const extension =
+    archivo.name.includes('.')
+      ? archivo.name
+          .split('.')
+          .pop()
+          .toLowerCase()
+      : 'pdf';
+
+  const permitidas = [
+    'pdf',
+    'jpg',
+    'jpeg',
+    'png'
+  ];
+
+  if (
+    !permitidas.includes(
+      extension
+    )
+  ) {
+    throw new Error(
+      'Solo se permiten PDF, JPG o PNG'
+    );
+  }
+
+  const pvSeguro =
+    String(acta.pv)
+      .replace(
+        /[^a-zA-Z0-9_-]/g,
+        '_'
+      );
+
+  const claseSeguro =
+    String(
+      acta.clase || 'acta'
+    )
+      .replace(
+        /[^a-zA-Z0-9_-]/g,
+        '_'
+      );
+
+  const ruta =
+    `${pvSeguro}/actas/${claseSeguro}/` +
+    `firmada_${Date.now()}.${extension}`;
+
+  const {
+    error: errorStorage
+  } =
+    await sb.storage
+      .from('evidencias')
+      .upload(
+        ruta,
+        archivo,
+        {
+          contentType:
+            archivo.type ||
+            undefined,
+
+          upsert:
+            false
+        }
+      );
+
+  if (errorStorage) {
+    throw errorStorage;
+  }
+
+  const { data: publica } =
+    sb.storage
+      .from('evidencias')
+      .getPublicUrl(
+        ruta
+      );
+
+  const url =
+    publica.publicUrl;
+
+  const hoy =
+    new Date()
+      .toISOString()
+      .slice(0, 10);
+
+  const { data, error } =
+    await sb
+      .from('actas')
+      .update({
+        documento_firmado_url:
+          url,
+
+        /*
+         * Conservamos documento_url para
+         * compatibilidad con el módulo viejo.
+         */
+        documento_url:
+          url,
+
+        fecha_firma:
+          hoy,
+
+        estado:
+          'en_revision'
+      })
+      .eq(
+        'id',
+        acta.id
+      )
+      .select('*')
+      .single();
+
+  if (error) {
+    await sb.storage
+      .from('evidencias')
+      .remove([
+        ruta
+      ]);
+
+    throw error;
+  }
+
+  return data;
 }
 
 async function obtenerDetalleActa(actaId) {
@@ -411,6 +909,21 @@ async function cargarPreciosSubcontrato() {
   );
 }
 // ---- 4. GUARDAR CAMBIOS ----
+async function guardarFechaCompromiso(
+  pv,
+  fecha
+) {
+  const { error } = await sb
+    .from('lecherias')
+    .update({
+      fcomp: fecha || null
+    })
+    .eq('pv', pv);
+
+  if (error) {
+    throw error;
+  }
+}
 
 // Subir una foto al Storage y registrar en la tabla
 async function subirFoto(pv, momento, tipo, archivo, lat, lng) {
@@ -569,6 +1082,11 @@ async function arrancarApp() {
   }
   
   window.LECH = await cargarLecherias();
+  /*
+   * Construimos zonas y relación SUB-ZONA
+   * directamente desde el padrón cargado.
+   */
+  reconstruirConfiguracionDinamica();
   ROLE = perfil.rol;
   if (ROLE === 'sub') {
       CURSUB = perfil.sub;

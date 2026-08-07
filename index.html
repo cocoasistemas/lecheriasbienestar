@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0d1b2a">
 <title>Bitácora de Lecherías · Pintura de Fachadas</title>
+<link
+  rel="icon"
+  type="image/svg+xml"
+  href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f6feb'/%3E%3Cpath d='M20 15h24l-3 35H23L20 15Z' fill='white'/%3E%3Cpath d='M23 27h18l-1.7 19H24.7L23 27Z' fill='%23cfe3ff'/%3E%3Cpath d='M19 15h26' stroke='%230d1b2a' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E"
+>
 <style>
   :root{
     --navy:#0d1b2a; --navy2:#16263a; --steel:#3a4f66;
@@ -334,9 +339,23 @@
 <script src="02-supabase-conexion.js"></script>
 </head>
 <body>
-<!-- Despliegue oficial v1.0 -->
 <div id="loginScreen" style="display:none;position:fixed;inset:0;background:#0d1b2a;z-index:200;
      display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:24px">
+  <div
+  style="
+    width:64px;
+    height:64px;
+    border-radius:16px;
+    background:#1f6feb;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:34px;
+    box-shadow:0 8px 24px rgba(0,0,0,.25);
+  "
+>
+  🥛
+</div>
   <div style="color:#fff;font-size:20px;font-weight:800">Bitácora de Lecherías</div>
   <div style="color:#8aa0b6;font-size:12px;margin-bottom:8px">LUMEN-OAX · Ingresa con tu cuenta</div>
   <input id="loginMail" placeholder="Correo" style="width:100%;max-width:300px;padding:12px;border-radius:8px;border:none">
@@ -499,12 +518,13 @@ async function confirmarCierreSesion() {
   }
 }
 
-const SUBS={"SUB-4": "Z4 · Bajío", "SUB-5": "Z5 · Norte", "SUB-1": "Z1 · Valle de México Pte.", "SUB-2": "Z2 · Valle de México Or.", "SUB-6": "Z6 · Sur/Golfo", "SUB-3": "Z3 · Centro"};
+let SUBS={};
+let ZONAS_DINAMICAS=[];
 const METAS={"SUB-1": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-2": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-3": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-4": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-5": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}, "SUB-6": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino": "2026-10-31"}};
 
 
 /* ---- contrato ---- */
-const MIN=1000, MAX=1400, DEFINIDAS=1037;
+const MIN=1000, MAX=2000;
 // ===== PRECIOS =====
 // A LA DEPENDENCIA: unidad estándar por lechería = 21 m² a $17,769.75 + IVA (fijo, sin extraordinarios)
 const PRECIO_FACHADA=17769.75, M2_STD=21, IVA=0.16;
@@ -545,28 +565,87 @@ function daysBetween(a, b) {
 let LOTES=[];
 /* ---- state ---- */
 let ROLE='sub',
-    CURSUB=Object.keys(SUBS)[0]||'',
+    CURSUB='',
     VIEW='estados',
     CUR_EST=null,
     CUR=null,
     FILTER='all',
     SEARCH='';
-let TAB='lista', MAP=null, MAPLAYER=null, MAP_READY=false;
+let TAB='lista', MAP=null, MAPLAYER=null, MAP_READY=false, REGRESAR_A_MAPA = false;
 const ROLEINFO={
   sub:{band:'rb-sub',txt:()=>'Subcontratista · '+CURSUB,hint:'Toca un estado para ver tus lecherías asignadas'},
-  gen:{band:'rb-gen',txt:()=>'Contratista general · panel completo',hint:'Vista nacional de los 32 estados y 6 zonas'},
+  gen:{band:'rb-gen',txt:()=>'Contratista general · panel completo',hint:'Vista nacional del padrón completo'},
   admin:{band:'rb-admin',txt:()=>'Administrador del contrato · validación',hint:'Otorga Vo.Bo. a lecherías atendidas'},
-  dep:{
-  band:'rb-dep',
-  txt:()=>'Dependencia · consulta y revisión de cartas',
-  hint:'Consulta nacional y revisión de cartas DEP'
-  }
+  dep:{band:'rb-dep',txt:()=>'Dependencia · consulta y revisión de cartas',hint:'Consulta nacional y revisión de cartas DEP'}
 };
 
 function visiblePts(){
   if(ROLE==='sub') return LECH.filter(p=>p.sub===CURSUB);
   return LECH;
 }
+
+function reconstruirConfiguracionDinamica() {
+  /*
+   * Zonas reales presentes en el padrón.
+   */
+  ZONAS_DINAMICAS = [
+    ...new Set(
+      LECH
+        .map(p => p.zona)
+        .filter(Boolean)
+    )
+  ].sort((a, b) =>
+    String(a).localeCompare(
+      String(b),
+      'es',
+      {
+        numeric: true,
+        sensitivity: 'base'
+      }
+    )
+  );
+
+  /*
+   * Relación real SUB -> zonas.
+   *
+   * Ejemplo:
+   * {
+   *   "SUB-1": ["Z1", "Z4"],
+   *   "SUB-2": ["Z1", "Z8"]
+   * }
+   */
+  SUBS = {};
+
+  LECH.forEach(p => {
+    if (!p.sub || !p.zona) {
+      return;
+    }
+
+    if (!SUBS[p.sub]) {
+      SUBS[p.sub] = [];
+    }
+
+    if (
+      !SUBS[p.sub].includes(p.zona)
+    ) {
+      SUBS[p.sub].push(p.zona);
+    }
+  });
+
+  Object.keys(SUBS).forEach(sub => {
+    SUBS[sub].sort((a, b) =>
+      String(a).localeCompare(
+        String(b),
+        'es',
+        {
+          numeric: true,
+          sensitivity: 'base'
+        }
+      )
+    );
+  });
+}
+
 function setRole(r){
   ROLE=r; VIEW='estados'; CUR_EST=null;
   const info=ROLEINFO[r], b=document.getElementById('roleBand');
@@ -575,6 +654,7 @@ function setRole(r){
   document.getElementById('zoneTag').textContent = r==='sub'?CURSUB:'Nacional';
   setTab('lista');
 }
+
 function setFilter(f,el){
   FILTER=f;
   document.querySelectorAll('#filters .chip').forEach(c=>c.classList.remove('on'));
@@ -582,32 +662,161 @@ function setFilter(f,el){
 }
 
 /* ---- min/max gauge ---- */
-function renderMinMax(){
-  const pts=visiblePts();
-  // a nivel nacional mostramos progreso del contrato; a nivel sub, su universo
-  const universo = ROLE==='sub'? pts.length : DEFINIDAS;
-  const atend = pts.filter(p=>p.status==='at').length;
-  const vobo = pts.filter(p=>p.vobo==='ok').length;
-  const el=document.getElementById('minmax');
-  if(ROLE==='sub'){
-    const pct=Math.round(atend/universo*100);
-    el.innerHTML=`<div class="head"><div class="t">Avance de mi cartera</div>
-      <div class="big"><b>${atend}</b> / ${universo} atendidas</div></div>
-      <div class="track"><div class="fill" style="width:${pct}%"></div></div>
-      <div class="mmlegend"><span><b>${vobo}</b> con Vo.Bo.</span><span><b>${universo-atend}</b> pendientes</span><span><b>${pct}%</b> avance</span></div>`;
+function renderMinMax() {
+  const pts = visiblePts();
+
+  /*
+   * En vista nacional, las definidas son todas las
+   * lecherías activas cargadas desde Supabase.
+   *
+   * En vista SUB, el universo sigue siendo únicamente
+   * la cartera asignada a ese subcontratista.
+   */
+  const definidas = LECH.length;
+
+  const universo =
+    ROLE === 'sub'
+      ? pts.length
+      : definidas;
+
+  const atend =
+    pts.filter(
+      p => p.status === 'at'
+    ).length;
+
+  const vobo =
+    pts.filter(
+      p => p.vobo === 'ok'
+    ).length;
+
+  const el =
+    document.getElementById(
+      'minmax'
+    );
+
+  if (ROLE === 'sub') {
+    const pct =
+      universo > 0
+        ? Math.round(
+            atend /
+            universo *
+            100
+          )
+        : 0;
+
+    el.innerHTML = `
+      <div class="head">
+        <div class="t">
+          Avance de mi cartera
+        </div>
+
+        <div class="big">
+          <b>${atend}</b>
+          / ${universo} atendidas
+        </div>
+      </div>
+
+      <div class="track">
+        <div
+          class="fill"
+          style="width:${pct}%"
+        ></div>
+      </div>
+
+      <div class="mmlegend">
+        <span>
+          <b>${vobo}</b>
+          con Vo.Bo.
+        </span>
+
+        <span>
+          <b>${universo - atend}</b>
+          pendientes
+        </span>
+
+        <span>
+          <b>${pct}%</b>
+          avance
+        </span>
+      </div>
+    `;
+
     return;
   }
-  // nacional: barra de min-max
-  const wDef=DEFINIDAS/MAX*100, wMin=MIN/MAX*100;
-  el.innerHTML=`<div class="head"><div class="t">Contrato abierto · mín–máx</div>
-    <div class="big"><b>${DEFINIDAS}</b> definidas</div></div>
-    <div class="track">
-      <div class="fill" style="width:${wDef}%"></div>
-      <div class="seg" style="left:${wMin}%"><span class="lab">mín ${MIN}</span></div>
-      <div class="seg maxseg" style="left:99.5%"><span class="lab">máx ${MAX}</span></div>
+
+  const wDef =
+    Math.min(
+      definidas / MAX * 100,
+      100
+    );
+
+  const wMin =
+    MIN / MAX * 100;
+
+  const faltan =
+    Math.max(
+      MAX - definidas,
+      0
+    );
+
+  el.innerHTML = `
+    <div class="head">
+      <div class="t">
+        Contrato abierto · mín–máx
+      </div>
+
+      <div class="big">
+        <b>${definidas}</b>
+        definidas
+      </div>
     </div>
-    <div class="mmlegend"><span>Rango <b>${MIN}–${MAX}</b> P.V.</span><span>Faltan <b>${MAX-DEFINIDAS}</b> por definir</span><span><b>${atend}</b> atendidas</span></div>`;
+
+    <div class="track">
+      <div
+        class="fill"
+        style="width:${wDef}%"
+      ></div>
+
+      <div
+        class="seg"
+        style="left:${wMin}%"
+      >
+        <span class="lab">
+          mín ${MIN}
+        </span>
+      </div>
+
+      <div
+        class="seg maxseg"
+        style="left:99.5%"
+      >
+        <span class="lab">
+          máx ${MAX}
+        </span>
+      </div>
+    </div>
+
+    <div class="mmlegend">
+      <span>
+        Rango
+        <b>${MIN}–${MAX}</b>
+        P.V.
+      </span>
+
+      <span>
+        Faltan
+        <b>${faltan}</b>
+        por definir
+      </span>
+
+      <span>
+        <b>${atend}</b>
+        atendidas
+      </span>
+    </div>
+  `;
 }
+
 function renderKPI(){
   const pts=visiblePts();
   const tot=pts.length, at=pts.filter(p=>p.status==='at').length;
@@ -643,6 +852,7 @@ function render(){
   if(VIEW==='estados') renderEstados();
   else renderPuntos();
 }
+
 function renderCrumbs(){
   const c=document.getElementById('crumbs');
   if(VIEW==='estados'){ c.innerHTML=`<b style="color:var(--ink)">${ROLE==='sub'?'Estados de mi zona':'Estados'}</b>`; }
@@ -754,6 +964,7 @@ function matchF(p){
   if(FILTER==='ext')return p.m2>M2_STD;
   return true;
 }
+
 function renderPuntos(){
   renderCrumbs(); renderFilters();
   const q=getQ();
@@ -836,7 +1047,31 @@ function photoCard(f) {
 
   return `
     <div class="ph">
-      <img loading="lazy" src="${f.url}">
+      <a
+        href="${f.url}"
+        target="_blank"
+        rel="noopener"
+        onclick="event.stopPropagation()"
+        title="Abrir imagen en tamaño completo"
+        style="
+          display:block;
+          width:100%;
+          height:100%;
+          cursor:zoom-in;
+        "
+      >
+        <img
+          loading="lazy"
+          src="${f.url}"
+          alt="Evidencia fotográfica"
+          style="
+            width:100%;
+            height:100%;
+            object-fit:cover;
+            display:block;
+          "
+        >
+      </a>
       ${catBadge}
       ${botonEliminar}
 
@@ -885,6 +1120,849 @@ async function confirmarEliminarFoto(idFoto, urlCodificada) {
   }
 }
 
+function renderActaAperturaBlock(
+  p
+) {
+  const acta =
+    p.actaApertura;
+
+  /*
+   * LUMEN administra este documento.
+   * Los demás perfiles lo consultan.
+   */
+  const puedeGestionar =
+    ROLE === 'gen';
+
+  /*
+   * Todavía no existe.
+   */
+  if (!acta) {
+    return `
+      <div class="sect">
+        <h3>
+          Acta de apertura
+        </h3>
+
+        <div
+          class="cobro-flag"
+          style="
+            margin-bottom:10px;
+          "
+        >
+          <span
+            class="k"
+            style="
+              background:
+                var(--pend);
+            "
+          ></span>
+
+          Pendiente de generar
+        </div>
+
+        <div
+          style="
+            font-size:11px;
+            color:var(--mut);
+            margin-bottom:10px;
+          "
+        >
+          Documento individual para
+          autorizar y documentar el
+          inicio de trabajos de esta
+          lechería.
+        </div>
+
+        ${
+          puedeGestionar
+            ? `
+              <button
+                class="btn"
+                style="
+                  background:
+                    var(--leche);
+                  color:#fff;
+                  width:100%;
+                "
+                onclick="
+                  generarActaApertura()
+                "
+              >
+                📄 Generar acta de apertura
+              </button>
+            `
+            : `
+              <div class="lock">
+                El acta de apertura
+                aún no ha sido generada.
+              </div>
+            `
+        }
+      </div>
+    `;
+  }
+
+  const estados = {
+    por_armar: {
+      color:
+        'var(--pend)',
+
+      texto:
+        'Generada · pendiente de firma'
+    },
+
+    en_revision: {
+      color:
+        'var(--wait)',
+
+      texto:
+        'Documento firmado cargado'
+    },
+
+    aprobada: {
+      color:
+        'var(--done)',
+
+      texto:
+        'Acta validada'
+    },
+
+    rechazada: {
+      color:
+        'var(--rej)',
+
+      texto:
+        'Acta con observaciones'
+    }
+  };
+
+  const estado =
+    estados[
+      acta.estado
+    ] ||
+    estados.por_armar;
+
+  const comentarios =
+    acta.comentarios || '';
+
+  const generado =
+    acta.documento_generado_url
+      ? `
+        <a
+          href="${acta.documento_generado_url}"
+          target="_blank"
+          rel="noopener"
+          class="btn"
+          style="
+            display:block;
+            text-align:center;
+            text-decoration:none;
+            background:
+              var(--steel);
+            color:#fff;
+            margin-bottom:8px;
+          "
+        >
+          📄 Abrir acta generada
+        </a>
+      `
+      : (
+          puedeGestionar
+            ? `
+              <button
+                class="btn"
+                style="
+                  background:
+                    var(--steel);
+                  color:#fff;
+                  width:100%;
+                  margin-bottom:8px;
+                "
+                onclick="
+                  generarActaApertura()
+                "
+              >
+                📄 Generar PDF
+              </button>
+            `
+            : ''
+        );
+
+  const firmado =
+    acta.documento_firmado_url
+      ? `
+        <a
+          href="${acta.documento_firmado_url}"
+          target="_blank"
+          rel="noopener"
+          class="btn"
+          style="
+            display:block;
+            text-align:center;
+            text-decoration:none;
+            background:
+              var(--done);
+            color:#fff;
+            margin-bottom:8px;
+          "
+        >
+          ✓ Abrir acta firmada
+        </a>
+      `
+      : (
+          puedeGestionar
+            ? `
+              <button
+                class="btn"
+                style="
+                  background:
+                    var(--leche);
+                  color:#fff;
+                  width:100%;
+                  margin-bottom:8px;
+                "
+                onclick="
+                  cargarActaAperturaFirmada()
+                "
+              >
+                📎 Cargar acta firmada
+              </button>
+            `
+            : `
+              <div
+                class="lock"
+                style="
+                  margin-bottom:8px;
+                "
+              >
+                Aún no se carga el
+                documento firmado.
+              </div>
+            `
+        );
+
+  const bloqueComentarios =
+    puedeGestionar
+      ? `
+        <div
+          style="
+            margin-top:10px;
+          "
+        >
+          <div
+            style="
+              font-size:10px;
+              font-weight:800;
+              color:var(--steel);
+              text-transform:uppercase;
+              letter-spacing:.6px;
+              margin-bottom:5px;
+            "
+          >
+            Comentarios
+          </div>
+
+          <textarea
+            id="comentarioActaApertura"
+            placeholder="Ej. Se dio inicio a los trabajos; el representante no se encontraba disponible para firma."
+            style="
+              width:100%;
+              min-height:76px;
+              resize:vertical;
+              border:
+                1px solid var(--line);
+              border-radius:8px;
+              padding:9px;
+              font:inherit;
+              font-size:12px;
+              color:var(--ink);
+              background:#fff;
+            "
+          >${comentarios}</textarea>
+
+          <button
+            class="btn"
+            style="
+              background:
+                var(--steel);
+              color:#fff;
+              width:100%;
+              margin-top:7px;
+            "
+            onclick="
+              guardarComentarioApertura()
+            "
+          >
+            Guardar comentarios
+          </button>
+        </div>
+      `
+      : (
+          comentarios
+            ? `
+              <div
+                style="
+                  margin-top:10px;
+                  background:
+                    var(--milk);
+                  border-radius:8px;
+                  padding:9px;
+                  font-size:11px;
+                "
+              >
+                <b>Comentarios</b>
+                <br>
+                ${comentarios}
+              </div>
+            `
+            : ''
+        );
+
+  return `
+    <div class="sect">
+
+      <h3>
+        Acta de apertura
+      </h3>
+
+      <div
+        class="cobro-flag"
+        style="
+          margin-bottom:10px;
+        "
+      >
+        <span
+          class="k"
+          style="
+            background:
+              ${estado.color};
+          "
+        ></span>
+
+        ${estado.texto}
+      </div>
+
+      <div
+        class="infogrid"
+        style="
+          margin-bottom:10px;
+        "
+      >
+        <div class="ib">
+          <div class="k">
+            P.V.
+          </div>
+
+          <div class="v">
+            ${p.pv}
+          </div>
+        </div>
+
+        <div class="ib">
+          <div class="k">
+            Fecha compromiso
+          </div>
+
+          <div class="v">
+            ${p.fcomp || '—'}
+          </div>
+        </div>
+
+        <div class="ib">
+          <div class="k">
+            Zona
+          </div>
+
+          <div class="v">
+            ${p.zona || '—'}
+          </div>
+        </div>
+
+        <div class="ib">
+          <div class="k">
+            Subcontratista
+          </div>
+
+          <div class="v">
+            ${p.sub || '—'}
+          </div>
+        </div>
+      </div>
+
+      ${generado}
+
+      ${firmado}
+
+      ${
+        acta.fecha_firma
+          ? `
+            <div
+              style="
+                font-size:10px;
+                color:var(--mut);
+                margin-top:4px;
+              "
+            >
+              Fecha de carga/firma:
+              <b>
+                ${acta.fecha_firma}
+              </b>
+            </div>
+          `
+          : ''
+      }
+
+      ${bloqueComentarios}
+
+    </div>
+  `;
+}
+
+function renderActaRecepcionBlock(
+  p
+) {
+  const acta =
+    p.actaRecepcion;
+
+  const puedeGestionar =
+    ROLE === 'gen';
+
+  const trabajoTerminado =
+    p.status === 'at';
+
+  /*
+   * Todavía no se ha terminado la obra.
+   */
+  if (!trabajoTerminado) {
+    return `
+      <div class="sect">
+        <h3>
+          Acta de recepción
+        </h3>
+
+        <div
+          class="cobro-flag"
+          style="
+            margin-bottom:10px;
+          "
+        >
+          <span
+            class="k"
+            style="
+              background:
+                var(--mut);
+            "
+          ></span>
+
+          Disponible al concluir los trabajos
+        </div>
+
+        <div
+          style="
+            font-size:11px;
+            color:var(--mut);
+          "
+        >
+          El acta de recepción podrá generarse
+          cuando esta lechería haya sido marcada
+          como atendida.
+        </div>
+      </div>
+    `;
+  }
+
+  /*
+   * Trabajo terminado, pero todavía
+   * no existe el acta.
+   */
+  if (!acta) {
+    return `
+      <div class="sect">
+        <h3>
+          Acta de recepción
+        </h3>
+
+        <div
+          class="cobro-flag"
+          style="
+            margin-bottom:10px;
+          "
+        >
+          <span
+            class="k"
+            style="
+              background:
+                var(--pend);
+            "
+          ></span>
+
+          Pendiente de generar
+        </div>
+
+        <div
+          style="
+            font-size:11px;
+            color:var(--mut);
+            margin-bottom:10px;
+          "
+        >
+          Documento individual para dejar
+          constancia de la conclusión y
+          recepción de los trabajos realizados
+          en esta lechería.
+        </div>
+
+        ${
+          puedeGestionar
+            ? `
+              <button
+                class="btn"
+                style="
+                  background:
+                    var(--leche);
+                  color:#fff;
+                  width:100%;
+                "
+                onclick="
+                  generarActaRecepcion()
+                "
+              >
+                📄 Generar acta de recepción
+              </button>
+            `
+            : `
+              <div class="lock">
+                El acta de recepción
+                aún no ha sido generada.
+              </div>
+            `
+        }
+      </div>
+    `;
+  }
+
+  const estados = {
+    por_armar: {
+      color:
+        'var(--pend)',
+
+      texto:
+        'Generada · pendiente de firma'
+    },
+
+    en_revision: {
+      color:
+        'var(--wait)',
+
+      texto:
+        'Documento firmado cargado'
+    },
+
+    aprobada: {
+      color:
+        'var(--done)',
+
+      texto:
+        'Acta validada'
+    },
+
+    rechazada: {
+      color:
+        'var(--rej)',
+
+      texto:
+        'Acta con observaciones'
+    }
+  };
+
+  const estado =
+    estados[
+      acta.estado
+    ] ||
+    estados.por_armar;
+
+  const comentarios =
+    acta.comentarios || '';
+
+  const generado =
+    acta.documento_generado_url
+      ? `
+        <a
+          href="${acta.documento_generado_url}"
+          target="_blank"
+          rel="noopener"
+          class="btn"
+          style="
+            display:block;
+            text-align:center;
+            text-decoration:none;
+            background:
+              var(--steel);
+            color:#fff;
+            margin-bottom:8px;
+          "
+        >
+          📄 Abrir acta generada
+        </a>
+      `
+      : (
+          puedeGestionar
+            ? `
+              <button
+                class="btn"
+                style="
+                  background:
+                    var(--steel);
+                  color:#fff;
+                  width:100%;
+                  margin-bottom:8px;
+                "
+                onclick="
+                  generarActaRecepcion()
+                "
+              >
+                📄 Generar PDF
+              </button>
+            `
+            : ''
+        );
+
+  const firmado =
+    acta.documento_firmado_url
+      ? `
+        <a
+          href="${acta.documento_firmado_url}"
+          target="_blank"
+          rel="noopener"
+          class="btn"
+          style="
+            display:block;
+            text-align:center;
+            text-decoration:none;
+            background:
+              var(--done);
+            color:#fff;
+            margin-bottom:8px;
+          "
+        >
+          ✓ Abrir acta de recepción firmada
+        </a>
+      `
+      : (
+          puedeGestionar
+            ? `
+              <button
+                class="btn"
+                style="
+                  background:
+                    var(--leche);
+                  color:#fff;
+                  width:100%;
+                  margin-bottom:8px;
+                "
+                onclick="
+                  cargarActaRecepcionFirmada()
+                "
+              >
+                📎 Cargar acta firmada
+              </button>
+            `
+            : `
+              <div
+                class="lock"
+                style="
+                  margin-bottom:8px;
+                "
+              >
+                Aún no se carga el
+                documento firmado.
+              </div>
+            `
+        );
+
+  const bloqueComentarios =
+    puedeGestionar
+      ? `
+        <div
+          style="
+            margin-top:10px;
+          "
+        >
+          <div
+            style="
+              font-size:10px;
+              font-weight:800;
+              color:var(--steel);
+              text-transform:uppercase;
+              letter-spacing:.6px;
+              margin-bottom:5px;
+            "
+          >
+            Comentarios
+          </div>
+
+          <textarea
+            id="comentarioActaRecepcion"
+            placeholder="Escribe observaciones relacionadas con la recepción o firma del documento."
+            style="
+              width:100%;
+              min-height:76px;
+              resize:vertical;
+              border:
+                1px solid var(--line);
+              border-radius:8px;
+              padding:9px;
+              font:inherit;
+              font-size:12px;
+              color:var(--ink);
+              background:#fff;
+            "
+          >${comentarios}</textarea>
+
+          <button
+            class="btn"
+            style="
+              background:
+                var(--steel);
+              color:#fff;
+              width:100%;
+              margin-top:7px;
+            "
+            onclick="
+              guardarComentarioRecepcion()
+            "
+          >
+            Guardar comentarios
+          </button>
+        </div>
+      `
+      : (
+          comentarios
+            ? `
+              <div
+                style="
+                  margin-top:10px;
+                  background:
+                    var(--milk);
+                  border-radius:8px;
+                  padding:9px;
+                  font-size:11px;
+                "
+              >
+                <b>Comentarios</b>
+                <br>
+                ${comentarios}
+              </div>
+            `
+            : ''
+        );
+
+  return `
+    <div class="sect">
+
+      <h3>
+        Acta de recepción
+      </h3>
+
+      <div
+        class="cobro-flag"
+        style="
+          margin-bottom:10px;
+        "
+      >
+        <span
+          class="k"
+          style="
+            background:
+              ${estado.color};
+          "
+        ></span>
+
+        ${estado.texto}
+      </div>
+
+      <div
+        class="infogrid"
+        style="
+          margin-bottom:10px;
+        "
+      >
+        <div class="ib">
+          <div class="k">
+            P.V.
+          </div>
+
+          <div class="v">
+            ${p.pv}
+          </div>
+        </div>
+
+        <div class="ib">
+          <div class="k">
+            Fecha real
+          </div>
+
+          <div class="v">
+            ${p.freal || '—'}
+          </div>
+        </div>
+
+        <div class="ib">
+          <div class="k">
+            Superficie ejecutada
+          </div>
+
+          <div class="v">
+            ${p.m2 || M2_STD} m²
+          </div>
+        </div>
+
+        <div class="ib">
+          <div class="k">
+            Vo.Bo.
+          </div>
+
+          <div class="v">
+            ${
+              p.vobo === 'ok'
+                ? 'Aprobado'
+                : p.vobo === 'rej'
+                  ? 'Rechazado'
+                  : 'En revisión'
+            }
+          </div>
+        </div>
+      </div>
+
+      ${generado}
+
+      ${firmado}
+
+      ${
+        acta.fecha_firma
+          ? `
+            <div
+              style="
+                font-size:10px;
+                color:var(--mut);
+                margin-top:4px;
+              "
+            >
+              Fecha de carga/firma:
+              <b>
+                ${acta.fecha_firma}
+              </b>
+            </div>
+          `
+          : ''
+      }
+
+      ${bloqueComentarios}
+
+    </div>
+  `;
+}
+
 async function openSheet(id){
    CUR = LECH.find(p => p.id === id);
 
@@ -894,14 +1972,45 @@ async function openSheet(id){
   }
 
   try {
-  const [fotos, adjuntos] = await Promise.all([
-    cargarFotos(CUR.pv),
-    cargarAdjuntos(CUR.pv)
+  const [
+  fotos,
+  adjuntos,
+  actaApertura,
+  actaRecepcion
+  ] = await Promise.all([
+  cargarFotos(
+    CUR.pv
+  ),
+
+  cargarAdjuntos(
+    CUR.pv
+  ),
+
+  cargarActaIndividual(
+    CUR.pv,
+    'apertura'
+  ),
+
+  cargarActaIndividual(
+    CUR.pv,
+    'recepcion'
+  )
   ]);
 
-  CUR.fotosPrev = fotos.prev;
-  CUR.fotosFin = fotos.fin;
-  CUR.adjuntos = adjuntos;
+CUR.fotosPrev =
+  fotos.prev;
+
+CUR.fotosFin =
+  fotos.fin;
+
+CUR.adjuntos =
+  adjuntos;
+
+CUR.actaApertura =
+  actaApertura;
+
+CUR.actaRecepcion =
+  actaRecepcion;
   } catch (error) {
   console.error(error);
   toast('No fue posible cargar toda la información de la lechería');
@@ -1175,32 +2284,134 @@ async function openSheet(id){
   }
 
   // fecha compromiso / real en el detalle
-  const dInfo = p.fcomp ? desvio(p) : null;
-  const fechasBlock = p.fcomp ? `<div class="sect"><h3>Programa</h3><div class="infogrid">
-    <div class="ib"><div class="k">Fecha compromiso</div><div class="v" style="font-size:12.5px">${p.fcomp}</div></div>
-    <div class="ib"><div class="k">Fecha real</div><div class="v" style="font-size:12.5px">${p.freal||'—'}</div></div>
-    <div class="ib full"><div class="k">Desviación</div><div class="v"><span class="desv-badge ${dInfo.cls}">${dInfo.txt}</span></div></div>
-  </div></div>` : '';
+const dInfo = p.fcomp ? desvio(p) : null;
 
-  // estado del acta de esta lechería (solo si tiene Vo.Bo.)
-  let actaBlock='';
-  if(p.vobo==='ok'){
-    const map={aprobada:['var(--done)','Acta aprobada — cobrable'],cargada:['var(--wait)','Acta en revisión'],rechazada:['var(--rej)','Acta rechazada'],ninguna:['var(--mut)','Sin acta cargada']};
-    const [col,txt]=map[p.acta]||map.ninguna;
-    actaBlock=`<div class="sect"><h3>Acta de conformidad</h3>
-      <div class="cobro-flag"><span class="k" style="background:${col}"></span>${txt}</div>
-      ${p.acta==='rechazada'&&p.actaObs.length?`<div class="rejmotivo"><b>Observaciones</b>${p.actaObs.join(' · ')}</div>`:''}
-      <div style="font-size:11px;color:var(--mut);padding:2px">Las actas se gestionan por lote en la pestaña Actas.</div>
-    </div>`;
-  }
+const puedeEditarFcomp =
+  ROLE === 'gen' ||
+  ROLE === 'admin';
+
+const fechasBlock = p.fcomp
+  ? `
+    <div class="sect">
+      <h3>Programa</h3>
+
+      <div class="infogrid">
+
+        <div class="ib">
+          <div class="k">
+            Fecha compromiso
+          </div>
+
+          <div
+            class="v"
+            style="font-size:12.5px"
+          >
+            ${
+              puedeEditarFcomp
+                ? `
+                  <input
+                    type="date"
+                    value="${p.fcomp || ''}"
+                    onchange="
+                      cambiarFechaCompromiso(
+                        ${p.id},
+                        this.value
+                      )
+                    "
+                    style="
+                      width:100%;
+                      border:none;
+                      background:transparent;
+                      font:inherit;
+                      font-size:12.5px;
+                      font-weight:700;
+                      color:var(--ink);
+                      outline:none;
+                      padding:0;
+                    "
+                  >
+                `
+                : (
+                    p.fcomp || '—'
+                  )
+            }
+          </div>
+        </div>
+
+        <div class="ib">
+          <div class="k">
+            Fecha real
+          </div>
+
+          <div
+            class="v"
+            style="font-size:12.5px"
+          >
+            ${p.freal || '—'}
+          </div>
+        </div>
+
+        <div class="ib full">
+          <div class="k">
+            Desviación
+          </div>
+
+          <div class="v">
+            <span
+              class="desv-badge ${dInfo.cls}"
+            >
+              ${dInfo.txt}
+            </span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `
+  : '';
+
+  const actaAperturaBlock =
+  renderActaAperturaBlock(p);
+
+  const actaRecepcionBlock =
+  renderActaRecepcionBlock(p);
 
   // botón de reporte PDF antes/después (disponible cuando hay evidencia)
   const repBtn = ((p.fotosPrev||[]).length>0||(p.fotosFin||[]).length>0) ? `<button class="btn" style="background:var(--steel);color:#fff" onclick="reportePDF()">📄 Descargar reporte antes/después</button>` : '';
 
   document.getElementById('sbody').innerHTML=
-    info+fechasBlock+`<div class="sect"><h3>Evidencia fotográfica</h3>${prevLane}${finLane}</div>`+adjBlock+sup+actaBlock+tl+`<div class="actions">${actions}${repBtn}</div>`;
+    info+fechasBlock+actaAperturaBlock+`<div class="sect"><h3>Evidencia fotográfica</h3>${prevLane}${finLane}</div>`+adjBlock+sup+tl+actaRecepcionBlock+`<div class="actions">${actions}${repBtn}</div>`;
   document.getElementById('sheet').classList.add('show');
 }
+
+function abrirDetalleDesdeMapa(id) {
+  REGRESAR_A_MAPA = true;
+  /*
+   * Cerramos el popup antes de ocultar el mapa.
+   */
+  if (
+    MAP &&
+    typeof MAP.closePopup === 'function'
+  ) {
+    MAP.closePopup();
+  }
+
+  /*
+   * Cambiamos a la pestaña Puntos.
+   * setTab() ocultará mapWrap y mostrará nuevamente
+   * el contenedor normal de la aplicación.
+   */
+  setTab('lista');
+
+  /*
+   * Esperamos a que la vista termine de actualizarse
+   * antes de abrir la ficha.
+   */
+  requestAnimationFrame(() => {
+    openSheet(id);
+  });
+}
+
 async function seleccionarArchivo(){
   return new Promise((resolve) => {
     const input = document.createElement('input');
@@ -1373,6 +2584,1258 @@ async function confirmarEliminarAdjunto(idAdjunto, urlCodificada) {
   } catch (error) {
     console.error(error);
     toast('No fue posible eliminar el documento');
+  }
+}
+
+function crearPDFActaApertura(
+  p,
+  acta
+) {
+  const { jsPDF } =
+    window.jspdf;
+
+  const doc =
+    new jsPDF({
+      orientation:
+        'portrait',
+
+      unit:
+        'mm',
+
+      format:
+        'a4'
+    });
+
+  /*
+   * Encabezado.
+   */
+  doc.setFillColor(
+    13,
+    27,
+    42
+  );
+
+  doc.rect(
+    0,
+    0,
+    210,
+    30,
+    'F'
+  );
+
+  doc.setTextColor(
+    255,
+    255,
+    255
+  );
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(15);
+
+  doc.text(
+    'Acta de apertura de trabajos',
+    14,
+    13
+  );
+
+  doc.setFontSize(8.5);
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.text(
+    `Procedimiento ${PROCEDIMIENTO}`,
+    14,
+    20
+  );
+
+  doc.text(
+    `P.V. ${p.pv}`,
+    14,
+    25
+  );
+
+  doc.setTextColor(
+    20,
+    20,
+    20
+  );
+
+  let y = 42;
+
+  const domicilio =
+    [
+      p.calle,
+      p.colonia,
+      p.localidad
+    ]
+      .filter(Boolean)
+      .join(', ');
+
+  const filas = [
+    [
+      'Clave P.V.',
+      p.pv
+    ],
+
+    [
+      'Entidad',
+      p.estado || '—'
+    ],
+
+    [
+      'Municipio',
+      p.municipio || '—'
+    ],
+
+    [
+      'Domicilio',
+      domicilio || '—'
+    ],
+
+    [
+      'Zona',
+      p.zona || '—'
+    ],
+
+    [
+      'Subcontratista',
+      p.sub || '—'
+    ],
+
+    [
+      'Fecha compromiso',
+      p.fcomp || '—'
+    ],
+
+    [
+      'Contratista general',
+      acta.contratista ||
+      EMPRESA
+    ],
+
+    [
+      'Dependencia',
+      DEPENDENCIA
+    ]
+  ];
+
+  doc.setFontSize(9.5);
+
+  filas.forEach(
+    ([etiqueta, valor]) => {
+      doc.setFont(
+        undefined,
+        'bold'
+      );
+
+      doc.text(
+        `${etiqueta}:`,
+        14,
+        y
+      );
+
+      doc.setFont(
+        undefined,
+        'normal'
+      );
+
+      const lineas =
+        doc.splitTextToSize(
+          String(valor),
+          118
+        );
+
+      doc.text(
+        lineas,
+        70,
+        y
+      );
+
+      y += Math.max(
+        7,
+        lineas.length * 5
+      );
+    }
+  );
+
+  y += 5;
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(10);
+
+  doc.text(
+    'Objeto del acta',
+    14,
+    y
+  );
+
+  y += 7;
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(9);
+
+  const texto =
+    'Por medio de la presente se deja constancia de la apertura del punto de venta indicado y del inicio de los trabajos correspondientes al servicio de pintura de fachada, conforme al procedimiento y programación aplicables.';
+
+  const lineasTexto =
+    doc.splitTextToSize(
+      texto,
+      180
+    );
+
+  doc.text(
+    lineasTexto,
+    14,
+    y
+  );
+
+  y +=
+    lineasTexto.length *
+    5 +
+    7;
+
+  if (
+    acta.comentarios
+  ) {
+    doc.setFont(
+      undefined,
+      'bold'
+    );
+
+    doc.text(
+      'Comentarios:',
+      14,
+      y
+    );
+
+    y += 6;
+
+    doc.setFont(
+      undefined,
+      'normal'
+    );
+
+    const lineasComentarios =
+      doc.splitTextToSize(
+        acta.comentarios,
+        180
+      );
+
+    doc.text(
+      lineasComentarios,
+      14,
+      y
+    );
+
+    y +=
+      lineasComentarios.length *
+      5 +
+      8;
+  }
+
+  /*
+   * Firmas.
+   */
+  y =
+    Math.max(
+      y + 18,
+      225
+    );
+
+  doc.setDrawColor(
+    100,
+    100,
+    100
+  );
+
+  doc.line(
+    20,
+    y,
+    90,
+    y
+  );
+
+  doc.line(
+    120,
+    y,
+    190,
+    y
+  );
+
+  y += 6;
+
+  doc.setFontSize(8.5);
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.text(
+    'CONTRATISTA GENERAL',
+    55,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+  doc.text(
+    'DEPENDENCIA',
+    155,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+  y += 5;
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  const empresaCorta =
+    doc.splitTextToSize(
+      acta.contratista ||
+      EMPRESA,
+      66
+    );
+
+  const dependenciaCorta =
+    doc.splitTextToSize(
+      DEPENDENCIA,
+      66
+    );
+
+  doc.text(
+    empresaCorta,
+    55,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+  doc.text(
+    dependenciaCorta,
+    155,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+  /*
+   * Pie.
+   */
+  doc.setFontSize(7);
+
+  doc.setTextColor(
+    107,
+    123,
+    140
+  );
+
+  doc.text(
+    `Generada por Bitácora de Lecherías · ${new Date().toLocaleString('es-MX')}`,
+    105,
+    290,
+    {
+      align:
+        'center'
+    }
+  );
+
+  return doc;
+}
+
+function crearPDFActaRecepcion(
+  p,
+  acta
+) {
+  const { jsPDF } =
+    window.jspdf;
+
+  const doc =
+    new jsPDF({
+      orientation:
+        'portrait',
+
+      unit:
+        'mm',
+
+      format:
+        'a4'
+    });
+
+  /*
+   * Encabezado.
+   */
+  doc.setFillColor(
+    13,
+    27,
+    42
+  );
+
+  doc.rect(
+    0,
+    0,
+    210,
+    30,
+    'F'
+  );
+
+  doc.setTextColor(
+    255,
+    255,
+    255
+  );
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(15);
+
+  doc.text(
+    'Acta de recepción de trabajos',
+    14,
+    13
+  );
+
+  doc.setFontSize(8.5);
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.text(
+    `Procedimiento ${PROCEDIMIENTO}`,
+    14,
+    20
+  );
+
+  doc.text(
+    `P.V. ${p.pv}`,
+    14,
+    25
+  );
+
+  doc.setTextColor(
+    20,
+    20,
+    20
+  );
+
+  let y = 42;
+
+  const domicilio =
+    [
+      p.calle,
+      p.colonia,
+      p.localidad
+    ]
+      .filter(Boolean)
+      .join(', ');
+
+  const excedente =
+    Math.max(
+      Number(p.m2 || M2_STD) -
+      M2_STD,
+      0
+    );
+
+  const filas = [
+    [
+      'Clave P.V.',
+      p.pv
+    ],
+
+    [
+      'Entidad',
+      p.estado || '—'
+    ],
+
+    [
+      'Municipio',
+      p.municipio || '—'
+    ],
+
+    [
+      'Domicilio',
+      domicilio || '—'
+    ],
+
+    [
+      'Zona',
+      p.zona || '—'
+    ],
+
+    [
+      'Subcontratista',
+      p.sub || '—'
+    ],
+
+    [
+      'Fecha compromiso',
+      p.fcomp || '—'
+    ],
+
+    [
+      'Fecha real',
+      p.freal || '—'
+    ],
+
+    [
+      'Superficie estándar',
+      `${M2_STD} m²`
+    ],
+
+    [
+      'Superficie real ejecutada',
+      `${p.m2 || M2_STD} m²`
+    ],
+
+    [
+      'Superficie excedente',
+      excedente > 0
+        ? `${excedente} m²`
+        : 'Sin excedente'
+    ],
+
+    [
+      'Contratista general',
+      acta.contratista ||
+      EMPRESA
+    ],
+
+    [
+      'Dependencia',
+      DEPENDENCIA
+    ]
+  ];
+
+  doc.setFontSize(9.2);
+
+  filas.forEach(
+    ([etiqueta, valor]) => {
+      doc.setFont(
+        undefined,
+        'bold'
+      );
+
+      doc.text(
+        `${etiqueta}:`,
+        14,
+        y
+      );
+
+      doc.setFont(
+        undefined,
+        'normal'
+      );
+
+      const lineas =
+        doc.splitTextToSize(
+          String(valor),
+          115
+        );
+
+      doc.text(
+        lineas,
+        74,
+        y
+      );
+
+      y += Math.max(
+        6.5,
+        lineas.length * 4.7
+      );
+    }
+  );
+
+  y += 5;
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(10);
+
+  doc.text(
+    'Objeto del acta',
+    14,
+    y
+  );
+
+  y += 7;
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(9);
+
+  const texto =
+    'Por medio de la presente se hace constar la conclusión y recepción de los trabajos ejecutados en el punto de venta indicado, conforme a las condiciones, superficie y evidencia registradas en la Bitácora de Lecherías.';
+
+  const lineasTexto =
+    doc.splitTextToSize(
+      texto,
+      180
+    );
+
+  doc.text(
+    lineasTexto,
+    14,
+    y
+  );
+
+  y +=
+    lineasTexto.length *
+    5 +
+    7;
+
+  /*
+   * Estado de validación.
+   */
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.text(
+    'Estado de validación:',
+    14,
+    y
+  );
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  const estadoVobo =
+    p.vobo === 'ok'
+      ? 'Vo.Bo. aprobado'
+      : p.vobo === 'rej'
+        ? 'Vo.Bo. rechazado'
+        : 'Pendiente de Vo.Bo.';
+
+  doc.text(
+    estadoVobo,
+    74,
+    y
+  );
+
+  y += 9;
+
+  if (acta.comentarios) {
+    doc.setFont(
+      undefined,
+      'bold'
+    );
+
+    doc.text(
+      'Comentarios:',
+      14,
+      y
+    );
+
+    y += 6;
+
+    doc.setFont(
+      undefined,
+      'normal'
+    );
+
+    const lineasComentarios =
+      doc.splitTextToSize(
+        acta.comentarios,
+        180
+      );
+
+    doc.text(
+      lineasComentarios,
+      14,
+      y
+    );
+
+    y +=
+      lineasComentarios.length *
+      5 +
+      8;
+  }
+
+  /*
+   * Firmas.
+   */
+  y =
+    Math.max(
+      y + 16,
+      225
+    );
+
+  doc.setDrawColor(
+    100,
+    100,
+    100
+  );
+
+  doc.line(
+    20,
+    y,
+    90,
+    y
+  );
+
+  doc.line(
+    120,
+    y,
+    190,
+    y
+  );
+
+  y += 6;
+
+  doc.setFontSize(8.5);
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.text(
+    'CONTRATISTA GENERAL',
+    55,
+    y,
+    {
+      align:'center'
+    }
+  );
+
+  doc.text(
+    'DEPENDENCIA',
+    155,
+    y,
+    {
+      align:'center'
+    }
+  );
+
+  y += 5;
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.text(
+    doc.splitTextToSize(
+      acta.contratista ||
+      EMPRESA,
+      66
+    ),
+    55,
+    y,
+    {
+      align:'center'
+    }
+  );
+
+  doc.text(
+    doc.splitTextToSize(
+      DEPENDENCIA,
+      66
+    ),
+    155,
+    y,
+    {
+      align:'center'
+    }
+  );
+
+  /*
+   * Pie.
+   */
+  doc.setFontSize(7);
+
+  doc.setTextColor(
+    107,
+    123,
+    140
+  );
+
+  doc.text(
+    `Generada por Bitácora de Lecherías · ${new Date().toLocaleString('es-MX')}`,
+    105,
+    290,
+    {
+      align:'center'
+    }
+  );
+
+  return doc;
+}
+
+async function generarActaApertura() {
+  if (!CUR) {
+    return;
+  }
+
+  if (ROLE !== 'gen') {
+    toast(
+      'Solo el contratista general puede generar el acta de apertura'
+    );
+    return;
+  }
+
+  try {
+    let acta =
+      CUR.actaApertura;
+
+    /*
+     * Si todavía no existe el registro,
+     * lo creamos.
+     */
+    if (!acta) {
+      acta =
+        await crearActaAperturaBD(
+          CUR
+        );
+    }
+
+    /*
+     * Si ya existe PDF generado,
+     * simplemente lo abrimos.
+     */
+    if (
+      acta.documento_generado_url
+    ) {
+      window.open(
+        acta.documento_generado_url,
+        '_blank'
+      );
+
+      CUR.actaApertura =
+        acta;
+
+      return;
+    }
+
+    const doc =
+      crearPDFActaApertura(
+        CUR,
+        acta
+      );
+
+    const blob =
+      doc.output(
+        'blob'
+      );
+
+    acta =
+      await guardarPDFGeneradoActaIndividual(
+        acta,
+        blob
+      );
+
+    CUR.actaApertura =
+      acta;
+
+    /*
+     * También descargamos una copia local
+     * para impresión/firma.
+     */
+    doc.save(
+      `Acta_Apertura_${CUR.pv}.pdf`
+    );
+
+    toast(
+      'Acta de apertura generada'
+    );
+
+    await openSheet(
+      CUR.id
+    );
+
+  } catch (error) {
+    console.error(
+      error
+    );
+
+    toast(
+      error.message ||
+      'No fue posible generar el acta'
+    );
+  }
+}
+
+async function generarActaRecepcion() {
+  if (!CUR) {
+    return;
+  }
+
+  if (ROLE !== 'gen') {
+    toast(
+      'Solo el contratista general puede generar el acta de recepción'
+    );
+
+    return;
+  }
+
+  if (CUR.status !== 'at') {
+    toast(
+      'Primero debe concluirse el trabajo de esta lechería'
+    );
+
+    return;
+  }
+
+  try {
+    let acta =
+      CUR.actaRecepcion;
+
+    if (!acta) {
+      acta =
+        await crearActaRecepcionBD(
+          CUR
+        );
+    }
+
+    /*
+     * Si el PDF ya está generado,
+     * simplemente lo abrimos.
+     */
+    if (
+      acta.documento_generado_url
+    ) {
+      window.open(
+        acta.documento_generado_url,
+        '_blank'
+      );
+
+      CUR.actaRecepcion =
+        acta;
+
+      return;
+    }
+
+    const doc =
+      crearPDFActaRecepcion(
+        CUR,
+        acta
+      );
+
+    const blob =
+      doc.output(
+        'blob'
+      );
+
+    acta =
+      await guardarPDFGeneradoActaIndividual(
+        acta,
+        blob
+      );
+
+    CUR.actaRecepcion =
+      acta;
+
+    doc.save(
+      `Acta_Recepcion_${CUR.pv}.pdf`
+    );
+
+    toast(
+      'Acta de recepción generada'
+    );
+
+    await openSheet(
+      CUR.id
+    );
+
+  } catch (error) {
+    console.error(
+      error
+    );
+
+    toast(
+      error.message ||
+      'No fue posible generar el acta de recepción'
+    );
+  }
+}
+
+async function guardarComentarioApertura() {
+  if (
+    !CUR ||
+    !CUR.actaApertura
+  ) {
+    return;
+  }
+
+  if (
+    ROLE !== 'gen'
+  ) {
+    toast(
+      'Tu perfil no puede modificar los comentarios'
+    );
+    return;
+  }
+
+  const campo =
+    document.getElementById(
+      'comentarioActaApertura'
+    );
+
+  const comentarios =
+    campo
+      ? campo.value.trim()
+      : '';
+
+  try {
+    const actualizada =
+      await guardarComentariosActaIndividual(
+        CUR.actaApertura.id,
+        comentarios
+      );
+
+    CUR.actaApertura =
+      actualizada;
+
+    toast(
+      'Comentarios guardados'
+    );
+
+    await openSheet(
+      CUR.id
+    );
+
+  } catch (error) {
+    console.error(
+      error
+    );
+
+    toast(
+      error.message ||
+      'No fue posible guardar los comentarios'
+    );
+  }
+}
+
+async function guardarComentarioRecepcion() {
+  if (
+    !CUR ||
+    !CUR.actaRecepcion
+  ) {
+    return;
+  }
+
+  if (ROLE !== 'gen') {
+    toast(
+      'Tu perfil no puede modificar los comentarios'
+    );
+
+    return;
+  }
+
+  const campo =
+    document.getElementById(
+      'comentarioActaRecepcion'
+    );
+
+  const comentarios =
+    campo
+      ? campo.value.trim()
+      : '';
+
+  try {
+    const actualizada =
+      await guardarComentariosActaIndividual(
+        CUR.actaRecepcion.id,
+        comentarios
+      );
+
+    CUR.actaRecepcion =
+      actualizada;
+
+    toast(
+      'Comentarios guardados'
+    );
+
+    await openSheet(
+      CUR.id
+    );
+
+  } catch (error) {
+    console.error(
+      error
+    );
+
+    toast(
+      error.message ||
+      'No fue posible guardar los comentarios'
+    );
+  }
+}
+
+async function seleccionarDocumentoActa() {
+  return new Promise(
+    resolve => {
+      const input =
+        document.createElement(
+          'input'
+        );
+
+      input.type =
+        'file';
+
+      input.accept =
+        '.pdf,image/jpeg,image/png';
+
+      input.onchange =
+        () => {
+          resolve(
+            input.files &&
+            input.files.length
+              ? input.files[0]
+              : null
+          );
+        };
+
+      input.click();
+    }
+  );
+}
+
+async function cargarActaAperturaFirmada() {
+  if (
+    !CUR ||
+    !CUR.actaApertura
+  ) {
+    return;
+  }
+
+  if (
+    ROLE !== 'gen'
+  ) {
+    toast(
+      'Solo el contratista general puede cargar el acta firmada'
+    );
+    return;
+  }
+
+  const archivo =
+    await seleccionarDocumentoActa();
+
+  if (!archivo) {
+    return;
+  }
+
+  try {
+    const actualizada =
+      await subirActaIndividualFirmada(
+        CUR.actaApertura,
+        archivo
+      );
+
+    CUR.actaApertura =
+      actualizada;
+
+    toast(
+      'Acta firmada cargada correctamente'
+    );
+
+    await openSheet(
+      CUR.id
+    );
+
+  } catch (error) {
+    console.error(
+      error
+    );
+
+    toast(
+      error.message ||
+      'No fue posible cargar el acta firmada'
+    );
+  }
+}
+
+async function cargarActaRecepcionFirmada() {
+  if (
+    !CUR ||
+    !CUR.actaRecepcion
+  ) {
+    return;
+  }
+
+  if (ROLE !== 'gen') {
+    toast(
+      'Solo el contratista general puede cargar el acta firmada'
+    );
+
+    return;
+  }
+
+  const archivo =
+    await seleccionarDocumentoActa();
+
+  if (!archivo) {
+    return;
+  }
+
+  try {
+    const actualizada =
+      await subirActaIndividualFirmada(
+        CUR.actaRecepcion,
+        archivo
+      );
+
+    CUR.actaRecepcion =
+      actualizada;
+
+    toast(
+      'Acta de recepción firmada cargada correctamente'
+    );
+
+    await openSheet(
+      CUR.id
+    );
+
+  } catch (error) {
+    console.error(
+      error
+    );
+
+    toast(
+      error.message ||
+      'No fue posible cargar el acta firmada'
+    );
   }
 }
 
@@ -1564,6 +4027,82 @@ async function vobo(aprobado) {
   }
 }
 
+async function cambiarFechaCompromiso(
+  id,
+  nuevaFecha
+) {
+  const p = LECH[id];
+
+  if (!p) {
+    toast(
+      'No se encontró la lechería'
+    );
+    return;
+  }
+
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    toast(
+      'Tu perfil no puede modificar la fecha compromiso'
+    );
+    return;
+  }
+
+  const fechaAnterior =
+    p.fcomp || '';
+
+  if (
+    nuevaFecha === fechaAnterior
+  ) {
+    return;
+  }
+
+  try {
+    await guardarFechaCompromiso(
+      p.pv,
+      nuevaFecha
+    );
+
+    p.fcomp =
+      nuevaFecha || '';
+
+    toast(
+      'Fecha compromiso actualizada'
+    );
+
+    /*
+     * Actualizamos la ficha para que
+     * desviación y programa se recalculen.
+     */
+    openSheet(id);
+
+    /*
+     * Los módulos usan p.fcomp directamente,
+     * por lo que también quedarán actualizados
+     * sin volver a consultar Supabase.
+     */
+    render();
+
+  } catch (error) {
+    console.error(
+      'No fue posible actualizar la fecha compromiso:',
+      error
+    );
+
+    /*
+     * Dejamos el valor anterior en memoria.
+     */
+    p.fcomp =
+      fechaAnterior;
+
+    toast(
+      'No fue posible guardar la fecha'
+    );
+  }
+}
+
 function toggleRej(){ const b=document.getElementById('rejWrap'); if(b) b.style.display = b.style.display==='none'?'block':'none'; }
 
 async function resend() {
@@ -1611,7 +4150,27 @@ async function resend() {
   }
 }
 
-function closeSheet(){ document.getElementById('sheet').classList.remove('show'); CUR=null; }
+function closeSheet() {
+  const regresarAlMapa = REGRESAR_A_MAPA;
+
+  document
+    .getElementById('sheet')
+    .classList
+    .remove('show');
+
+  CUR = null;
+  REGRESAR_A_MAPA = false;
+
+  if (regresarAlMapa) {
+    /*
+     * La ficha tiene una transición de 0.25 segundos.
+     * Esperamos a que termine antes de mostrar de nuevo el mapa.
+     */
+    setTimeout(() => {
+      setTab('mapa');
+    }, 260);
+  }
+}
 
 /* ============ MAPA ============ */
 function markerColor(p){
@@ -1620,6 +4179,7 @@ function markerColor(p){
   if(p.vobo==='rej') return '#c0362c';
   return '#e08a1e';
 }
+
 function initMap(){
   if(!MAP){
     MAP=L.map('map',{zoomControl:true,attributionControl:false}).setView([21.5,-99.5],5);
@@ -1630,21 +4190,56 @@ function initMap(){
   MAP.invalidateSize();
   drawMarkers();
 }
+
 function drawMarkers(){
-  if(!MAPLAYER) return;
+  if (!MAPLAYER) {
+    return;
+  }
+
   MAPLAYER.clearLayers();
-  const pts=visiblePts();
+
+  const pts = visiblePts().filter(p => {
+    if (
+      p.lat === null ||
+      p.lat === undefined ||
+      p.lat === '' ||
+      p.lng === null ||
+      p.lng === undefined ||
+      p.lng === ''
+    ) {
+      return false;
+    }
+
+    const lat = Number(p.lat);
+    const lng = Number(p.lng);
+
+    return (
+      Number.isFinite(lat) &&
+      Number.isFinite(lng) &&
+      lat >= -90 &&
+      lat <= 90 &&
+      lng >= -180 &&
+      lng <= 180
+    );
+  });
+
   const bounds=[];
   pts.forEach(p=>{
+    const lat = Number(p.lat);
+    const lng = Number(p.lng);
     const c=markerColor(p);
-    const m=L.circleMarker([p.lat,p.lng],{radius:6,color:'#fff',weight:1.5,fillColor:c,fillOpacity:.95});
+    const m=L.circleMarker([lat,lng],{radius:6,color:'#fff',weight:1.5,fillColor:c,fillOpacity:.95});
     const stTxt = p.status==='at' ? (p.vobo==='ok'?'Con Vo.Bo.':p.vobo==='rej'?'Rechazado':'Atendido s/ Vo.Bo.') : 'No atendido';
     m.bindPopup(`<b>P.V. ${p.pv}</b><br>${p.calle||''}<br><span style="color:#6b7b8c">${p.municipio}, ${p.estado}</span><br><b style="color:${c}">${stTxt}</b> · ${p.m2} m²<br><span class="popbtn" onclick="fromMap(${p.id})">Ver detalle</span>`);
-    m.addTo(MAPLAYER); bounds.push([p.lat,p.lng]);
+    m.addTo(MAPLAYER); bounds.push([lat,lng]);
   });
-  if(bounds.length){ try{ MAP.fitBounds(bounds,{padding:[30,30],maxZoom:12}); }catch(e){} }
+
+  if(bounds.length){ try{ MAP.fitBounds(bounds,{padding:[30,30],maxZoom:12}); }catch(error){console.warn('No se pudo ajustar el mapa:', error);} }
 }
-function fromMap(id){ openSheet(id); }
+
+function fromMap(id) {
+  abrirDetalleDesdeMapa(id);
+}
 
 /* ============ TABLERO por subcontratista ============ */
 function renderTablero(){
@@ -6434,7 +9029,7 @@ async function exportReporteInterno() {
         Concepto:
           'Lecherías definidas',
         Valor:
-          DEFINIDAS
+          LECH.length
       },
       {
         Concepto:
