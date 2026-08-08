@@ -2280,6 +2280,7 @@ CUR.actaRecepcion =
   // requisito de fotos (anexo): 3 previas + 3 finales, con fachada global y letrero
   const reqOk = fotosOk(p);
   const aperturaAutorizada =
+  p.actaApertura?.estado === 'en_revision' ||
   p.actaApertura?.estado === 'aprobada';
   const nP=(p.fotosPrev||[]).length, nF=(p.fotosFin||[]).length;
   const faltaCat=faltanCatFin(p);
@@ -4171,16 +4172,20 @@ async function addExtraEvidencia() {
 async function markAt() {
   if (!CUR || ROLE !== 'sub') return;
 
-  if (
-    CUR.actaApertura?.estado !==
-    'aprobada'
-  ) {
-    toast(
-      'Esta lechería aún no está autorizada para iniciar trabajos'
-    );
+  const estadoApertura =
+  CUR.actaApertura?.estado;
 
-    return;
-  }
+const aperturaAutorizada =
+  estadoApertura === 'en_revision' ||
+  estadoApertura === 'aprobada';
+
+if (!aperturaAutorizada) {
+  toast(
+    'Esta lechería aún no está autorizada para iniciar trabajos'
+  );
+
+  return;
+}
 
   const nP = (CUR.fotosPrev || []).length;
   const nF = (CUR.fotosFin || []).length;
