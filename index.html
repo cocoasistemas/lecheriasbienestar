@@ -335,6 +335,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="02-supabase-conexion.js"></script>
 </head>
@@ -563,6 +564,16 @@ function daysBetween(a, b) {
 }
 
 let LOTES=[];
+let ACTAS_PERIODO = {
+  inicio: '',
+  fin: '',
+  aperturas: [],
+  recepciones: []
+};
+const VISTA_ACTAS = {
+  apertura: 'disponibles',
+  recepcion: 'disponibles'
+};
 /* ---- state ---- */
 let ROLE='sub',
     CURSUB='',
@@ -646,12 +657,95 @@ function reconstruirConfiguracionDinamica() {
   });
 }
 
-function setRole(r){
-  ROLE=r; VIEW='estados'; CUR_EST=null;
-  const info=ROLEINFO[r], b=document.getElementById('roleBand');
-  b.className='roleband '+info.band; b.textContent=info.txt();
-  document.getElementById('roleHint').textContent=info.hint;
-  document.getElementById('zoneTag').textContent = r==='sub'?CURSUB:'Nacional';
+function tabsPermitidasPorRol() {
+  if (ROLE === 'sub') {
+    return [
+      'lista',
+      'mapa',
+      'programa',
+      'tablero'
+    ];
+  }
+
+  if (ROLE === 'dep') {
+    return [
+      'lista',
+      'mapa',
+      'programa',
+      'tablero',
+      'estim'
+    ];
+  }
+
+  return [
+    'lista',
+    'mapa',
+    'programa',
+    'tablero',
+    'actas',
+    'estim'
+  ];
+}
+
+function actualizarNavbarPorRol() {
+  const permitidas =
+    tabsPermitidasPorRol();
+
+  document
+    .querySelectorAll(
+      '#navbar .navbtn'
+    )
+    .forEach(boton => {
+      const permitido =
+        permitidas.includes(
+          boton.dataset.tab
+        );
+
+      boton.style.display =
+        permitido
+          ? ''
+          : 'none';
+    });
+}
+
+function setRole(r) {
+  ROLE = r;
+  VIEW = 'estados';
+  CUR_EST = null;
+
+  const info =
+    ROLEINFO[r];
+
+  const b =
+    document.getElementById(
+      'roleBand'
+    );
+
+  b.className =
+    'roleband ' +
+    info.band;
+
+  b.textContent =
+    info.txt();
+
+  document
+    .getElementById(
+      'roleHint'
+    )
+    .textContent =
+      info.hint;
+
+  document
+    .getElementById(
+      'zoneTag'
+    )
+    .textContent =
+      r === 'sub'
+        ? CURSUB
+        : 'Nacional';
+
+  actualizarNavbarPorRol();
+
   setTab('lista');
 }
 
@@ -829,16 +923,85 @@ function renderKPI(){
 }
 
 /* ---- tabs ---- */
-function setTab(t){
-  TAB=t;
-  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
-  document.getElementById('scroll').style.display = (t==='mapa')?'none':'block';
-  document.getElementById('mapWrap').style.display = (t==='mapa')?'block':'none';
-  const showList = (t==='lista');
-  document.getElementById('crumbs').style.display = showList?'flex':'none';
-  document.getElementById('filters').style.display = showList?'flex':'none';
+function setTab(t) {
+  const permitidas =
+    tabsPermitidasPorRol();
+
+  /*
+   * No solamente ocultamos pestañas:
+   * impedimos abrir módulos que no
+   * corresponden al perfil actual.
+   */
+  if (
+    !permitidas.includes(t)
+  ) {
+    console.warn(
+      `El rol ${ROLE} no tiene acceso a la pestaña ${t}`
+    );
+
+    t = 'lista';
+  }
+
+  TAB = t;
+
+  document
+    .querySelectorAll(
+      '.navbtn'
+    )
+    .forEach(b => {
+      b.classList.toggle(
+        'on',
+        b.dataset.tab === t
+      );
+    });
+
+  document
+    .getElementById(
+      'scroll'
+    )
+    .style.display =
+      t === 'mapa'
+        ? 'none'
+        : 'block';
+
+  document
+    .getElementById(
+      'mapWrap'
+    )
+    .style.display =
+      t === 'mapa'
+        ? 'block'
+        : 'none';
+
+  const showList =
+    t === 'lista';
+
+  document
+    .getElementById(
+      'crumbs'
+    )
+    .style.display =
+      showList
+        ? 'flex'
+        : 'none';
+
+  document
+    .getElementById(
+      'filters'
+    )
+    .style.display =
+      showList
+        ? 'flex'
+        : 'none';
+
   render();
-  if(t==='mapa') setTimeout(initMap,60);
+
+  if (t === 'mapa') {
+    setTimeout(
+      initMap,
+      60
+    );
+  }
 }
 
 /* ---- render router ---- */
@@ -2116,6 +2279,8 @@ CUR.actaRecepcion =
 
   // requisito de fotos (anexo): 3 previas + 3 finales, con fachada global y letrero
   const reqOk = fotosOk(p);
+  const aperturaAutorizada =
+  p.actaApertura?.estado === 'aprobada';
   const nP=(p.fotosPrev||[]).length, nF=(p.fotosFin||[]).length;
   const faltaCat=faltanCatFin(p);
   let reqDetalle;
@@ -2225,16 +2390,32 @@ CUR.actaRecepcion =
 
   if (ROLE === 'sub') {
   if (p.status === 'no') {
+    const puedeMarcarAtendido =
+      reqOk &&
+      aperturaAutorizada;
+
     actions = `
       <button
         class="btn btn-leche"
         onclick="markAt()"
-        ${reqOk ? '' : 'disabled'}
+        ${
+          puedeMarcarAtendido
+            ? ''
+            : 'disabled'
+        }
       >
         Marcar como atendido
       </button>
 
-      ${reqTxt}
+      ${
+        !aperturaAutorizada
+          ? `
+            <div class="lock">
+              ⏳ Pendiente de autorización de inicio por LUMEN.
+            </div>
+          `
+          : reqTxt
+      }
     `;
   } else if (vo === 'rej') {
     actions = `
@@ -2370,17 +2551,98 @@ const fechasBlock = p.fcomp
   `
   : '';
 
-  const actaAperturaBlock =
-  renderActaAperturaBlock(p);
+  const puedeVerAdministrativo =
+  ROLE !== 'sub';
 
-  const actaRecepcionBlock =
-  renderActaRecepcionBlock(p);
+const actaAperturaBlock =
+  puedeVerAdministrativo
+    ? renderActaAperturaBlock(p)
+    : '';
 
-  // botón de reporte PDF antes/después (disponible cuando hay evidencia)
-  const repBtn = ((p.fotosPrev||[]).length>0||(p.fotosFin||[]).length>0) ? `<button class="btn" style="background:var(--steel);color:#fff" onclick="reportePDF()">📄 Descargar reporte antes/después</button>` : '';
+const actaRecepcionBlock =
+  puedeVerAdministrativo
+    ? renderActaRecepcionBlock(p)
+    : '';
+
+const repBtn =
+  puedeVerAdministrativo &&
+  (
+    (p.fotosPrev || []).length > 0 ||
+    (p.fotosFin || []).length > 0
+  )
+    ? `
+      <button
+        class="btn"
+        style="
+          background:var(--steel);
+          color:#fff
+        "
+        onclick="reportePDF()"
+      >
+        📄 Descargar reporte antes/después
+      </button>
+    `
+    : '';
+
+const autorizacionBlock =
+  ROLE === 'sub'
+    ? `
+      <div class="sect">
+        <h3>Autorización de trabajo</h3>
+
+        <div
+          class="cobro-flag"
+          style="
+            background:
+              ${
+                aperturaAutorizada
+                  ? 'var(--done-bg)'
+                  : 'var(--wait-bg)'
+              };
+          "
+        >
+          <span
+            class="k"
+            style="
+              background:
+                ${
+                  aperturaAutorizada
+                    ? 'var(--done)'
+                    : 'var(--wait)'
+                };
+            "
+          ></span>
+
+          <div>
+            <b>
+              ${
+                aperturaAutorizada
+                  ? 'Autorizada para iniciar'
+                  : 'Pendiente de autorización'
+              }
+            </b>
+
+            <div
+              style="
+                margin-top:2px;
+                font-size:10.5px;
+                color:var(--mut);
+              "
+            >
+              ${
+                aperturaAutorizada
+                  ? 'Acta de apertura autorizada por LUMEN.'
+                  : 'No iniciar trabajos hasta recibir autorización de LUMEN.'
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+    : '';
 
   document.getElementById('sbody').innerHTML=
-    info+fechasBlock+actaAperturaBlock+`<div class="sect"><h3>Evidencia fotográfica</h3>${prevLane}${finLane}</div>`+adjBlock+sup+tl+actaRecepcionBlock+`<div class="actions">${actions}${repBtn}</div>`;
+    info+fechasBlock+autorizacionBlock+actaAperturaBlock+`<div class="sect"><h3>Evidencia fotográfica</h3>${prevLane}${finLane}</div>`+adjBlock+sup+tl+actaRecepcionBlock+`<div class="actions">${actions}${repBtn}</div>`;
   document.getElementById('sheet').classList.add('show');
 }
 
@@ -3908,6 +4170,17 @@ async function addExtraEvidencia() {
 
 async function markAt() {
   if (!CUR || ROLE !== 'sub') return;
+
+  if (
+    CUR.actaApertura?.estado !==
+    'aprobada'
+  ) {
+    toast(
+      'Esta lechería aún no está autorizada para iniciar trabajos'
+    );
+
+    return;
+  }
 
   const nP = (CUR.fotosPrev || []).length;
   const nF = (CUR.fotosFin || []).length;
@@ -11649,160 +11922,1209 @@ async function renderActas() {
   document.getElementById('crumbs').style.display = 'none';
   document.getElementById('filters').style.display = 'none';
 
-  const sc = document.getElementById('scroll');
+  const sc =
+    document.getElementById('scroll');
+
+  /*
+   * Protección adicional.
+   * Aunque intenten llamar setTab('actas')
+   * manualmente, solo GEN y ADMIN
+   * pueden consultar este concentrado.
+   */
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    sc.innerHTML = `
+      <div
+        style="
+          text-align:center;
+          color:var(--mut);
+          padding:40px 15px;
+        "
+      >
+        Tu perfil no tiene acceso
+        al concentrado de actas.
+      </div>
+    `;
+
+    return;
+  }
+
+  /*
+   * Si todavía no hay periodo,
+   * usamos automáticamente
+   * la semana actual.
+   */
+  if (
+    !ACTAS_PERIODO.inicio ||
+    !ACTAS_PERIODO.fin
+  ) {
+    const rango =
+      obtenerSemanaActual();
+
+    ACTAS_PERIODO.inicio =
+      rango.inicio;
+
+    ACTAS_PERIODO.fin =
+      rango.fin;
+  }
+
   sc.innerHTML = `
-    <div style="
-      text-align:center;
-      color:var(--mut);
-      padding:30px 0;
-      font-size:12px
-    ">
-      Cargando actas…
+    <div class="note">
+      <b>Concentrado de actas por periodo operativo.</b>
+      <br><br>
+
+      Las <b>Actas de Apertura</b> se incluyen
+      según la <b>Fecha Compromiso</b> de cada lechería.
+
+      <br><br>
+
+      Las <b>Actas de Recepción</b> se incluyen
+      según la <b>Fecha Real</b> de ejecución.
+
+      <br><br>
+
+      El periodo seleccionado no corresponde a la fecha
+      en que se generó o cargó el PDF.
+    </div>
+
+    <div class="sect">
+      <h3>Periodo</h3>
+
+      <div class="infogrid">
+
+        <div class="ib">
+          <div class="k">
+            Fecha inicial
+          </div>
+
+          <div class="v">
+            <input
+              id="actasFechaInicio"
+              type="date"
+              value="${ACTAS_PERIODO.inicio}"
+              style="
+                width:100%;
+                border:none;
+                background:transparent;
+                font:inherit;
+                font-weight:700;
+                color:var(--ink);
+                outline:none;
+              "
+            >
+          </div>
+        </div>
+
+        <div class="ib">
+          <div class="k">
+            Fecha final
+          </div>
+
+          <div class="v">
+            <input
+              id="actasFechaFin"
+              type="date"
+              value="${ACTAS_PERIODO.fin}"
+              style="
+                width:100%;
+                border:none;
+                background:transparent;
+                font:inherit;
+                font-weight:700;
+                color:var(--ink);
+                outline:none;
+              "
+            >
+          </div>
+        </div>
+
+      </div>
+
+      <div
+        style="
+          display:flex;
+          gap:8px;
+          margin-top:9px;
+        "
+      >
+        <button
+          class="btn"
+          style="
+            background:var(--milk);
+            color:var(--steel);
+          "
+          onclick="ponerSemanaActualActas()"
+        >
+          Esta semana
+        </button>
+
+        <button
+          class="btn btn-leche"
+          onclick="aplicarPeriodoActas()"
+        >
+          Consultar
+        </button>
+      </div>
+    </div>
+
+    <div
+      id="actasResultado"
+      style="
+        text-align:center;
+        color:var(--mut);
+        padding:20px 0;
+        font-size:12px;
+      "
+    >
+      Consultando actas…
+    </div>
+  `;
+
+  await cargarConcentradoActas();
+}
+
+function fechaISOlocal(fecha) {
+  const y =
+    fecha.getFullYear();
+
+  const m =
+    String(
+      fecha.getMonth() + 1
+    ).padStart(2, '0');
+
+  const d =
+    String(
+      fecha.getDate()
+    ).padStart(2, '0');
+
+  return `${y}-${m}-${d}`;
+}
+
+function obtenerSemanaActual() {
+  const hoy =
+    new Date();
+
+  const dia =
+    hoy.getDay();
+
+  /*
+   * Semana lunes-domingo.
+   */
+  const diferenciaLunes =
+    dia === 0
+      ? -6
+      : 1 - dia;
+
+  const lunes =
+    new Date(hoy);
+
+  lunes.setDate(
+    hoy.getDate() +
+    diferenciaLunes
+  );
+
+  const domingo =
+    new Date(lunes);
+
+  domingo.setDate(
+    lunes.getDate() + 6
+  );
+
+  return {
+    inicio:
+      fechaISOlocal(lunes),
+
+    fin:
+      fechaISOlocal(domingo)
+  };
+}
+
+function ponerSemanaActualActas() {
+  const rango =
+    obtenerSemanaActual();
+
+  document
+    .getElementById(
+      'actasFechaInicio'
+    )
+    .value =
+      rango.inicio;
+
+  document
+    .getElementById(
+      'actasFechaFin'
+    )
+    .value =
+      rango.fin;
+
+  aplicarPeriodoActas();
+}
+
+async function aplicarPeriodoActas() {
+  const inicio =
+    document
+      .getElementById(
+        'actasFechaInicio'
+      )
+      .value;
+
+  const fin =
+    document
+      .getElementById(
+        'actasFechaFin'
+      )
+      .value;
+
+  if (!inicio || !fin) {
+    toast(
+      'Selecciona fecha inicial y final'
+    );
+
+    return;
+  }
+
+  if (inicio > fin) {
+    toast(
+      'La fecha inicial no puede ser posterior a la final'
+    );
+
+    return;
+  }
+
+  ACTAS_PERIODO.inicio =
+    inicio;
+
+  ACTAS_PERIODO.fin =
+    fin;
+
+  await cargarConcentradoActas();
+}
+
+async function cargarConcentradoActas() {
+  const contenedor =
+    document.getElementById(
+      'actasResultado'
+    );
+
+  if (!contenedor) {
+    return;
+  }
+
+  contenedor.innerHTML = `
+    <div
+      style="
+        text-align:center;
+        color:var(--mut);
+        padding:20px 0;
+      "
+    >
+      Consultando actas…
     </div>
   `;
 
   try {
-    const lotes = await visibleLotes();
+    const todasActas =
+      await cargarActas();
 
-    // openActa() todavía busca el registro dentro de LOTES.
-    LOTES = lotes;
+    const inicio =
+      ACTAS_PERIODO.inicio;
 
-    sc.innerHTML = '';
+    const fin =
+      ACTAS_PERIODO.fin;
 
-    const puedeGenerar =
-      ROLE === 'admin' ||
-      ROLE === 'gen';
+    /*
+     * APERTURAS:
+     * manda la fecha compromiso.
+     */
+    const puntosApertura =
+      LECH.filter(p =>
+        p.fcomp &&
+        p.fcomp >= inicio &&
+        p.fcomp <= fin
+      );
 
-    const wrap = document.createElement('div');
+    /*
+     * RECEPCIONES:
+     * manda la fecha real.
+     */
+    const puntosRecepcion =
+      LECH.filter(p =>
+        p.freal &&
+        p.freal >= inicio &&
+        p.freal <= fin
+      );
 
-    wrap.innerHTML = `
-      <div class="note">
-        <b>Actas y documentos.</b>
-        La <b>Carta Entrega-Recepción</b> firmada por las partes
-        da fe de la finalización a entera satisfacción y
-        <b>detona el cobro</b>.
-        Con la dependencia se arma cada <b>50 lecherías o más</b>;
-        con cada subcontratista es un <b>corte quincenal</b>.
+    /*
+     * Relacionamos cada lechería
+     * con su acta individual.
+     */
+    ACTAS_PERIODO.aperturas =
+      puntosApertura.map(p => ({
+        punto: p,
+
+        acta:
+          todasActas.find(a =>
+            String(a.pv) ===
+              String(p.pv) &&
+            a.clase ===
+              'apertura'
+          ) || null
+      }));
+
+    ACTAS_PERIODO.recepciones =
+      puntosRecepcion.map(p => ({
+        punto: p,
+
+        acta:
+          todasActas.find(a =>
+            String(a.pv) ===
+              String(p.pv) &&
+            a.clase ===
+              'recepcion'
+          ) || null
+      }));
+
+    pintarConcentradoActas();
+
+  } catch (error) {
+    console.error(
+      'Error cargando concentrado:',
+      error
+    );
+
+    contenedor.innerHTML = `
+      <div
+        style="
+          color:var(--rej);
+          text-align:center;
+          padding:25px 10px;
+          font-size:12px;
+        "
+      >
+        No fue posible cargar
+        el concentrado de actas.
+      </div>
+    `;
+  }
+}
+
+function pintarConcentradoActas() {
+  const contenedor =
+    document.getElementById(
+      'actasResultado'
+    );
+
+  if (!contenedor) {
+    return;
+  }
+
+  const aperturas =
+    ACTAS_PERIODO.aperturas;
+
+  const recepciones =
+    ACTAS_PERIODO.recepciones;
+
+  const aperturasDisponibles =
+    aperturas.filter(
+      tieneDocumentoActa
+    ).length;
+
+  const recepcionesDisponibles =
+    recepciones.filter(
+      tieneDocumentoActa
+    ).length;
+
+  const aperturasPendientes =
+    aperturas.length -
+    aperturasDisponibles;
+
+  const recepcionesPendientes =
+    recepciones.length -
+    recepcionesDisponibles;
+
+  contenedor.innerHTML = `
+
+    <div class="sect">
+      <h3>Resumen del periodo</h3>
+
+      <div
+        class="dashcard"
+        style="
+          border-left:
+            4px solid var(--leche);
+        "
+      >
+        <div
+          style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:10px;
+          "
+        >
+          <div>
+            <div
+              style="
+                font-size:12px;
+                font-weight:800;
+              "
+            >
+              Actas de Apertura
+            </div>
+
+            <div
+              style="
+                font-size:10px;
+                color:var(--mut);
+                margin-top:2px;
+              "
+            >
+              Por fecha compromiso
+            </div>
+          </div>
+
+          <div
+            style="
+              font-size:22px;
+              font-weight:800;
+            "
+          >
+            ${aperturas.length}
+          </div>
+        </div>
+
+        <div class="dstats">
+
+          <div class="s">
+            <div
+              class="v"
+              style="color:var(--done)"
+            >
+              ${aperturasDisponibles}
+            </div>
+
+            <div class="k">
+              Disponibles
+            </div>
+          </div>
+
+          <div class="s">
+            <div
+              class="v"
+              style="
+                color:${
+                  aperturasPendientes
+                    ? 'var(--wait)'
+                    : 'var(--done)'
+                }
+              "
+            >
+              ${aperturasPendientes}
+            </div>
+
+            <div class="k">
+              Pendientes
+            </div>
+          </div>
+
+        </div>
       </div>
 
-      <button
-        class="expbtn"
+      <div
+        class="dashcard"
         style="
-          background:var(--navy);
-          color:#fff;
-          width:100%;
-          margin-bottom:10px
+          border-left:
+            4px solid var(--done);
         "
-        onclick="reporteInicioPDF()"
       >
-        Generar reporte de inicio de trabajos
-        (junta de arranque)
-      </button>
+        <div
+          style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:10px;
+          "
+        >
+          <div>
+            <div
+              style="
+                font-size:12px;
+                font-weight:800;
+              "
+            >
+              Actas de Recepción
+            </div>
+
+            <div
+              style="
+                font-size:10px;
+                color:var(--mut);
+                margin-top:2px;
+              "
+            >
+              Por fecha real
+            </div>
+          </div>
+
+          <div
+            style="
+              font-size:22px;
+              font-weight:800;
+            "
+          >
+            ${recepciones.length}
+          </div>
+        </div>
+
+        <div class="dstats">
+
+          <div class="s">
+            <div
+              class="v"
+              style="color:var(--done)"
+            >
+              ${recepcionesDisponibles}
+            </div>
+
+            <div class="k">
+              Disponibles
+            </div>
+          </div>
+
+          <div class="s">
+            <div
+              class="v"
+              style="
+                color:${
+                  recepcionesPendientes
+                    ? 'var(--wait)'
+                    : 'var(--done)'
+                }
+              "
+            >
+              ${recepcionesPendientes}
+            </div>
+
+            <div class="k">
+              Pendientes
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    ${renderGrupoConcentradoActas(
+      'apertura',
+      'Actas de apertura',
+      aperturas
+    )}
+
+    ${renderGrupoConcentradoActas(
+      'recepcion',
+      'Actas de recepción',
+      recepciones
+    )}
+  `;
+}
+
+function tieneDocumentoActa(item) {
+  return !!(
+    item &&
+    item.acta &&
+    (
+      item.acta.documento_generado_url ||
+      item.acta.documento_firmado_url
+    )
+  );
+}
+
+function renderGrupoConcentradoActas(
+  clase,
+  titulo,
+  registros
+) {
+  const disponibles =
+    registros.filter(
+      tieneDocumentoActa
+    );
+
+  const pendientes =
+    registros.filter(
+      item =>
+        !tieneDocumentoActa(item)
+    );
+
+  const vistaActual =
+    VISTA_ACTAS[clase] ||
+    'disponibles';
+
+  const mostrar =
+    vistaActual === 'pendientes'
+      ? pendientes
+      : disponibles;
+
+  const tarjetas =
+    mostrar.length
+      ? mostrar
+          .map(
+            item =>
+              renderActaPeriodoItem(
+                item,
+                clase
+              )
+          )
+          .join('')
+      : `
+        <div
+          style="
+            background:#fff;
+            border:1px solid var(--line);
+            border-radius:9px;
+            padding:18px 14px;
+            text-align:center;
+            color:var(--mut);
+            font-size:11px;
+          "
+        >
+          ${
+            vistaActual === 'disponibles'
+              ? 'No hay actas disponibles en este periodo.'
+              : 'No hay actas pendientes en este periodo.'
+          }
+        </div>
+      `;
+
+  return `
+    <div class="sect">
+
+      <h3>${titulo}</h3>
+
+      <div
+        style="
+          font-size:10.5px;
+          color:var(--mut);
+          margin-bottom:8px;
+        "
+      >
+        ${
+          clase === 'apertura'
+            ? 'Periodo determinado por Fecha Compromiso'
+            : 'Periodo determinado por Fecha Real'
+        }
+      </div>
+
+      <div
+        style="
+          display:flex;
+          gap:7px;
+          margin-bottom:10px;
+        "
+      >
+
+        <button
+          type="button"
+          class="chip ${
+            vistaActual === 'disponibles'
+              ? 'on'
+              : ''
+          }"
+          style="flex:1"
+          onclick="
+            cambiarVistaActas(
+              '${clase}',
+              'disponibles'
+            )
+          "
+        >
+          Disponibles
+          (${disponibles.length})
+        </button>
+
+        <button
+          type="button"
+          class="chip ${
+            vistaActual === 'pendientes'
+              ? 'on'
+              : ''
+          }"
+          style="flex:1"
+          onclick="
+            cambiarVistaActas(
+              '${clase}',
+              'pendientes'
+            )
+          "
+        >
+          Pendientes
+          (${pendientes.length})
+        </button>
+
+      </div>
+
+      <div
+        style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          margin-bottom:8px;
+          font-size:10px;
+          color:var(--mut);
+        "
+      >
+        <span>
+          Mostrando
+          ${mostrar.length}
+        </span>
+
+        <span>
+          Total del periodo:
+          ${registros.length}
+        </span>
+      </div>
+
+      ${tarjetas}
 
       ${
-        puedeGenerar
+        disponibles.length
           ? `
             <button
-              class="expbtn"
+              class="btn"
               style="
-                background:var(--leche);
-                color:#fff;
-                width:100%;
-                margin-bottom:10px
-              "
-              onclick="generarActaSubDesdeUI()"
-            >
-              + Generar acta de subcontratista
-            </button>
-            <button
-              class="expbtn"
-              style="
+                margin-top:10px;
                 background:var(--steel);
                 color:#fff;
-                width:100%;
-                margin-bottom:10px
               "
-              onclick="generarCartaDepDesdeUI()"
+              onclick="
+                descargarActasPeriodo(
+                  '${clase}'
+                )
+              "
             >
-              + Generar carta para dependencia
+              📦 Descargar actas disponibles
+              (${disponibles.length})
             </button>
           `
           : ''
       }
 
-      <div class="sectlabel">
-        Cartas Entrega-Recepción con la dependencia (cobro)
-      </div>
-    `;
+    </div>
+  `;
+}
 
-    sc.appendChild(wrap);
+function cambiarVistaActas(
+  clase,
+  vista
+) {
+  if (
+    clase !== 'apertura' &&
+    clase !== 'recepcion'
+  ) {
+    return;
+  }
 
-    const dependencia = lotes.filter(
-      lote => lote.tipo === 'dependencia'
-    );
+  if (
+    vista !== 'disponibles' &&
+    vista !== 'pendientes'
+  ) {
+    return;
+  }
 
-    if (!dependencia.length) {
-      sc.insertAdjacentHTML(
-        'beforeend',
-        `
-          <div style="
-            font-size:12px;
-            color:var(--mut);
-            padding:2px 2px 10px
-          ">
-            Aún no hay lotes de 50+ listos.
+  VISTA_ACTAS[clase] =
+    vista;
+
+  pintarConcentradoActas();
+}
+
+function renderActaPeriodoItem(
+  item,
+  clase
+) {
+  const p =
+    item.punto;
+
+  const a =
+    item.acta;
+
+  if (!a) {
+    return `
+      <div
+        class="estim-row"
+        style="
+          border-left:
+            3px solid var(--wait);
+        "
+      >
+        <div class="l">
+          <b>P.V. ${p.pv}</b>
+
+          <div
+            style="
+              font-size:10px;
+              margin-top:2px;
+              color:var(--mut);
+            "
+          >
+            ${p.municipio},
+            ${p.estado}
           </div>
-        `
-      );
-    }
 
-    dependencia.forEach(
-      lote => sc.appendChild(loteCard(lote))
-    );
-
-    const etiqueta = document.createElement('div');
-    etiqueta.className = 'sectlabel';
-    etiqueta.textContent =
-      'Actas con subcontratistas (corte quincenal)';
-
-    sc.appendChild(etiqueta);
-
-    const contratistas = lotes.filter(
-      lote => lote.tipo === 'contratista'
-    );
-
-    if (!contratistas.length) {
-      sc.insertAdjacentHTML(
-        'beforeend',
-        `
-          <div style="
-            font-size:12px;
-            color:var(--mut);
-            padding:2px 2px 10px
-          ">
-            Aún no hay actas de subcontratistas.
+          <div
+            style="
+              font-size:10px;
+              margin-top:3px;
+              color:var(--wait);
+            "
+          >
+            ⚠ Acta no generada
           </div>
-        `
-      );
-    }
+        </div>
 
-    contratistas.forEach(
-      lote => sc.appendChild(loteCard(lote))
-    );
-  } catch (error) {
-    console.error(error);
-
-    sc.innerHTML = `
-      <div style="
-        text-align:center;
-        color:var(--rej);
-        padding:35px 10px;
-        font-size:12px
-      ">
-        No fue posible cargar las actas.
+        <div class="v">
+          ${
+            clase === 'apertura'
+              ? p.fcomp
+              : p.freal
+          }
+        </div>
       </div>
     `;
   }
+
+  const generada =
+    a.documento_generado_url;
+
+  const firmada =
+    a.documento_firmado_url;
+
+  let estadoTexto =
+    'Por armar';
+
+  let estadoColor =
+    'var(--mut)';
+
+  if (
+    a.estado ===
+    'en_revision'
+  ) {
+    estadoTexto =
+      'En revisión';
+
+    estadoColor =
+      'var(--wait)';
+  }
+
+  if (
+    a.estado ===
+    'aprobada'
+  ) {
+    estadoTexto =
+      'Aprobada';
+
+    estadoColor =
+      'var(--done)';
+  }
+
+  if (
+    a.estado ===
+    'rechazada'
+  ) {
+    estadoTexto =
+      'Rechazada';
+
+    estadoColor =
+      'var(--rej)';
+  }
+
+  return `
+    <div
+      class="estim-row"
+      style="
+        align-items:flex-start;
+      "
+    >
+      <div
+        class="l"
+        style="
+          flex:1;
+          min-width:0;
+        "
+      >
+        <b>P.V. ${p.pv}</b>
+
+        <div
+          style="
+            font-size:10px;
+            margin-top:2px;
+            color:var(--mut);
+          "
+        >
+          ${p.municipio},
+          ${p.estado}
+        </div>
+
+        <div
+          style="
+            font-size:10px;
+            margin-top:3px;
+            color:${estadoColor};
+            font-weight:700;
+          "
+        >
+          ${estadoTexto}
+        </div>
+
+        <div
+          style="
+            display:flex;
+            gap:10px;
+            flex-wrap:wrap;
+            margin-top:5px;
+            font-size:10px;
+          "
+        >
+          ${
+            generada
+              ? `
+                <a
+                  href="${generada}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="
+                    color:var(--leche);
+                    text-decoration:none;
+                    font-weight:700;
+                  "
+                >
+                  📄 Generada
+                </a>
+              `
+              : ''
+          }
+
+          ${
+            firmada
+              ? `
+                <a
+                  href="${firmada}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="
+                    color:var(--done);
+                    text-decoration:none;
+                    font-weight:700;
+                  "
+                >
+                  ✓ Firmada
+                </a>
+              `
+              : ''
+          }
+
+          ${
+            !generada &&
+            !firmada
+              ? `
+                <span
+                  style="
+                    color:var(--wait);
+                  "
+                >
+                  Sin documento cargado
+                </span>
+              `
+              : ''
+          }
+        </div>
+      </div>
+
+      <div
+        class="v"
+        style="
+          font-size:11px;
+          margin-left:10px;
+        "
+      >
+        ${
+          clase === 'apertura'
+            ? p.fcomp
+            : p.freal
+        }
+      </div>
+
+    </div>
+  `;
+}
+
+async function descargarActasPeriodo(
+  clase
+) {
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    toast(
+      'Tu perfil no puede descargar este concentrado'
+    );
+
+    return;
+  }
+
+  const registros =
+    clase === 'apertura'
+      ? ACTAS_PERIODO.aperturas
+      : ACTAS_PERIODO.recepciones;
+
+  const conDocumentos =
+    registros.filter(
+      x =>
+        x.acta &&
+        (
+          x.acta.documento_generado_url ||
+          x.acta.documento_firmado_url
+        )
+    );
+
+  if (!conDocumentos.length) {
+    toast(
+      'No hay documentos disponibles en este periodo'
+    );
+
+    return;
+  }
+
+  try {
+    toast(
+      'Preparando concentrado…'
+    );
+
+    const zip =
+      new JSZip();
+
+    for (
+      const item
+      of conDocumentos
+    ) {
+      const pv =
+        String(
+          item.punto.pv
+        );
+
+      const acta =
+        item.acta;
+
+      if (
+        acta.documento_generado_url
+      ) {
+        await agregarArchivoActaZIP(
+          zip,
+          acta.documento_generado_url,
+          `${pv}_GENERADA`
+        );
+      }
+
+      if (
+        acta.documento_firmado_url
+      ) {
+        await agregarArchivoActaZIP(
+          zip,
+          acta.documento_firmado_url,
+          `${pv}_FIRMADA`
+        );
+      }
+    }
+
+    const blob =
+      await zip.generateAsync({
+        type: 'blob'
+      });
+
+    const nombre =
+      `actas_${clase}_` +
+      `${ACTAS_PERIODO.inicio}_` +
+      `${ACTAS_PERIODO.fin}.zip`;
+
+    const enlace =
+      document.createElement('a');
+
+    enlace.href =
+      URL.createObjectURL(
+        blob
+      );
+
+    enlace.download =
+      nombre;
+
+    document.body.appendChild(
+      enlace
+    );
+
+    enlace.click();
+
+    enlace.remove();
+
+    URL.revokeObjectURL(
+      enlace.href
+    );
+
+    toast(
+      'Concentrado descargado'
+    );
+
+  } catch (error) {
+    console.error(
+      'Error preparando ZIP:',
+      error
+    );
+
+    toast(
+      'No fue posible preparar el concentrado'
+    );
+  }
+}
+
+async function agregarArchivoActaZIP(
+  zip,
+  url,
+  nombreBase
+) {
+  const respuesta =
+    await fetch(url);
+
+  if (!respuesta.ok) {
+    throw new Error(
+      `No fue posible descargar ${nombreBase}`
+    );
+  }
+
+  const blob =
+    await respuesta.blob();
+
+  let extension =
+    'pdf';
+
+  const tipo =
+    blob.type || '';
+
+  if (
+    tipo.includes('png')
+  ) {
+    extension =
+      'png';
+  } else if (
+    tipo.includes('jpeg') ||
+    tipo.includes('jpg')
+  ) {
+    extension =
+      'jpg';
+  }
+
+  zip.file(
+    `${nombreBase}.${extension}`,
+    blob
+  );
 }
 
 function reporteInicioPDF() {
