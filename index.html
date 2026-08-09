@@ -574,6 +574,18 @@ const VISTA_ACTAS = {
   apertura: 'disponibles',
   recepcion: 'disponibles'
 };
+
+let ESTIMACION_PERIODO = {
+  inicio: '',
+  fin: '',
+  ejecutadas: [],
+  estimables: [],
+  pendientes: [],
+  rechazadas: []
+};
+
+let VISTA_ESTIMACION =
+  'estimables';
 /* ---- state ---- */
 let ROLE='sub',
     CURSUB='',
@@ -584,10 +596,10 @@ let ROLE='sub',
     SEARCH='';
 let TAB='lista', MAP=null, MAPLAYER=null, MAP_READY=false, REGRESAR_A_MAPA = false;
 const ROLEINFO={
-  sub:{band:'rb-sub',txt:()=>'Subcontratista · '+CURSUB,hint:'Toca un estado para ver tus lecherías asignadas'},
+  sub:{band:'rb-sub',txt:()=>'Cuadrilla · '+CURSUB,hint:'Toca un estado para ver tus lecherías asignadas'},
   gen:{band:'rb-gen',txt:()=>'Contratista general · panel completo',hint:'Vista nacional del padrón completo'},
   admin:{band:'rb-admin',txt:()=>'Administrador del contrato · validación',hint:'Otorga Vo.Bo. a lecherías atendidas'},
-  dep:{band:'rb-dep',txt:()=>'Dependencia · consulta y revisión de cartas',hint:'Consulta nacional y revisión de cartas DEP'}
+  dep:{band:'rb-dep',txt:()=>'Dependencia · consulta y seguimiento',hint:'Consulta nacional de avances y estimaciones'}
 };
 
 function visiblePts(){
@@ -916,7 +928,7 @@ function renderKPI(){
   const tot=pts.length, at=pts.filter(p=>p.status==='at').length;
   const ok=pts.filter(p=>p.vobo==='ok').length, ext=pts.filter(p=>p.m2>M2_STD).length;
   document.getElementById('kpis').innerHTML=`
-    <div class="kpi"><div class="n">${tot}</div><div class="l">${ROLE==='sub'?'Mi zona':'Cargadas'}</div></div>
+    <div class="kpi"><div class="n">${tot}</div><div class="l">${ROLE==='sub'?'Mi cartera':'Cargadas'}</div></div>
     <div class="kpi"><div class="n">${at}</div><div class="l">Atendidas</div></div>
     <div class="kpi"><div class="n acc">${ok}</div><div class="l">Con Vo.Bo.</div></div>
     <div class="kpi"><div class="n">${ext}</div><div class="l">Con Extra</div></div>`;
@@ -1018,7 +1030,7 @@ function render(){
 
 function renderCrumbs(){
   const c=document.getElementById('crumbs');
-  if(VIEW==='estados'){ c.innerHTML=`<b style="color:var(--ink)">${ROLE==='sub'?'Estados de mi zona':'Estados'}</b>`; }
+  if(VIEW==='estados'){ c.innerHTML=`<b style="color:var(--ink)">${ROLE==='sub'?'Estados de mi cartera':'Estados'}</b>`; }
   else c.innerHTML=`<a onclick="goEstados()">Estados</a><span class="sep">›</span><b style="color:var(--ink)">${CUR_EST}</b>`;
 }
 
@@ -1094,10 +1106,32 @@ function renderEstados(){
     const arr=map[e], tot=arr.length, at=arr.filter(p=>p.status==='at').length;
     const pct=Math.round(at/tot*100);
     const abbr=e.replace('Edo. ','').slice(0,4).toUpperCase();
+    const zonasEstado =
+      [
+        ...new Set(
+          arr
+            .map(p => p.zona)
+            .filter(Boolean)
+        )
+      ]
+        .sort((a, b) =>
+          String(a).localeCompare(
+            String(b),
+            'es',
+            {
+              numeric: true,
+              sensitivity: 'base'
+            }
+          )
+        )
+        .join(', ');
     const d=document.createElement('div'); d.className='estcard'; d.onclick=()=>openEstado(e);
     d.innerHTML=`<div class="top">
         <div class="flag">${abbr}</div>
-        <div class="nm"><b>${e}</b><span>${arr[0].zona}</span></div>
+        <div class="nm">
+        <b>${e}</b>
+        <span>${zonasEstado || 'Sin zona'}</span>
+        </div>
         <div class="cnt"><div class="num">${tot}</div><div class="pct">${at} atend · ${pct}%</div></div>
       </div><div class="estbar"><div class="f" style="width:${pct}%"></div></div>`;
     sc.appendChild(d);
@@ -1643,7 +1677,7 @@ function renderActaAperturaBlock(
 
         <div class="ib">
           <div class="k">
-            Subcontratista
+            Cuadrilla
           </div>
 
           <div class="v">
@@ -2214,16 +2248,30 @@ CUR.actaRecepcion =
     <div class="ib"><div class="k">Unidad estándar (a la dependencia)</div><div class="v">21 m²</div></div>
     <div class="ib"><div class="k">Superficie real ejecutada</div><div class="v">${
       canPintor&&p.status==='at'
-      ?`<input class="mono" type="number" min="21" value="${p.m2}" style="width:70px;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:14px;font-weight:700" onchange="setM2(this.value)">`
+      ?`<input class="mono" type="number" min="21" max="32" value="${p.m2}" style="width:70px;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:14px;font-weight:700" onchange="setM2(this.value)">`
       :p.m2+' m²'}</div></div></div>`;
   if(exc>0){
-    const precioSub=precioExtraSub(p.sub);
+    //const precioSub=precioExtraSub(p.sub);
     const evOk = p.m2_excedente > 0;
-    sup+=`<div style="height:8px"></div><div class="extra-box">
-      <div class="top"><div class="t">Excedente (pago a subcontratista)</div><div class="badge">+${exc} m²</div></div>
-      <div class="calc">La dependencia paga fijo por unidad estándar; este excedente <b>no se cobra a la dependencia</b>.<br>
-      Es un <b>registro interno</b> para el pago a <b>${p.sub}</b>: ${exc} m² × $${precioSub.toFixed(2)} = <b>$${(exc*precioSub).toLocaleString('es-MX',{minimumFractionDigits:2})}</b><br>
-      <span style="color:var(--mut);font-size:10px">Precio por m² configurable al cerrar el subcontrato.</span></div>
+    sup+=`<div style="height:8px"></div>
+      <div class="extra-box">
+        <div class="top">
+          <div class="t">
+            Superficie excedente
+          </div>
+
+          <div class="badge">
+            +${exc} m²
+          </div>
+        </div>
+
+        <div class="calc">
+          La dependencia paga fijo por la
+          unidad estándar de 21 m².
+          <br>
+          La superficie adicional
+          <b>no incrementa el importe de la estimación</b>.
+        </div>
       <div style="margin-top:8px">
         ${p.evidencia_url
         ?
@@ -2257,7 +2305,7 @@ CUR.actaRecepcion =
     <div class="tldot on"></div>
     <div class="tx">
       <b>Capturado</b>
-      <span>${p.sub || 'Sin subcontratista'} · ${p.zona || 'Sin zona'}</span>
+      <span>${p.sub || 'Sin Cuadrilla'} · ${p.zona || 'Sin zona'}</span>
     </div>
     <div class="when">${nPrevTL ? '✓' : '—'}</div>
     </div>
@@ -2968,7 +3016,7 @@ function crearPDFActaApertura(
     ],
 
     [
-      'Subcontratista',
+      'Cuadrilla',
       p.sub || '—'
     ],
 
@@ -3358,7 +3406,7 @@ function crearPDFActaRecepcion(
     ],
 
     [
-      'Subcontratista',
+      'Cuadrilla',
       p.sub || '—'
     ],
 
@@ -4228,10 +4276,53 @@ if (!aperturaAutorizada) {
 }
 
 async function setM2(v) {
-  const m2Anterior = CUR.m2;
+  if (!CUR || ROLE !== 'sub') {
+    return;
+  }
 
-  CUR.m2 = Math.max(M2_STD, Number(v) || M2_STD);
-  CUR.m2_excedente = Math.max(0, CUR.m2 - M2_STD);
+  const m2Anterior =
+    CUR.m2;
+
+  const valor =
+    Number(v);
+
+  if (
+    !Number.isFinite(valor)
+  ) {
+    toast(
+      'Ingresa una superficie válida'
+    );
+
+    await openSheet(CUR.id);
+    return;
+  }
+
+  if (valor < 21) {
+    toast(
+      'La superficie mínima es de 21 m²'
+    );
+
+    await openSheet(CUR.id);
+    return;
+  }
+
+  if (valor > 32) {
+    toast(
+      'La superficie máxima permitida es de 32 m²'
+    );
+
+    await openSheet(CUR.id);
+    return;
+  }
+
+  CUR.m2 =
+    valor;
+
+  CUR.m2_excedente =
+    Math.max(
+      0,
+      valor - M2_STD
+    );
 
   try {
     await guardarM2(
@@ -4243,16 +4334,31 @@ async function setM2(v) {
       CUR.freal
     );
 
-    openSheet(CUR.id);
+    await openSheet(
+      CUR.id
+    );
+
     render();
+
   } catch (error) {
     console.error(error);
 
-    CUR.m2 = m2Anterior;
-    CUR.m2_excedente = Math.max(0, m2Anterior - M2_STD);
+    CUR.m2 =
+      m2Anterior;
 
-    toast('No se pudo guardar la superficie');
-    openSheet(CUR.id);
+    CUR.m2_excedente =
+      Math.max(
+        0,
+        m2Anterior - M2_STD
+      );
+
+    toast(
+      'No se pudo guardar la superficie'
+    );
+
+    await openSheet(
+      CUR.id
+    );
   }
 }
 
@@ -4296,7 +4402,7 @@ async function vobo(aprobado) {
     CUR.vobo = 'rej';
     CUR.motivo = motivo;
 
-    toast('Rechazado — regresa al subcontratista');
+    toast('Rechazado — regresa a la cuadrilla');
     await openSheet(CUR.id);
     render();
   } catch (error) {
@@ -4530,7 +4636,7 @@ function renderTablero(){
   pts.forEach(p=>{ (groups[p.sub||'(sin asignar)']=groups[p.sub||'(sin asignar)']||[]).push(p); });
   const heading=document.createElement('div');
   heading.className='sectlabel'; heading.style.margin='6px 0 10px';
-  heading.textContent = ROLE==='sub' ? 'Avance de mi cartera' : 'Avance por subcontratista';
+  heading.textContent = ROLE==='sub' ? 'Avance de mi cartera' : 'Avance por cuadrilla';
   sc.appendChild(heading);
   const subs=Object.keys(groups).sort();
   subs.forEach(s=>{
@@ -4541,12 +4647,35 @@ function renderTablero(){
     const rej=arr.filter(p=>p.vobo==='rej').length;
     const no=tot-at;
     const pctOk=Math.round(ok/tot*100), pctWait=Math.round(wait/tot*100);
-    const zona=arr[0].zona||'';
+    const zonas =
+    [
+      ...new Set(
+        arr
+          .map(p => p.zona)
+          .filter(Boolean)
+      )
+    ]
+      .sort((a, b) =>
+        String(a).localeCompare(
+          String(b),
+          'es',
+          {
+            numeric: true,
+            sensitivity: 'base'
+          }
+        )
+      )
+    .join(', ');
     const d=document.createElement('div'); d.className='dashcard';
     d.innerHTML=`
       <div class="hd">
         <div class="av">${s.replace(/[^0-9A-Za-z]/g,'').slice(-3).toUpperCase()}</div>
-        <div class="nm"><b>${s}</b><span>${zona} · ${tot} lecherías</span></div>
+        <div class="nm"><b>${s}</b>
+        <span>
+          ${zonas || 'Sin zona'}
+          ·
+          ${tot} lecherías
+        </span></div>
         <div class="big"><div class="p">${Math.round(at/tot*100)}%</div><div class="l">atendido</div></div>
       </div>
       <div class="dbar"><div class="ok" style="width:${pctOk}%"></div><div class="wa" style="width:${pctWait}%"></div></div>
@@ -4600,7 +4729,7 @@ function detalleExcedentes(datos) {
   const grupos = {};
 
   (datos.extras || []).forEach(extra => {
-    const sub = extra.sub || 'Sin subcontratista';
+    const sub = extra.sub || 'Sin cuadrilla';
 
     if (!grupos[sub]) {
       grupos[sub] = {
@@ -4633,522 +4762,784 @@ function detalleExcedentes(datos) {
   return grupos;
 }
 
-async function renderEstim() {
-  document.getElementById('crumbs').style.display =
-    'none';
+function renderEstim() {
+  document
+    .getElementById('crumbs')
+    .style.display = 'none';
 
-  document.getElementById('filters').style.display =
-    'none';
+  document
+    .getElementById('filters')
+    .style.display = 'none';
 
   const sc =
     document.getElementById('scroll');
 
-  sc.innerHTML = `
-    <div
-      style="
-        text-align:center;
-        color:var(--mut);
-        padding:45px 15px
-      "
-    >
-      Cargando estimación…
-    </div>
-  `;
-
-  try {
-    ESTIMACION =
-      await obtenerEstimacion();
-
-  } catch (error) {
-    console.error(
-      'No fue posible cargar la estimación:',
-      error
-    );
-
-    ESTIMACION = null;
-
+  /*
+   * SUB no debería llegar aquí porque
+   * la pestaña está oculta, pero dejamos
+   * también la protección lógica.
+   */
+  if (ROLE === 'sub') {
     sc.innerHTML = `
       <div
         style="
           text-align:center;
-          color:var(--rej);
-          padding:40px 15px
+          color:var(--mut);
+          padding:40px 15px;
         "
       >
-        No fue posible cargar la estimación.
-        <br><br>
-
-        <button
-          class="btn btn-leche"
-          onclick="renderEstim()"
-        >
-          Reintentar
-        </button>
+        Tu perfil no tiene acceso
+        al módulo de estimaciones.
       </div>
     `;
-
-    toast(
-      error.message ||
-      'No fue posible cargar la estimación'
-    );
 
     return;
   }
 
   /*
-   * Evita pintar la estimación si el usuario cambió
-   * de pestaña mientras cargaba.
+   * Primera entrada:
+   * usamos la semana actual, igual
+   * que en el concentrado de actas.
    */
-  if (TAB !== 'estim') {
+  if (
+    !ESTIMACION_PERIODO.inicio ||
+    !ESTIMACION_PERIODO.fin
+  ) {
+    const rango =
+      obtenerSemanaActual();
+
+    ESTIMACION_PERIODO.inicio =
+      rango.inicio;
+
+    ESTIMACION_PERIODO.fin =
+      rango.fin;
+  }
+
+  sc.innerHTML = `
+    <div class="note">
+      <b>Estimación por periodo de ejecución.</b>
+      <br><br>
+
+      Se consideran las lecherías cuya
+      <b>Fecha Real</b> se encuentre dentro
+      del periodo seleccionado.
+
+      <br><br>
+
+      Solamente las lecherías con
+      <b>Vo.Bo. aprobado</b> forman parte
+      del importe estimable.
+
+      <br><br>
+
+      Los metros excedentes no forman parte
+      del cobro a la dependencia.
+    </div>
+
+    <div class="sect">
+      <h3>Periodo</h3>
+
+      <div class="infogrid">
+
+        <div class="ib">
+          <div class="k">
+            Fecha inicial
+          </div>
+
+          <div class="v">
+            <input
+              id="estimFechaInicio"
+              type="date"
+              value="${ESTIMACION_PERIODO.inicio}"
+              style="
+                width:100%;
+                border:none;
+                background:transparent;
+                font:inherit;
+                font-weight:700;
+                color:var(--ink);
+                outline:none;
+              "
+            >
+          </div>
+        </div>
+
+        <div class="ib">
+          <div class="k">
+            Fecha final
+          </div>
+
+          <div class="v">
+            <input
+              id="estimFechaFin"
+              type="date"
+              value="${ESTIMACION_PERIODO.fin}"
+              style="
+                width:100%;
+                border:none;
+                background:transparent;
+                font:inherit;
+                font-weight:700;
+                color:var(--ink);
+                outline:none;
+              "
+            >
+          </div>
+        </div>
+
+      </div>
+
+      <div
+        style="
+          display:flex;
+          gap:8px;
+          margin-top:9px;
+        "
+      >
+        <button
+          class="btn"
+          style="
+            background:var(--milk);
+            color:var(--steel);
+          "
+          onclick="ponerSemanaActualEstimacion()"
+        >
+          Esta semana
+        </button>
+
+        <button
+          class="btn btn-leche"
+          onclick="aplicarPeriodoEstimacion()"
+        >
+          Consultar
+        </button>
+      </div>
+    </div>
+
+    <div id="estimResultado"></div>
+  `;
+
+  calcularEstimacionPeriodo();
+}
+
+function ponerSemanaActualEstimacion() {
+  const rango =
+    obtenerSemanaActual();
+
+  document
+    .getElementById(
+      'estimFechaInicio'
+    )
+    .value =
+      rango.inicio;
+
+  document
+    .getElementById(
+      'estimFechaFin'
+    )
+    .value =
+      rango.fin;
+
+  aplicarPeriodoEstimacion();
+}
+
+function aplicarPeriodoEstimacion() {
+  const inicio =
+    document
+      .getElementById(
+        'estimFechaInicio'
+      )
+      .value;
+
+  const fin =
+    document
+      .getElementById(
+        'estimFechaFin'
+      )
+      .value;
+
+  if (!inicio || !fin) {
+    toast(
+      'Selecciona fecha inicial y final'
+    );
+
     return;
   }
 
-  const datos = ESTIMACION;
-
-  const resumen =
-    datos.resumen || {};
-
-  const cartas =
-    Array.isArray(datos.cartas)
-      ? datos.cartas
-      : [];
-
-  const extras =
-    Array.isArray(datos.extras)
-      ? datos.extras
-      : [];
-
-  const gruposExtra =
-    detalleExcedentes(datos);
-
-  const totalM2Extra =
-    extras.reduce(
-      (suma, extra) =>
-        suma +
-        Number(extra.m2_excedente || 0),
-      0
+  if (inicio > fin) {
+    toast(
+      'La fecha inicial no puede ser posterior a la final'
     );
 
-  const totalCostoExtra =
-    Object.values(gruposExtra).reduce(
-      (suma, grupo) =>
-        suma + grupo.importe,
-      0
+    return;
+  }
+
+  ESTIMACION_PERIODO.inicio =
+    inicio;
+
+  ESTIMACION_PERIODO.fin =
+    fin;
+
+  /*
+   * Al consultar otro periodo regresamos
+   * a la vista principal.
+   */
+  VISTA_ESTIMACION =
+    'estimables';
+
+  calcularEstimacionPeriodo();
+}
+
+function calcularEstimacionPeriodo() {
+  const inicio =
+    ESTIMACION_PERIODO.inicio;
+
+  const fin =
+    ESTIMACION_PERIODO.fin;
+
+  /*
+   * Primero obtenemos únicamente trabajos
+   * realmente ejecutados dentro del periodo.
+   *
+   * freal = fecha real de ejecución.
+   */
+  const ejecutadas =
+    LECH.filter(p =>
+      p.status === 'at' &&
+      p.freal &&
+      p.freal >= inicio &&
+      p.freal <= fin
     );
 
-  const cartasHTML =
-    cartas.length
-      ? cartas.map(carta => `
-          <div class="lotecard">
-            <div class="top">
-              <div class="ic ic-dep">
-                📄
-              </div>
+  /*
+   * Con Vo.Bo. aprobado:
+   * sí forman parte de la estimación.
+   */
+  const estimables =
+    ejecutadas.filter(
+      p => p.vobo === 'ok'
+    );
 
-              <div class="nm">
-                <b>
-                  ${carta.numero || 'Carta sin folio'}
-                </b>
+  /*
+   * Ejecutadas que todavía están
+   * esperando validación.
+   */
+  const pendientes =
+    ejecutadas.filter(
+      p =>
+        p.vobo !== 'ok' &&
+        p.vobo !== 'rej'
+    );
 
-                <span>
-                  ${carta.fini || '—'}
-                  al
-                  ${carta.ffin || '—'}
-                </span>
-              </div>
+  /*
+   * Ejecutadas pero rechazadas.
+   */
+  const rechazadas =
+    ejecutadas.filter(
+      p => p.vobo === 'rej'
+    );
 
-              <span
-                class="
-                  acta-badge
-                  ${claseEstadoCarta(carta.estado)}
-                "
-              >
-                ${etiquetaEstadoCarta(carta.estado)}
-              </span>
-            </div>
+  ESTIMACION_PERIODO.ejecutadas =
+    ejecutadas;
 
-            <div class="foot">
-              <div class="f">
-                <div class="v">
-                  ${Number(
-                    carta.cantidad_visible || 0
-                  )}
-                </div>
+  ESTIMACION_PERIODO.estimables =
+    estimables;
 
-                <div class="k">
-                  Lecherías
-                </div>
-              </div>
+  ESTIMACION_PERIODO.pendientes =
+    pendientes;
 
-              <div class="f">
-                <div class="v">
-                  ${money(carta.monto_visible)}
-                </div>
+  ESTIMACION_PERIODO.rechazadas =
+    rechazadas;
 
-                <div class="k">
-                  Importe
-                </div>
-              </div>
-            </div>
+  pintarEstimacionPeriodo();
+}
+
+function pintarEstimacionPeriodo() {
+  const contenedor =
+    document.getElementById(
+      'estimResultado'
+    );
+
+  if (!contenedor) {
+    return;
+  }
+
+  const ejecutadas =
+    ESTIMACION_PERIODO.ejecutadas;
+
+  const estimables =
+    ESTIMACION_PERIODO.estimables;
+
+  const pendientes =
+    ESTIMACION_PERIODO.pendientes;
+
+  const rechazadas =
+    ESTIMACION_PERIODO.rechazadas;
+
+  const subtotal =
+    estimables.length *
+    PRECIO_FACHADA;
+
+  const iva =
+    subtotal *
+    IVA;
+
+  const total =
+    subtotal +
+    iva;
+
+  contenedor.innerHTML = `
+
+    <div class="sect">
+      <h3>Resumen del periodo</h3>
+
+      <div class="progsum">
+
+        <div class="s">
+          <div class="v">
+            ${ejecutadas.length}
           </div>
-        `).join('')
-      : `
+
+          <div class="k">
+            Ejecutadas
+          </div>
+        </div>
+
+        <div class="s">
           <div
-            style="
-              font-size:12px;
-              color:var(--mut);
-              padding:8px 2px
-            "
+            class="v"
+            style="color:var(--done)"
           >
-            Todavía no existen cartas para la dependencia.
+            ${estimables.length}
           </div>
-        `;
 
-  const extrasHTML =
-    Object.keys(gruposExtra).length
-      ? Object.keys(gruposExtra)
-          .sort()
-          .map(sub => {
-            const grupo =
-              gruposExtra[sub];
+          <div class="k">
+            Con Vo.Bo.
+          </div>
+        </div>
 
-            return `
-              <div class="estim-row extra-row">
-                <span class="l">
-                  ${sub}
-                  ·
-                  ${grupo.m2.toFixed(2)} m²
-                  (${grupo.cantidad} lech.)
+        <div class="s">
+          <div
+            class="v"
+            style="color:var(--wait)"
+          >
+            ${pendientes.length}
+          </div>
 
-                  ${
-                    grupo.sinEvidencia
-                      ? `
-                        ·
-                        <span
-                          style="color:var(--rej)"
-                        >
-                          ${grupo.sinEvidencia}
-                          sin evidencia
-                        </span>
-                      `
-                      : ''
-                  }
-                </span>
+          <div class="k">
+            Pendientes
+          </div>
+        </div>
 
-                <span class="v">
-                  ${money(grupo.importe)}
-                </span>
-              </div>
-            `;
-          })
+        <div class="s">
+          <div
+            class="v"
+            style="color:var(--rej)"
+          >
+            ${rechazadas.length}
+          </div>
+
+          <div class="k">
+            Rechazadas
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="sect">
+      <h3>Importe estimable</h3>
+
+      <div class="estim-hero">
+
+        <div class="lbl">
+          Total del periodo con Vo.Bo.
+        </div>
+
+        <div class="amt">
+          ${money(total)}
+        </div>
+
+        <div class="sub">
+          ${estimables.length}
+          ${
+            estimables.length === 1
+              ? 'lechería'
+              : 'lecherías'
+          }
+          ×
+          ${money(PRECIO_FACHADA)}
+          + IVA
+        </div>
+
+      </div>
+
+      <div class="estim-row">
+        <span class="l">
+          Unidades estimables
+        </span>
+
+        <span class="v">
+          ${estimables.length}
+        </span>
+      </div>
+
+      <div class="estim-row">
+        <span class="l">
+          Precio unitario
+        </span>
+
+        <span class="v">
+          ${money(PRECIO_FACHADA)}
+        </span>
+      </div>
+
+      <div class="estim-row">
+        <span class="l">
+          Subtotal
+        </span>
+
+        <span class="v">
+          ${money(subtotal)}
+        </span>
+      </div>
+
+      <div class="estim-row">
+        <span class="l">
+          IVA 16%
+        </span>
+
+        <span class="v">
+          ${money(iva)}
+        </span>
+      </div>
+
+      <div class="estim-row tot">
+        <span class="l">
+          Total
+        </span>
+
+        <span class="v">
+          ${money(total)}
+        </span>
+      </div>
+
+    </div>
+
+    ${renderDetalleEstimacionPeriodo()}
+
+    ${
+      estimables.length
+        ? `
+          <div class="sect">
+            <h3>Exportación</h3>
+
+            <div class="expbtns">
+
+              <button
+                class="expbtn exp-xlsx"
+                onclick="exportEstimPeriodoXLSX()"
+              >
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
+                </svg>
+
+                Excel
+              </button>
+
+              <button
+                class="expbtn exp-pdf"
+                onclick="exportEstimPeriodoPDF()"
+              >
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
+                </svg>
+
+                PDF
+              </button>
+
+            </div>
+          </div>
+        `
+        : ''
+    }
+  `;
+}
+
+function renderDetalleEstimacionPeriodo() {
+  const estimables =
+    ESTIMACION_PERIODO.estimables;
+
+  const pendientes =
+    ESTIMACION_PERIODO.pendientes;
+
+  const rechazadas =
+    ESTIMACION_PERIODO.rechazadas;
+
+  let registros = [];
+
+  if (
+    VISTA_ESTIMACION ===
+    'pendientes'
+  ) {
+    registros =
+      pendientes;
+
+  } else if (
+    VISTA_ESTIMACION ===
+    'rechazadas'
+  ) {
+    registros =
+      rechazadas;
+
+  } else {
+    registros =
+      estimables;
+  }
+
+  const tarjetas =
+    registros.length
+      ? registros
+          .map(
+            p =>
+              renderEstimacionPeriodoItem(p)
+          )
           .join('')
       : `
-          <div
-            style="
-              font-size:12px;
-              color:var(--mut);
-              padding:4px 2px
-            "
-          >
-            Sin excedentes registrados.
-          </div>
-        `;
+        <div
+          style="
+            background:#fff;
+            border:1px solid var(--line);
+            border-radius:9px;
+            padding:18px 14px;
+            text-align:center;
+            color:var(--mut);
+            font-size:11px;
+          "
+        >
+          No hay lecherías en esta
+          categoría para el periodo.
+        </div>
+      `;
 
-  const wrap =
-    document.createElement('div');
+  return `
+    <div class="sect">
 
-  wrap.innerHTML = `
-    <div class="estim-hero">
-      <div class="lbl">
-        Total aprobado para cobro
-        ·
-        ${datos.alcance || 'Nacional'}
-      </div>
+      <h3>Detalle del periodo</h3>
 
-      <div class="amt">
-        ${money(resumen.total)}
-      </div>
-
-      <div class="sub">
-        ${Number(resumen.cobrables || 0)}
-        lecherías
-        ·
-        ${money(resumen.subtotal)}
-        + IVA
-      </div>
-    </div>
-
-    <div class="cobro-flag">
-      <span
-        class="k"
+      <div
         style="
-          background:
-          ${
-            Number(resumen.cartas_aprobadas || 0) > 0
-              ? 'var(--done)'
-              : 'var(--wait)'
-          }
+          display:flex;
+          gap:6px;
+          margin-bottom:10px;
+          overflow-x:auto;
         "
-      ></span>
-
-      ${
-        Number(resumen.cartas_aprobadas || 0) > 0
-          ? `
-            <b>
-              ${Number(resumen.cartas_aprobadas || 0)}
-            </b>
-
-            ${
-              Number(resumen.cartas_aprobadas || 0) === 1
-                ? 'carta aprobada lista para cobro.'
-                : 'cartas aprobadas listas para cobro.'
-            }
-          `
-          : `
-            Aún no hay cartas DEP aprobadas para cobro.
-          `
-      }
-    </div>
-
-    <div class="sectlabel">
-      Resumen financiero
-    </div>
-
-    <div class="estim-row">
-      <span class="l">
-        Lecherías con Vo.Bo.
-      </span>
-
-      <span class="v">
-        ${Number(resumen.con_vobo || 0)}
-      </span>
-    </div>
-
-    <div class="estim-row">
-      <span class="l">
-        Lecherías en cartas aprobadas
-      </span>
-
-      <span class="v">
-        ${Number(resumen.cobrables || 0)}
-      </span>
-    </div>
-
-    <div class="estim-row">
-      <span class="l">
-        Subtotal aprobado
-      </span>
-
-      <span class="v">
-        ${money(resumen.subtotal)}
-      </span>
-    </div>
-
-    <div class="estim-row">
-      <span class="l">
-        IVA 16%
-      </span>
-
-      <span class="v">
-        ${money(resumen.iva)}
-      </span>
-    </div>
-
-    <div class="estim-row tot">
-      <span class="l">
-        Total aprobado
-      </span>
-
-      <span class="v">
-        ${money(resumen.total)}
-      </span>
-    </div>
-
-    <div class="sectlabel">
-      Estado de las cartas DEP
-    </div>
-
-    <div class="progsum">
-      <div class="s">
-        <div
-          class="v"
-          style="color:var(--done)"
-        >
-          ${Number(resumen.cartas_aprobadas || 0)}
-        </div>
-
-        <div class="k">
-          Aprobadas
-        </div>
-      </div>
-
-      <div class="s">
-        <div
-          class="v"
-          style="color:var(--wait)"
-        >
-          ${Number(resumen.cartas_revision || 0)}
-        </div>
-
-        <div class="k">
-          En revisión
-        </div>
-      </div>
-
-      <div class="s">
-        <div
-          class="v"
-          style="color:var(--rej)"
-        >
-          ${Number(resumen.cartas_rechazadas || 0)}
-        </div>
-
-        <div class="k">
-          Rechazadas
-        </div>
-      </div>
-
-      <div class="s">
-        <div
-          class="v"
-          style="color:var(--mut)"
-        >
-          ${Number(resumen.cartas_por_armar || 0)}
-        </div>
-
-        <div class="k">
-          Por armar
-        </div>
-      </div>
-    </div>
-
-    <div class="sectlabel">
-      Cartas para la dependencia
-    </div>
-
-    ${cartasHTML}
-
-    <div class="sectlabel">
-      Excedentes
-      ·
-      pago interno a subcontratistas
-    </div>
-
-    <div
-      style="
-        font-size:11px;
-        color:var(--mut);
-        margin-bottom:7px
-      "
-    >
-      Estos importes no forman parte del cobro a la
-      dependencia.
-    </div>
-
-    ${extrasHTML}
-
-    <div
-      class="estim-row tot"
-      style="
-        border-left:
-        3px solid var(--extra)
-      "
-    >
-      <span class="l">
-        Total excedentes
-        (${totalM2Extra.toFixed(2)} m²)
-      </span>
-
-      <span class="v">
-        ${money(totalCostoExtra)}
-      </span>
-    </div>
-
-    <div class="sectlabel">
-      Exportación
-    </div>
-
-    <div class="expbtns">
-  <button
-    class="expbtn exp-xlsx"
-    onclick="exportXLSX()"
-  >
-    <svg viewBox="0 0 24 24">
-      <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
-    </svg>
-
-    Excel estimación
-  </button>
-
-  <button
-    class="expbtn exp-pdf"
-    onclick="exportEstimPDF()"
-  >
-    <svg viewBox="0 0 24 24">
-      <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
-    </svg>
-
-    PDF dependencia
-  </button>
-</div>
-
-${
-  ROLE === 'gen' || ROLE === 'admin'
-    ? `
-      <button
-        class="expbtn"
-        style="
-          background:var(--navy);
-          color:#fff;
-          width:100%;
-          margin:2px 0 12px
-        "
-        onclick="exportReporteInterno()"
       >
-        <svg viewBox="0 0 24 24">
-          <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
-        </svg>
 
-        Reporte interno completo
-      </button>
-    `
-    : ''
-}
-    <div class="expbtns">
-  <button
-    class="expbtn"
-    style="
-      background:var(--steel);
-      color:#fff
-    "
-    onclick="reporteSemanal()"
-  >
-    <svg viewBox="0 0 24 24">
-      <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
-    </svg>
+        <button
+          type="button"
+          class="chip ${
+            VISTA_ESTIMACION ===
+            'estimables'
+              ? 'on'
+              : ''
+          }"
+          onclick="
+            cambiarVistaEstimacion(
+              'estimables'
+            )
+          "
+        >
+          Con Vo.Bo.
+          (${estimables.length})
+        </button>
 
-    Reporte semanal
-  </button>
+        <button
+          type="button"
+          class="chip ${
+            VISTA_ESTIMACION ===
+            'pendientes'
+              ? 'on'
+              : ''
+          }"
+          onclick="
+            cambiarVistaEstimacion(
+              'pendientes'
+            )
+          "
+        >
+          Pendientes
+          (${pendientes.length})
+        </button>
 
-  <button
-    class="expbtn"
-    style="
-      background:var(--steel);
-      color:#fff
-    "
-    onclick="reporteMensual()"
-  >
-    <svg viewBox="0 0 24 24">
-      <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
-    </svg>
+        <button
+          type="button"
+          class="chip ${
+            VISTA_ESTIMACION ===
+            'rechazadas'
+              ? 'on'
+              : ''
+          }"
+          onclick="
+            cambiarVistaEstimacion(
+              'rechazadas'
+            )
+          "
+        >
+          Rechazadas
+          (${rechazadas.length})
+        </button>
 
-    Reporte mensual
-  </button>
-</div>
+      </div>
+
+      <div
+        style="
+          font-size:10.5px;
+          color:var(--mut);
+          margin-bottom:8px;
+        "
+      >
+        El periodo se determina
+        exclusivamente por Fecha Real.
+      </div>
+
+      ${tarjetas}
+
+    </div>
   `;
+}
 
-  sc.innerHTML = '';
-  sc.appendChild(wrap);
+function renderEstimacionPeriodoItem(p) {
+  let estadoTexto =
+    'Pendiente de Vo.Bo.';
+
+  let estadoColor =
+    'var(--wait)';
+
+  if (p.vobo === 'ok') {
+    estadoTexto =
+      'Incluida en estimación';
+
+    estadoColor =
+      'var(--done)';
+  }
+
+  if (p.vobo === 'rej') {
+    estadoTexto =
+      'Rechazada';
+
+    estadoColor =
+      'var(--rej)';
+  }
+
+  return `
+    <div
+      class="estim-row"
+      style="
+        align-items:flex-start;
+        cursor:pointer;
+      "
+      onclick="openSheet(${p.id})"
+    >
+
+      <div
+        class="l"
+        style="
+          flex:1;
+          min-width:0;
+        "
+      >
+        <b>
+          P.V. ${p.pv}
+        </b>
+
+        <div
+          style="
+            font-size:10px;
+            color:var(--mut);
+            margin-top:2px;
+          "
+        >
+          ${p.municipio || '—'},
+          ${p.estado || '—'}
+        </div>
+
+        <div
+          style="
+            font-size:10px;
+            color:var(--mut);
+            margin-top:2px;
+          "
+        >
+          ${p.zona || 'Sin zona'}
+        </div>
+
+        <div
+          style="
+            font-size:10px;
+            font-weight:700;
+            color:${estadoColor};
+            margin-top:4px;
+          "
+        >
+          ${estadoTexto}
+        </div>
+
+      </div>
+
+      <div
+        style="
+          text-align:right;
+          margin-left:10px;
+        "
+      >
+        <div
+          class="v"
+          style="font-size:11px"
+        >
+          ${p.freal || '—'}
+        </div>
+
+        ${
+          p.vobo === 'ok'
+            ? `
+              <div
+                style="
+                  font-size:10px;
+                  color:var(--done);
+                  margin-top:4px;
+                "
+              >
+                ${money(PRECIO_FACHADA)}
+              </div>
+            `
+            : ''
+        }
+      </div>
+
+    </div>
+  `;
+}
+
+function cambiarVistaEstimacion(
+  vista
+) {
+  const permitidas = [
+    'estimables',
+    'pendientes',
+    'rechazadas'
+  ];
+
+  if (
+    !permitidas.includes(vista)
+  ) {
+    return;
+  }
+
+  VISTA_ESTIMACION =
+    vista;
+
+  pintarEstimacionPeriodo();
 }
 
 async function reporteSemanal() {
@@ -5837,7 +6228,7 @@ async function reporteSemanal() {
               )
             : (
                 punto.sub ||
-                'Sin subcontratista'
+                'Sin cuadrilla'
               );
 
         if (!grupos[clave]) {
@@ -6662,7 +7053,7 @@ async function reporteSemanal() {
     tituloSeccion(
       ROLE === 'sub'
         ? 'Productividad por entidad'
-        : 'Productividad por subcontratista'
+        : 'Productividad por cuadrilla'
     );
 
     encabezadoTabla([
@@ -6670,7 +7061,7 @@ async function reporteSemanal() {
         texto:
           ROLE === 'sub'
             ? 'Entidad'
-            : 'Subcontratista',
+            : 'Cuadrilla',
         x: 15
       },
       {
@@ -7959,7 +8350,7 @@ async function reporteMensual() {
             )
           : (
               punto.sub ||
-              'Sin subcontratista'
+              'Sin cuadrilla'
             );
 
       if (!grupos[clave]) {
@@ -8484,7 +8875,7 @@ async function reporteMensual() {
     tituloSeccion(
       ROLE === 'sub'
         ? 'Desglose por entidad'
-        : 'Desglose por subcontratista'
+        : 'Desglose por cuadrilla'
     );
 
     asegurarEspacio(15);
@@ -8519,7 +8910,7 @@ async function reporteMensual() {
     doc.text(
       ROLE === 'sub'
         ? 'Entidad'
-        : 'Subcontratista',
+        : 'Cuadrilla',
       15,
       y + 6
     );
@@ -9390,7 +9781,7 @@ async function exportReporteInterno() {
     puntos.forEach(punto => {
       const sub =
         punto.sub ||
-        'Sin subcontratista';
+        'Sin cuadrilla';
 
       if (!gruposSub[sub]) {
         gruposSub[sub] = [];
@@ -9399,7 +9790,7 @@ async function exportReporteInterno() {
       gruposSub[sub].push(punto);
     });
 
-    const porSubcontratista =
+    const porCuadrilla =
       Object.entries(gruposSub)
         .sort(([a], [b]) =>
           a.localeCompare(b)
@@ -9413,7 +9804,7 @@ async function exportReporteInterno() {
               .filter(Boolean);
 
           return {
-            Subcontratista:
+            Cuadrilla:
               sub,
 
             Zona:
@@ -9626,7 +10017,7 @@ async function exportReporteInterno() {
             Zona:
               punto.zona || '',
 
-            Subcontratista:
+            Cuadrilla:
               punto.sub || '',
 
             Beneficiarios:
@@ -9728,7 +10119,7 @@ async function exportReporteInterno() {
             Zona:
               punto.zona || '',
 
-            Subcontratista:
+            Cuadrilla:
               punto.sub || '',
 
             Compromiso:
@@ -9778,7 +10169,7 @@ async function exportReporteInterno() {
           Zona:
             extra.zona || '',
 
-          Subcontratista:
+          Cuadrilla:
             extra.sub || '',
 
           'm² real':
@@ -9822,7 +10213,7 @@ async function exportReporteInterno() {
             Folio:
               acta.numero || '',
 
-            Subcontratista:
+            Cuadrilla:
               acta.sub || '',
 
             Zona:
@@ -9925,8 +10316,8 @@ async function exportReporteInterno() {
 
     agregarHojaExcel(
       libro,
-      'Por subcontratista',
-      porSubcontratista,
+      'Por cuadrilla',
+      porCuadrilla,
       [
         18, 26, 10, 12, 12,
         18, 12, 12, 21, 21,
@@ -10128,6 +10519,542 @@ function textoVobo(valor) {
     'No solicitado';
 }
 
+function exportEstimPeriodoXLSX() {
+  const estimables =
+    ESTIMACION_PERIODO.estimables;
+
+  if (!estimables.length) {
+    toast(
+      'No hay lecherías estimables en este periodo'
+    );
+
+    return;
+  }
+
+  const subtotal =
+    estimables.length *
+    PRECIO_FACHADA;
+
+  const iva =
+    subtotal *
+    IVA;
+
+  const total =
+    subtotal +
+    iva;
+
+  const wb =
+    XLSX.utils.book_new();
+
+  const resumen = [
+    {
+      Concepto:
+        'Periodo inicial',
+
+      Valor:
+        ESTIMACION_PERIODO.inicio
+    },
+    {
+      Concepto:
+        'Periodo final',
+
+      Valor:
+        ESTIMACION_PERIODO.fin
+    },
+    {
+      Concepto:
+        'Lecherías ejecutadas',
+
+      Valor:
+        ESTIMACION_PERIODO
+          .ejecutadas
+          .length
+    },
+    {
+      Concepto:
+        'Lecherías con Vo.Bo.',
+
+      Valor:
+        estimables.length
+    },
+    {
+      Concepto:
+        'Pendientes de Vo.Bo.',
+
+      Valor:
+        ESTIMACION_PERIODO
+          .pendientes
+          .length
+    },
+    {
+      Concepto:
+        'Rechazadas',
+
+      Valor:
+        ESTIMACION_PERIODO
+          .rechazadas
+          .length
+    },
+    {
+      Concepto:
+        'Precio unitario',
+
+      Valor:
+        PRECIO_FACHADA
+    },
+    {
+      Concepto:
+        'Subtotal',
+
+      Valor:
+        subtotal
+    },
+    {
+      Concepto:
+        'IVA 16%',
+
+      Valor:
+        iva
+    },
+    {
+      Concepto:
+        'Total',
+
+      Valor:
+        total
+    }
+  ];
+
+  const hojaResumen =
+    XLSX.utils.json_to_sheet(
+      resumen
+    );
+
+  hojaResumen['!cols'] = [
+    { wch: 26 },
+    { wch: 22 }
+  ];
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    hojaResumen,
+    'Resumen'
+  );
+
+  const detalle =
+    estimables.map(p => ({
+      'Clave P.V.':
+        p.pv,
+
+      Estado:
+        p.estado || '',
+
+      Municipio:
+        p.municipio || '',
+
+      Localidad:
+        p.localidad || '',
+
+      Zona:
+        p.zona || '',
+
+      Cuadrilla:
+        p.sub || '',
+
+      'Fecha real':
+        p.freal || '',
+
+      'Vo.Bo.':
+        'Aprobado',
+
+      'Precio unitario':
+        PRECIO_FACHADA
+    }));
+
+  const hojaDetalle =
+    XLSX.utils.json_to_sheet(
+      detalle
+    );
+
+  hojaDetalle['!cols'] = [
+    { wch: 18 },
+    { wch: 20 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 18 }
+  ];
+
+  hojaDetalle['!autofilter'] = {
+    ref:
+      hojaDetalle['!ref']
+  };
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    hojaDetalle,
+    'Lecherias estimables'
+  );
+
+  XLSX.writeFile(
+    wb,
+    `Estimacion_${ESTIMACION_PERIODO.inicio}_${ESTIMACION_PERIODO.fin}.xlsx`
+  );
+
+  toast(
+    'Excel de estimación generado'
+  );
+}
+
+function exportEstimPeriodoPDF() {
+  const estimables =
+    ESTIMACION_PERIODO.estimables;
+
+  if (!estimables.length) {
+    toast(
+      'No hay lecherías estimables en este periodo'
+    );
+
+    return;
+  }
+
+  const { jsPDF } =
+    window.jspdf;
+
+  const doc =
+    new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+  const subtotal =
+    estimables.length *
+    PRECIO_FACHADA;
+
+  const iva =
+    subtotal *
+    IVA;
+
+  const total =
+    subtotal +
+    iva;
+
+  /*
+   * Encabezado.
+   */
+  doc.setFillColor(
+    13,
+    27,
+    42
+  );
+
+  doc.rect(
+    0,
+    0,
+    210,
+    36,
+    'F'
+  );
+
+  doc.setTextColor(
+    255,
+    255,
+    255
+  );
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(15);
+
+  doc.text(
+    'Estimación de obra',
+    12,
+    12
+  );
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(8);
+
+  doc.text(
+    `Proc. ${PROCEDIMIENTO}`,
+    12,
+    19
+  );
+
+  doc.text(
+    EMPRESA,
+    12,
+    25
+  );
+
+  doc.text(
+    DEPENDENCIA,
+    12,
+    31
+  );
+
+  doc.setTextColor(
+    20,
+    20,
+    20
+  );
+
+  let y = 47;
+
+  /*
+   * Periodo.
+   */
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(11);
+
+  doc.text(
+    'Periodo de estimación',
+    12,
+    y
+  );
+
+  y += 7;
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(9);
+
+  doc.text(
+    `${ESTIMACION_PERIODO.inicio} al ${ESTIMACION_PERIODO.fin}`,
+    12,
+    y
+  );
+
+  y += 10;
+
+  /*
+   * Resumen.
+   */
+  const filasResumen = [
+    [
+      'Ejecutadas',
+      String(
+        ESTIMACION_PERIODO
+          .ejecutadas
+          .length
+      )
+    ],
+    [
+      'Con Vo.Bo.',
+      String(
+        estimables.length
+      )
+    ],
+    [
+      'Pendientes',
+      String(
+        ESTIMACION_PERIODO
+          .pendientes
+          .length
+      )
+    ],
+    [
+      'Rechazadas',
+      String(
+        ESTIMACION_PERIODO
+          .rechazadas
+          .length
+      )
+    ],
+    [
+      'Precio unitario',
+      money(
+        PRECIO_FACHADA
+      )
+    ],
+    [
+      'Subtotal',
+      money(subtotal)
+    ],
+    [
+      'IVA 16%',
+      money(iva)
+    ],
+    [
+      'TOTAL',
+      money(total)
+    ]
+  ];
+
+  filasResumen.forEach(
+    ([concepto, valor]) => {
+      doc.setFont(
+        undefined,
+        concepto === 'TOTAL'
+          ? 'bold'
+          : 'normal'
+      );
+
+      doc.text(
+        concepto,
+        14,
+        y
+      );
+
+      doc.text(
+        valor,
+        195,
+        y,
+        {
+          align: 'right'
+        }
+      );
+
+      y += 6;
+    }
+  );
+
+  y += 6;
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(10);
+
+  doc.text(
+    'Lecherías incluidas',
+    12,
+    y
+  );
+
+  y += 7;
+
+  doc.setFontSize(7.5);
+
+  estimables.forEach(
+    (p, indice) => {
+      if (y > 280) {
+        doc.addPage();
+
+        y = 18;
+      }
+
+      doc.setFont(
+        undefined,
+        'bold'
+      );
+
+      doc.text(
+        String(p.pv),
+        14,
+        y
+      );
+
+      doc.setFont(
+        undefined,
+        'normal'
+      );
+
+      doc.text(
+        String(
+          p.estado || ''
+        ).slice(
+          0,
+          24
+        ),
+        48,
+        y
+      );
+
+      doc.text(
+        String(
+          p.municipio || ''
+        ).slice(
+          0,
+          30
+        ),
+        90,
+        y
+      );
+
+      doc.text(
+        String(
+          p.freal || ''
+        ),
+        156,
+        y
+      );
+
+      doc.text(
+        money(
+          PRECIO_FACHADA
+        ),
+        196,
+        y,
+        {
+          align: 'right'
+        }
+      );
+
+      y += 5.5;
+    }
+  );
+
+  /*
+   * Numeración de páginas.
+   */
+  const paginas =
+    doc.getNumberOfPages();
+
+  for (
+    let pagina = 1;
+    pagina <= paginas;
+    pagina++
+  ) {
+    doc.setPage(pagina);
+
+    doc.setFontSize(7.5);
+
+    doc.setTextColor(
+      107,
+      123,
+      140
+    );
+
+    doc.text(
+      `Estimación ${ESTIMACION_PERIODO.inicio} al ${ESTIMACION_PERIODO.fin} · Página ${pagina} de ${paginas}`,
+      105,
+      292,
+      {
+        align: 'center'
+      }
+    );
+  }
+
+  doc.save(
+    `Estimacion_${ESTIMACION_PERIODO.inicio}_${ESTIMACION_PERIODO.fin}.pdf`
+  );
+
+  toast(
+    'PDF de estimación generado'
+  );
+}
+
 function exportXLSX() {
   if (!ESTIMACION) {
     toast('Abre primero el módulo de estimaciones');
@@ -10265,7 +11192,7 @@ function exportXLSX() {
       Zona:
         p.zona || '',
 
-      Subcontratista:
+      Cuadrilla:
         p.sub || '',
 
       'm²':
@@ -10309,7 +11236,7 @@ function exportXLSX() {
         Zona:
           extra.zona || '',
 
-        Subcontratista:
+        Cuadrilla:
           extra.sub || '',
 
         'm² real':
@@ -11363,8 +12290,8 @@ async function reportePDF() {
         ubicacion
       ],
       [
-        'Zona / subcontratista',
-        `${p.zona || 'Sin zona'} / ${p.sub || 'Sin subcontratista'}`
+        'Zona / cuadrilla',
+        `${p.zona || 'Sin zona'} / ${p.sub || 'Sin Cuadrilla'}`
       ],
       [
         'Coordenadas del P.V.',
@@ -11685,7 +12612,7 @@ function renderPrograma(){
       <div class="dates">
         <div class="dt"><div class="v">${p.fcomp||'—'}</div><div class="k">Compromiso</div></div>
         <div class="dt"><div class="v">${p.freal||'—'}</div><div class="k">Real</div></div>
-        <div class="dt"><div class="v">${p.sub||'—'}</div><div class="k">Subcontr.</div></div>
+        <div class="dt"><div class="v">${p.sub||'—'}</div><div class="k">Cuadrilla</div></div>
       </div>`;
     sc.appendChild(row);
   });
@@ -11748,7 +12675,7 @@ async function generarActaSubDesdeUI() {
   const subSugerido = CURSUB || Object.keys(SUBS)[0] || 'SUB-1';
 
   const sub = window.prompt(
-    'Subcontratista para el corte (ejemplo: SUB-6):',
+    'Cuadrilla para el corte (ejemplo: SUB-6):',
     subSugerido
   );
 
@@ -11757,7 +12684,7 @@ async function generarActaSubDesdeUI() {
   const subNormalizado = sub.trim().toUpperCase();
 
   if (!SUBS[subNormalizado]) {
-    toast('El subcontratista indicado no existe');
+    toast('La cuadrilla indicada no existe');
     return;
   }
 
@@ -13511,10 +14438,10 @@ function reporteInicioPDF() {
 
   y =
     escribirFila(
-      'Subcontratistas comprendidos',
+      'Cuadrillas comprendidas',
       subs.length
         ? subs.join(', ')
-        : 'Sin subcontratista registrado',
+        : 'Sin cuadrilla registrada',
       y
     );
 
@@ -13763,7 +14690,7 @@ function reporteInicioPDF() {
       'y consolidar la evidencia documental y fotográfica.'
     ],
     [
-      'Subcontratistas',
+      'Cuadrillas',
       'Ejecutar los trabajos asignados, registrar evidencias completas ' +
       'y atender oportunamente las observaciones.'
     ],
@@ -13834,7 +14761,7 @@ function reporteInicioPDF() {
 
   y =
     tituloSeccion(
-      'Distribución por subcontratista',
+      'Distribución por cuadrilla',
       y
     );
 
@@ -13844,7 +14771,7 @@ function reporteInicioPDF() {
     punto => {
       const sub =
         punto.sub ||
-        'Sin subcontratista';
+        'Sin cuadrilla';
 
       if (!grupos[sub]) {
         grupos[sub] = [];
@@ -13883,7 +14810,7 @@ function reporteInicioPDF() {
   );
 
   doc.text(
-    'Subcontratista',
+    'Cuadrilla',
     15,
     y + 5.5
   );
@@ -14119,7 +15046,7 @@ function reporteInicioPDF() {
   doc.text(
     esSub
       ? `Responsable de ${CURSUB}`
-      : 'Responsable operativo / subcontratista',
+      : 'Responsable operativo / cuadrilla',
     55,
     y + 6,
     {
@@ -14205,7 +15132,7 @@ function loteCard(lote) {
 
   const referencia = lote.tipo === 'dependencia'
     ? (lote.zona || 'Nacional')
-    : (lote.sub || 'Sin subcontratista');
+    : (lote.sub || 'Sin cuadrilla');
 
   const tarjeta = document.createElement('div');
 
@@ -14343,7 +15270,7 @@ try {
   document.getElementById('shSub').textContent =
   l.tipo === 'dependencia'
     ? `Con la dependencia · ${Number(l.cantidad_lecherias || 0)} lecherías`
-    : `${l.sub || 'Subcontratista'} · ${Number(l.cantidad_lecherias || 0)} lecherías`;
+    : `${l.sub || 'Cuadrilla'} · ${Number(l.cantidad_lecherias || 0)} lecherías`;
 
   const [claseBadge, textoBadge] =
     loteStatusBadge(l.estado);
@@ -14585,7 +15512,7 @@ const listaLecherias = `
               </span>
 
               <span>
-                ${p.sub || 'Sin subcontratista'}
+                ${p.sub || 'Sin Cuadrilla'}
                 ·
                 ${p.zona || 'Sin zona'}
                 ·
@@ -14986,7 +15913,7 @@ function actaPDF() {
   const contextoDocumento =
     esDependencia
       ? 'Con la dependencia'
-      : 'Corte con subcontratista';
+      : 'Corte con cuadrilla';
 
   const numero =
     acta.numero ||

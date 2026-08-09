@@ -1077,7 +1077,7 @@ async function arrancarApp() {
   ) {
     await cerrarSesion();
     throw new Error(
-      'El subcontratista no tiene una clave asignada'
+      'La cuadrilla no tiene una clave asignada'
     );
   }
   
