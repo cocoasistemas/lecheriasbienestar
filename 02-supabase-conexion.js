@@ -662,6 +662,10 @@ async function subirActaIndividualFirmada(
         '_'
       );
 
+  const urlAnterior =
+  acta.documento_firmado_url ||
+  null;
+
   const ruta =
     `${pvSeguro}/actas/${claseSeguro}/` +
     `firmada_${Date.now()}.${extension}`;
@@ -739,6 +743,58 @@ async function subirActaIndividualFirmada(
 
     throw error;
   }
+
+  /*
+ * Si ya había un documento anterior,
+ * lo eliminamos de Storage después
+ * de confirmar que el nuevo quedó guardado.
+ */
+if (
+  urlAnterior &&
+  urlAnterior !== url
+) {
+  try {
+    const marcador =
+      '/storage/v1/object/public/evidencias/';
+
+    const posicion =
+      urlAnterior.indexOf(
+        marcador
+      );
+
+    if (posicion !== -1) {
+      const rutaAnterior =
+        decodeURIComponent(
+          urlAnterior.substring(
+            posicion +
+            marcador.length
+          )
+        );
+
+      const {
+        error: errorBorrado
+      } =
+        await sb.storage
+          .from('evidencias')
+          .remove([
+            rutaAnterior
+          ]);
+
+      if (errorBorrado) {
+        console.warn(
+          'El acta fue reemplazada, pero no se pudo eliminar el archivo anterior:',
+          errorBorrado
+        );
+      }
+    }
+
+  } catch (error) {
+    console.warn(
+      'No fue posible limpiar el archivo anterior:',
+      error
+    );
+  }
+}
 
   return data;
 }

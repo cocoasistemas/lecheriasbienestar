@@ -1414,7 +1414,7 @@ function renderActaAperturaBlock(
         'var(--wait)',
 
       texto:
-        'Documento firmado cargado'
+        'Documento cargado'
     },
 
     aprobada: {
@@ -1487,58 +1487,78 @@ function renderActaAperturaBlock(
         );
 
   const firmado =
-    acta.documento_firmado_url
-      ? `
-        <a
-          href="${acta.documento_firmado_url}"
-          target="_blank"
-          rel="noopener"
-          class="btn"
-          style="
-            display:block;
-            text-align:center;
-            text-decoration:none;
-            background:
-              var(--done);
-            color:#fff;
-            margin-bottom:8px;
-          "
-        >
-          ✓ Abrir acta firmada
-        </a>
-      `
-      : (
-          puedeGestionar
-            ? `
-              <button
-                class="btn"
-                style="
-                  background:
-                    var(--leche);
-                  color:#fff;
-                  width:100%;
-                  margin-bottom:8px;
-                "
-                onclick="
-                  cargarActaAperturaFirmada()
-                "
-              >
-                📎 Cargar acta firmada
-              </button>
-            `
-            : `
-              <div
-                class="lock"
-                style="
-                  margin-bottom:8px;
-                "
-              >
-                Aún no se carga el
-                documento firmado.
-              </div>
-            `
-        );
+  acta.documento_firmado_url
+    ? `
+      <a
+        href="${acta.documento_firmado_url}"
+        target="_blank"
+        rel="noopener"
+        class="btn"
+        style="
+          display:block;
+          text-align:center;
+          text-decoration:none;
+          background:
+            var(--done);
+          color:#fff;
+          margin-bottom:8px;
+        "
+      >
+        ✓ Abrir acta cargada
+      </a>
 
+      ${
+        puedeGestionar
+          ? `
+            <button
+              class="btn"
+              style="
+                background:
+                  var(--leche);
+                color:#fff;
+                width:100%;
+                margin-bottom:8px;
+              "
+              onclick="
+                cargarActaAperturaFirmada()
+              "
+            >
+              📎 Reemplazar acta cargada
+            </button>
+          `
+          : ''
+      }
+    `
+    : (
+        puedeGestionar
+          ? `
+            <button
+              class="btn"
+              style="
+                background:
+                  var(--leche);
+                color:#fff;
+                width:100%;
+                margin-bottom:8px;
+              "
+              onclick="
+                cargarActaAperturaFirmada()
+              "
+            >
+              📎 Cargar acta
+            </button>
+          `
+          : `
+            <div
+              class="lock"
+              style="
+                margin-bottom:8px;
+              "
+            >
+              Aún no se carga el documento.
+            </div>
+          `
+      );
   const bloqueComentarios =
     puedeGestionar
       ? `
@@ -1701,7 +1721,7 @@ function renderActaAperturaBlock(
                 margin-top:4px;
               "
             >
-              Fecha de carga/firma:
+              Fecha de carga:
               <b>
                 ${acta.fecha_firma}
               </b>
@@ -1854,7 +1874,7 @@ function renderActaRecepcionBlock(
         'var(--wait)',
 
       texto:
-        'Documento firmado cargado'
+        'Documento cargado'
     },
 
     aprobada: {
@@ -1927,57 +1947,78 @@ function renderActaRecepcionBlock(
         );
 
   const firmado =
-    acta.documento_firmado_url
-      ? `
-        <a
-          href="${acta.documento_firmado_url}"
-          target="_blank"
-          rel="noopener"
-          class="btn"
-          style="
-            display:block;
-            text-align:center;
-            text-decoration:none;
-            background:
-              var(--done);
-            color:#fff;
-            margin-bottom:8px;
-          "
-        >
-          ✓ Abrir acta de recepción firmada
-        </a>
-      `
-      : (
-          puedeGestionar
-            ? `
-              <button
-                class="btn"
-                style="
-                  background:
-                    var(--leche);
-                  color:#fff;
-                  width:100%;
-                  margin-bottom:8px;
-                "
-                onclick="
-                  cargarActaRecepcionFirmada()
-                "
-              >
-                📎 Cargar acta firmada
-              </button>
-            `
-            : `
-              <div
-                class="lock"
-                style="
-                  margin-bottom:8px;
-                "
-              >
-                Aún no se carga el
-                documento firmado.
-              </div>
-            `
-        );
+  acta.documento_firmado_url
+    ? `
+      <a
+        href="${acta.documento_firmado_url}"
+        target="_blank"
+        rel="noopener"
+        class="btn"
+        style="
+          display:block;
+          text-align:center;
+          text-decoration:none;
+          background:
+            var(--done);
+          color:#fff;
+          margin-bottom:8px;
+        "
+      >
+        ✓ Abrir acta de recepción cargada
+      </a>
+
+      ${
+        puedeGestionar
+          ? `
+            <button
+              class="btn"
+              style="
+                background:
+                  var(--leche);
+                color:#fff;
+                width:100%;
+                margin-bottom:8px;
+              "
+              onclick="
+                cargarActaRecepcionFirmada()
+              "
+            >
+              📎 Reemplazar acta cargada
+            </button>
+          `
+          : ''
+      }
+    `
+    : (
+        puedeGestionar
+          ? `
+            <button
+              class="btn"
+              style="
+                background:
+                  var(--leche);
+                color:#fff;
+                width:100%;
+                margin-bottom:8px;
+              "
+              onclick="
+                cargarActaRecepcionFirmada()
+              "
+            >
+              📎 Cargar acta
+            </button>
+          `
+          : `
+            <div
+              class="lock"
+              style="
+                margin-bottom:8px;
+              "
+            >
+              Aún no se carga el documento.
+            </div>
+          `
+      );
 
   const bloqueComentarios =
     puedeGestionar
@@ -2147,7 +2188,7 @@ function renderActaRecepcionBlock(
                 margin-top:4px;
               "
             >
-              Fecha de carga/firma:
+              Fecha de carga:
               <b>
                 ${acta.fecha_firma}
               </b>
@@ -11598,7 +11639,7 @@ if (ROLE === 'sub') {
   );
   return;
 }
-  
+
   if (!CUR) {
     toast('Primero abre una lechería');
     return;
