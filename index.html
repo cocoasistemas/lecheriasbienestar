@@ -1328,7 +1328,8 @@ function renderActaAperturaBlock(
    * Los demás perfiles lo consultan.
    */
   const puedeGestionar =
-    ROLE === 'gen';
+  ROLE === 'gen' ||
+  ROLE === 'sub';
 
   /*
    * Todavía no existe.
@@ -1722,7 +1723,8 @@ function renderActaRecepcionBlock(
     p.actaRecepcion;
 
   const puedeGestionar =
-    ROLE === 'gen';
+  ROLE === 'gen' ||
+  ROLE === 'sub';
 
   const trabajoTerminado =
     p.status === 'at';
@@ -2600,21 +2602,14 @@ const fechasBlock = p.fcomp
   `
   : '';
 
-  const puedeVerAdministrativo =
-  ROLE !== 'sub';
-
-const actaAperturaBlock =
-  puedeVerAdministrativo
-    ? renderActaAperturaBlock(p)
-    : '';
+  const actaAperturaBlock =
+  renderActaAperturaBlock(p);
 
 const actaRecepcionBlock =
-  puedeVerAdministrativo
-    ? renderActaRecepcionBlock(p)
-    : '';
+  renderActaRecepcionBlock(p);
 
 const repBtn =
-  puedeVerAdministrativo &&
+  ROLE !== 'sub' &&
   (
     (p.fotosPrev || []).length > 0 ||
     (p.fotosFin || []).length > 0
@@ -3719,12 +3714,16 @@ async function generarActaApertura() {
     return;
   }
 
-  if (ROLE !== 'gen') {
-    toast(
-      'Solo el contratista general puede generar el acta de apertura'
-    );
-    return;
-  }
+  if (
+  ROLE !== 'gen' &&
+  ROLE !== 'sub'
+) {
+  toast(
+    'Tu perfil no puede generar el acta de apertura'
+  );
+
+  return;
+}
 
   try {
     let acta =
@@ -3812,13 +3811,16 @@ async function generarActaRecepcion() {
     return;
   }
 
-  if (ROLE !== 'gen') {
-    toast(
-      'Solo el contratista general puede generar el acta de recepción'
-    );
+  if (
+  ROLE !== 'gen' &&
+  ROLE !== 'sub'
+) {
+  toast(
+    'Tu perfil no puede generar el acta de recepción'
+  );
 
-    return;
-  }
+  return;
+}
 
   if (CUR.status !== 'at') {
     toast(
@@ -3910,13 +3912,14 @@ async function guardarComentarioApertura() {
   }
 
   if (
-    ROLE !== 'gen'
-  ) {
-    toast(
-      'Tu perfil no puede modificar los comentarios'
-    );
-    return;
-  }
+  ROLE !== 'gen' &&
+  ROLE !== 'sub'
+) {
+  toast(
+    'Tu perfil no puede modificar los comentarios'
+  );
+  return;
+}
 
   const campo =
     document.getElementById(
@@ -3966,7 +3969,10 @@ async function guardarComentarioRecepcion() {
     return;
   }
 
-  if (ROLE !== 'gen') {
+  if (
+  ROLE !== 'gen' &&
+  ROLE !== 'sub'
+) {
     toast(
       'Tu perfil no puede modificar los comentarios'
     );
@@ -4052,13 +4058,14 @@ async function cargarActaAperturaFirmada() {
   }
 
   if (
-    ROLE !== 'gen'
-  ) {
-    toast(
-      'Solo el contratista general puede cargar el acta firmada'
-    );
-    return;
-  }
+  ROLE !== 'gen' &&
+  ROLE !== 'sub'
+) {
+  toast(
+    'Tu perfil no puede cargar el acta firmada'
+  );
+  return;
+}
 
   const archivo =
     await seleccionarDocumentoActa();
@@ -4105,13 +4112,16 @@ async function cargarActaRecepcionFirmada() {
     return;
   }
 
-  if (ROLE !== 'gen') {
-    toast(
-      'Solo el contratista general puede cargar el acta firmada'
-    );
+  if (
+  ROLE !== 'gen' &&
+  ROLE !== 'sub'
+) {
+  toast(
+    'Tu perfil no puede cargar el acta firmada'
+  );
 
-    return;
-  }
+  return;
+}
 
   const archivo =
     await seleccionarDocumentoActa();
@@ -11582,6 +11592,13 @@ function exportEstimPDF() {
 
 /* ============ REPORTE PDF antes/después por punto ============ */
 async function reportePDF() {
+if (ROLE === 'sub') {
+  toast(
+    'Este reporte no está disponible para cuadrillas'
+  );
+  return;
+}
+  
   if (!CUR) {
     toast('Primero abre una lechería');
     return;
