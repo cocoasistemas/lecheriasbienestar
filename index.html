@@ -528,7 +528,7 @@ const METAS={"SUB-1": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino
 const MIN=1000, MAX=2000;
 // ===== PRECIOS =====
 // A LA DEPENDENCIA: unidad estándar por lechería = 21 m² a $17,769.75 + IVA (fijo, sin extraordinarios)
-const PRECIO_FACHADA=17769.75, M2_STD=21, IVA=0.16;
+const PRECIO_FACHADA=17769.75, M2_STD=21, M2_MAX = 36, IVA=0.16;
 // EXTRAORDINARIOS: control INTERNO hacia subcontratistas (la dependencia NO paga extra).
 // Precio por m² adicional configurable por subcontratista (default; se ajusta al cerrar cada subcontrato).
 const PRECIO_M2_EXTRA_DEFAULT=450.00;
@@ -567,12 +567,10 @@ let LOTES=[];
 let ACTAS_PERIODO = {
   inicio: '',
   fin: '',
-  aperturas: [],
-  recepciones: []
+  actas: []
 };
 const VISTA_ACTAS = {
-  apertura: 'disponibles',
-  recepcion: 'disponibles'
+  acta: 'disponibles'
 };
 
 let ESTIMACION_PERIODO = {
@@ -1338,7 +1336,7 @@ function renderActaAperturaBlock(
     return `
       <div class="sect">
         <h3>
-          Acta de apertura
+          Acta de inicio y entrega recepción
         </h3>
 
         <div
@@ -1365,10 +1363,7 @@ function renderActaAperturaBlock(
             margin-bottom:10px;
           "
         >
-          Documento individual para
-          autorizar y documentar el
-          inicio de trabajos de esta
-          lechería.
+          Documento individual de inicio y entrega-recepción de los servicios de esta lechería.
         </div>
 
         ${
@@ -1386,12 +1381,12 @@ function renderActaAperturaBlock(
                   generarActaApertura()
                 "
               >
-                📄 Generar acta de apertura
+                📄 Generar acta
               </button>
             `
             : `
               <div class="lock">
-                El acta de apertura
+                El acta
                 aún no ha sido generada.
               </div>
             `
@@ -1640,7 +1635,7 @@ function renderActaAperturaBlock(
     <div class="sect">
 
       <h3>
-        Acta de apertura
+        Acta de inicio y entrega recepción
       </h3>
 
       <div
@@ -2215,9 +2210,8 @@ async function openSheet(id){
   const [
   fotos,
   adjuntos,
-  actaApertura,
-  actaRecepcion
-  ] = await Promise.all([
+  actaApertura
+] = await Promise.all([
   cargarFotos(
     CUR.pv
   ),
@@ -2229,13 +2223,8 @@ async function openSheet(id){
   cargarActaIndividual(
     CUR.pv,
     'apertura'
-  ),
-
-  cargarActaIndividual(
-    CUR.pv,
-    'recepcion'
   )
-  ]);
+]);
 
 CUR.fotosPrev =
   fotos.prev;
@@ -2248,9 +2237,6 @@ CUR.adjuntos =
 
 CUR.actaApertura =
   actaApertura;
-
-CUR.actaRecepcion =
-  actaRecepcion;
   } catch (error) {
   console.error(error);
   toast('No fue posible cargar toda la información de la lechería');
@@ -2646,9 +2632,6 @@ const fechasBlock = p.fcomp
   const actaAperturaBlock =
   renderActaAperturaBlock(p);
 
-const actaRecepcionBlock =
-  renderActaRecepcionBlock(p);
-
 const repBtn =
   ROLE !== 'sub' &&
   (
@@ -2727,7 +2710,7 @@ const autorizacionBlock =
     : '';
 
   document.getElementById('sbody').innerHTML=
-    info+fechasBlock+autorizacionBlock+actaAperturaBlock+`<div class="sect"><h3>Evidencia fotográfica</h3>${prevLane}${finLane}</div>`+adjBlock+sup+tl+actaRecepcionBlock+`<div class="actions">${actions}${repBtn}</div>`;
+    info+fechasBlock+autorizacionBlock+actaAperturaBlock+`<div class="sect"><h3>Evidencia fotográfica</h3>${prevLane}${finLane}</div>`+adjBlock+sup+tl+`<div class="actions">${actions}${repBtn}</div>`;
   document.getElementById('sheet').classList.add('show');
 }
 
@@ -2943,18 +2926,22 @@ function crearPDFActaApertura(
 
   const doc =
     new jsPDF({
-      orientation:
-        'portrait',
-
-      unit:
-        'mm',
-
-      format:
-        'a4'
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
     });
 
+  const domicilio =
+    [
+      p.calle,
+      p.colonia,
+      p.localidad
+    ]
+      .filter(Boolean)
+      .join(', ');
+
   /*
-   * Encabezado.
+   * Encabezado institucional.
    */
   doc.setFillColor(
     13,
@@ -2966,7 +2953,7 @@ function crearPDFActaApertura(
     0,
     0,
     210,
-    30,
+    31,
     'F'
   );
 
@@ -2981,99 +2968,116 @@ function crearPDFActaApertura(
     'bold'
   );
 
-  doc.setFontSize(15);
+  doc.setFontSize(13);
 
   doc.text(
-    'Acta de apertura de trabajos',
+    'LUMEN-OAX PROYECTOS Y CONSTRUCCIÓN S.A. DE C.V.',
     14,
-    13
+    10
   );
-
-  doc.setFontSize(8.5);
 
   doc.setFont(
     undefined,
     'normal'
   );
 
+  doc.setFontSize(7.6);
+
   doc.text(
-    `Procedimiento ${PROCEDIMIENTO}`,
+    'PRIV. DE CARRANZA LOTE 2, COLONIA BAJO, SAN LORENZO CACAOTEPEC, OAXACA',
     14,
-    20
+    16
   );
 
   doc.text(
-    `P.V. ${p.pv}`,
+    'R.F.C. LPC230130LRA · CORREO: lumenoax@outlook.com',
     14,
-    25
+    21
   );
 
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(8);
+
+  doc.text(
+    `Procedimiento: ${PROCEDIMIENTO}`,
+    14,
+    27
+  );
+
+  /*
+   * Título.
+   */
   doc.setTextColor(
     20,
     20,
     20
   );
 
-  let y = 42;
+  doc.setFont(
+    undefined,
+    'bold'
+  );
 
-  const domicilio =
-    [
-      p.calle,
-      p.colonia,
-      p.localidad
-    ]
-      .filter(Boolean)
-      .join(', ');
+  doc.setFontSize(13);
 
+  doc.text(
+    'ACTA DE INICIO Y ENTREGA RECEPCIÓN DE SERVICIO',
+    105,
+    41,
+    {
+      align: 'center'
+    }
+  );
+
+  let y = 51;
+
+  /*
+   * Datos del punto de venta.
+   */
   const filas = [
     [
-      'Clave P.V.',
+      'Punto de venta',
       p.pv
     ],
-
     [
       'Entidad',
       p.estado || '—'
     ],
-
     [
       'Municipio',
       p.municipio || '—'
     ],
-
     [
       'Domicilio',
       domicilio || '—'
     ],
-
     [
       'Zona',
       p.zona || '—'
     ],
-
     [
       'Cuadrilla',
       p.sub || '—'
     ],
-
     [
-      'Fecha compromiso',
+      'Fecha programada',
       p.fcomp || '—'
     ],
-
     [
-      'Contratista general',
-      acta.contratista ||
-      EMPRESA
+      'Contratista',
+      acta.contratista || EMPRESA
     ],
-
     [
       'Dependencia',
       DEPENDENCIA
     ]
   ];
 
-  doc.setFontSize(9.5);
+  doc.setFontSize(8.5);
 
   filas.forEach(
     ([etiqueta, valor]) => {
@@ -3096,137 +3100,209 @@ function crearPDFActaApertura(
       const lineas =
         doc.splitTextToSize(
           String(valor),
-          118
+          125
         );
 
       doc.text(
         lineas,
-        70,
+        66,
         y
       );
 
       y += Math.max(
-        7,
-        lineas.length * 5
+        4.8,
+        lineas.length * 3.8
       );
     }
   );
 
-  y += 5;
+  y += 1.5;
 
-  doc.setFont(
-    undefined,
-    'bold'
-  );
+  /*
+   * Introducción.
+   */
+  const intro =
+    'Reunidos el personal de LUMEN-OAX PROYECTOS Y CONSTRUCCIÓN S.A. DE C.V. y el Administrador del Punto de Venta de LECHE PARA EL BIENESTAR, S.A. DE C.V., se hace constar el inicio, ejecución y entrega-recepción de los servicios correspondientes al inmueble antes descrito.';
 
-  doc.setFontSize(10);
-
-  doc.text(
-    'Objeto del acta',
-    14,
-    y
-  );
-
-  y += 7;
+  doc.setFontSize(8.3);
 
   doc.setFont(
     undefined,
     'normal'
   );
 
-  doc.setFontSize(9);
-
-  const texto =
-    'Por medio de la presente se deja constancia de la apertura del punto de venta indicado y del inicio de los trabajos correspondientes al servicio de pintura de fachada, conforme al procedimiento y programación aplicables.';
-
-  const lineasTexto =
+  const introLineas =
     doc.splitTextToSize(
-      texto,
-      180
+      intro,
+      182
     );
 
   doc.text(
-    lineasTexto,
+    introLineas,
     14,
     y
   );
 
   y +=
-    lineasTexto.length *
-    5 +
-    7;
-
-  if (
-    acta.comentarios
-  ) {
-    doc.setFont(
-      undefined,
-      'bold'
-    );
-
-    doc.text(
-      'Comentarios:',
-      14,
-      y
-    );
-
-    y += 6;
-
-    doc.setFont(
-      undefined,
-      'normal'
-    );
-
-    const lineasComentarios =
-      doc.splitTextToSize(
-        acta.comentarios,
-        180
-      );
-
-    doc.text(
-      lineasComentarios,
-      14,
-      y
-    );
-
-    y +=
-      lineasComentarios.length *
-      5 +
-      8;
-  }
+    introLineas.length * 3.8 +
+    3;
 
   /*
-   * Firmas.
+   * DECLARACIONES
    */
-  y =
-    Math.max(
-      y + 18,
-      225
-    );
-
-  doc.setDrawColor(
-    100,
-    100,
-    100
+  doc.setFont(
+    undefined,
+    'bold'
   );
 
-  doc.line(
-    20,
-    y,
-    90,
-    y
-  );
+  doc.setFontSize(9.5);
 
-  doc.line(
-    120,
-    y,
-    190,
+  doc.text(
+    'DECLARACIONES',
+    14,
     y
   );
 
   y += 6;
 
-  doc.setFontSize(8.5);
+  doc.setFontSize(8.1);
+
+  const declaraciones = [
+    {
+      titulo:
+        'I. Declara la Contratista, a través de su representante:',
+      textos: [
+        'a) Que los servicios objeto del contrato referido han sido concluidos en su totalidad en el inmueble antes descrito, conforme a las especificaciones técnicas pactadas y detalladas en el Acta de Inicio de Servicios correspondiente.',
+        'b) Que hace entrega formal de los servicios ejecutados al Administrador de la Lechería.'
+      ]
+    },
+    {
+      titulo:
+        'II. Declara el Administrador:',
+      textos: [
+        'a) Que, previa inspección física del inmueble, recibe de conformidad los servicios ejecutados por la Contratista.',
+        'b) Que las observaciones o pendientes, en su caso, quedan asentadas en el apartado correspondiente del presente instrumento.'
+      ]
+    }
+  ];
+
+  declaraciones.forEach(
+    bloque => {
+      doc.setFont(
+        undefined,
+        'bold'
+      );
+
+      const tituloLineas =
+        doc.splitTextToSize(
+          bloque.titulo,
+          182
+        );
+
+      doc.text(
+        tituloLineas,
+        14,
+        y
+      );
+
+      y +=
+        tituloLineas.length *
+        3.8 +
+        1.5;
+
+      doc.setFont(
+        undefined,
+        'normal'
+      );
+
+      bloque.textos.forEach(
+        texto => {
+          const lineas =
+            doc.splitTextToSize(
+              texto,
+              178
+            );
+
+          doc.text(
+            lineas,
+            18,
+            y
+          );
+
+          y +=
+            lineas.length *
+            3.8 +
+            1.5;
+        }
+      );
+
+      y += 0.5;
+    }
+  );
+
+  /*
+   * Salto de página controlado.
+   */
+  if (y > 205) {
+    doc.addPage();
+    y = 18;
+  }
+
+  /*
+   * ACUERDOS
+   */
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(9.5);
+
+  doc.text(
+    'ACUERDOS',
+    14,
+    y
+  );
+
+  y += 6;
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(8.1);
+
+  const acuerdos = [
+    '1. La firma del presente instrumento por parte del Administrador constituye la aceptación de conformidad de los servicios entregados por la Contratista en los términos aquí descritos.',
+    '2. La garantía de los servicios ejecutados será la señalada en el apartado anterior, contada a partir de la fecha de firma de la presente Acta.'
+  ];
+
+  acuerdos.forEach(
+    texto => {
+      const lineas =
+        doc.splitTextToSize(
+          texto,
+          182
+        );
+
+      doc.text(
+        lineas,
+        14,
+        y
+      );
+
+      y +=
+        lineas.length *
+        3.8 +
+        2;
+    }
+  );
+
+  /*
+   * Observaciones.
+   */
+  y += 2;
 
   doc.setFont(
     undefined,
@@ -3234,64 +3310,260 @@ function crearPDFActaApertura(
   );
 
   doc.text(
-    'CONTRATISTA GENERAL',
-    55,
-    y,
-    {
-      align:
-        'center'
-    }
+    'Observaciones, impedimentos o pendientes, en su caso (inicio y/o entrega-recepción):',
+    14,
+    y
   );
 
-  doc.text(
-    'DEPENDENCIA',
-    155,
-    y,
-    {
-      align:
-        'center'
-    }
-  );
-
-  y += 5;
+  y += 6;
 
   doc.setFont(
     undefined,
     'normal'
   );
 
-  const empresaCorta =
-    doc.splitTextToSize(
-      acta.contratista ||
-      EMPRESA,
-      66
+  const comentarios =
+    acta.comentarios &&
+    acta.comentarios.trim()
+      ? acta.comentarios.trim()
+      : '';
+
+  if (comentarios) {
+    const lineas =
+      doc.splitTextToSize(
+        comentarios,
+        182
+      );
+
+    doc.text(
+      lineas,
+      14,
+      y
     );
 
-  const dependenciaCorta =
+    y +=
+      lineas.length *
+      4.2 +
+      3;
+  }
+
+  /*
+   * Líneas libres para observaciones manuales.
+   */
+  for (
+    let i = 0;
+    i < 2;
+    i++
+  ) {
+    doc.line(
+      14,
+      y,
+      196,
+      y
+    );
+
+    y += 5;
+  }
+
+  /*
+   * Texto de cierre.
+   */
+  const cierre =
+    'Con lo anterior, ambas partes dejan constancia de la puesta a disposición del inmueble, del inicio operativo del servicio y de la entrega-recepción de los trabajos de pintura de fachada y mantenimiento de letrero ya concluidos, sin que la presente acta modifique el contrato ni sus anexos. No habiendo más asuntos que tratar, se firma de conformidad la presente Acta al calce por quienes en ella intervienen, para los efectos legales y administrativos a que haya lugar.';
+
+  const cierreLineas =
     doc.splitTextToSize(
-      DEPENDENCIA,
-      66
+      cierre,
+      182
     );
 
   doc.text(
-    empresaCorta,
-    55,
-    y,
-    {
-      align:
-        'center'
-    }
+    cierreLineas,
+    14,
+    y
   );
 
-  doc.text(
-    dependenciaCorta,
-    155,
-    y,
-    {
-      align:
-        'center'
-    }
-  );
+  y +=
+    cierreLineas.length *
+    3.8 +
+    6;
+
+  /*
+   * Si no cabe la zona de firmas,
+   * mandamos firmas a página nueva.
+   */
+  if (y > 250) {
+    doc.addPage();
+    y = 45;
+  }
+
+  /*
+ * Firmas.
+ *
+ * Distribución:
+ *
+ * Nombre y firma
+ *
+ *
+ * ____________________
+ *
+ * Cargo
+ * Institución
+ */
+
+/*
+ * Si por algún domicilio o texto largo
+ * las firmas ya no caben, las mandamos
+ * a una página nueva.
+ */
+if (y > 238) {
+  doc.addPage();
+  y = 45;
+}
+
+/*
+ * Dejamos una separación cómoda
+ * después del texto de cierre.
+ */
+y += 7;
+
+/*
+ * Usamos coordenadas independientes
+ * para que ambos lados queden
+ * perfectamente alineados.
+ */
+const yNombreFirma =
+  y;
+
+const yLineaFirma =
+  y + 14;
+
+const yCargoFirma =
+  y + 20;
+
+const yEmpresaFirma =
+  y + 25;
+
+
+/*
+ * "Nombre y firma"
+ * ARRIBA de la línea.
+ */
+doc.setTextColor(
+  20,
+  20,
+  20
+);
+
+doc.setFont(
+  undefined,
+  'normal'
+);
+
+doc.setFontSize(7.5);
+
+doc.text(
+  'Nombre y firma',
+  55,
+  yNombreFirma,
+  {
+    align: 'center'
+  }
+);
+
+doc.text(
+  'Nombre y firma',
+  155,
+  yNombreFirma,
+  {
+    align: 'center'
+  }
+);
+
+
+/*
+ * Líneas de firma.
+ */
+doc.setDrawColor(
+  90,
+  90,
+  90
+);
+
+doc.line(
+  20,
+  yLineaFirma,
+  90,
+  yLineaFirma
+);
+
+doc.line(
+  120,
+  yLineaFirma,
+  190,
+  yLineaFirma
+);
+
+
+/*
+ * Cargos.
+ */
+doc.setFont(
+  undefined,
+  'bold'
+);
+
+doc.setFontSize(8);
+
+doc.text(
+  'ADMINISTRADOR DE LA LECHERÍA',
+  55,
+  yCargoFirma,
+  {
+    align: 'center'
+  }
+);
+
+doc.text(
+  'REPRESENTANTE / SUPERVISOR',
+  155,
+  yCargoFirma,
+  {
+    align: 'center'
+  }
+);
+
+
+/*
+ * Instituciones.
+ */
+doc.setFont(
+  undefined,
+  'normal'
+);
+
+doc.setFontSize(7.6);
+
+doc.text(
+  'LECHE PARA EL BIENESTAR, S.A. DE C.V.',
+  55,
+  yEmpresaFirma,
+  {
+    align: 'center'
+  }
+);
+
+doc.text(
+  [
+    'LUMEN-OAX PROYECTOS Y CONSTRUCCIÓN',
+    'S.A. DE C.V.'
+  ],
+  155,
+  yEmpresaFirma,
+  {
+    align: 'center'
+  }
+);
 
   /*
    * Pie.
@@ -3305,12 +3577,11 @@ function crearPDFActaApertura(
   );
 
   doc.text(
-    `Generada por Bitácora de Lecherías · ${new Date().toLocaleString('es-MX')}`,
+    'Se firma para constancia de inicio y entrega-recepción de los servicios.',
     105,
-    290,
+    286,
     {
-      align:
-        'center'
+      align: 'center'
     }
   );
 
@@ -3824,11 +4095,11 @@ async function generarActaApertura() {
      * para impresión/firma.
      */
     doc.save(
-      `Acta_Apertura_${CUR.pv}.pdf`
+      `Acta_Inicio_Entrega_Recepcion_${CUR.pv}.pdf`
     );
 
     toast(
-      'Acta de apertura generada'
+      'Acta de inicio y entrega-recepción generada'
     );
 
     await openSheet(
@@ -4357,13 +4628,13 @@ async function setM2(v) {
     return;
   }
 
-  if (valor > 32) {
-    toast(
-      'La superficie máxima permitida es de 32 m²'
-    );
+  if (valor > M2_MAX) {
+  toast(
+    `La superficie máxima permitida es de ${M2_MAX} m²`
+  );
 
-    await openSheet(CUR.id);
-    return;
+  await openSheet(CUR.id);
+  return;
   }
 
   CUR.m2 =
@@ -12962,21 +13233,16 @@ async function renderActas() {
 
   sc.innerHTML = `
     <div class="note">
-      <b>Concentrado de actas por periodo operativo.</b>
+      <b>Concentrado de Actas de Inicio y Entrega Recepción por periodo operativo.</b>
       <br><br>
 
-      Las <b>Actas de Apertura</b> se incluyen
-      según la <b>Fecha Compromiso</b> de cada lechería.
-
-      <br><br>
-
-      Las <b>Actas de Recepción</b> se incluyen
-      según la <b>Fecha Real</b> de ejecución.
+      Las actas se incluyen según la
+      <b>Fecha Compromiso</b> de cada lechería.
 
       <br><br>
 
       El periodo seleccionado no corresponde a la fecha
-      en que se generó o cargó el PDF.
+      en que se generó o cargó el documento.
     </div>
 
     <div class="sect">
@@ -13216,65 +13482,41 @@ async function cargarConcentradoActas() {
 
   try {
     const todasActas =
-      await cargarActas();
+  await cargarActas();
 
-    const inicio =
-      ACTAS_PERIODO.inicio;
+const inicio =
+  ACTAS_PERIODO.inicio;
 
-    const fin =
-      ACTAS_PERIODO.fin;
+const fin =
+  ACTAS_PERIODO.fin;
 
-    /*
-     * APERTURAS:
-     * manda la fecha compromiso.
-     */
-    const puntosApertura =
-      LECH.filter(p =>
-        p.fcomp &&
-        p.fcomp >= inicio &&
-        p.fcomp <= fin
-      );
+/*
+ * El acta homologada se organiza
+ * por fecha compromiso.
+ */
+const puntosPeriodo =
+  LECH.filter(p =>
+    p.fcomp &&
+    p.fcomp >= inicio &&
+    p.fcomp <= fin
+  );
 
-    /*
-     * RECEPCIONES:
-     * manda la fecha real.
-     */
-    const puntosRecepcion =
-      LECH.filter(p =>
-        p.freal &&
-        p.freal >= inicio &&
-        p.freal <= fin
-      );
+/*
+ * Internamente seguimos utilizando
+ * clase = 'apertura' por compatibilidad.
+ */
+ACTAS_PERIODO.actas =
+  puntosPeriodo.map(p => ({
+    punto: p,
 
-    /*
-     * Relacionamos cada lechería
-     * con su acta individual.
-     */
-    ACTAS_PERIODO.aperturas =
-      puntosApertura.map(p => ({
-        punto: p,
-
-        acta:
-          todasActas.find(a =>
-            String(a.pv) ===
-              String(p.pv) &&
-            a.clase ===
-              'apertura'
-          ) || null
-      }));
-
-    ACTAS_PERIODO.recepciones =
-      puntosRecepcion.map(p => ({
-        punto: p,
-
-        acta:
-          todasActas.find(a =>
-            String(a.pv) ===
-              String(p.pv) &&
-            a.clase ===
-              'recepcion'
-          ) || null
-      }));
+    acta:
+      todasActas.find(a =>
+        String(a.pv) ===
+          String(p.pv) &&
+        a.clase ===
+          'apertura'
+      ) || null
+  }));
 
     pintarConcentradoActas();
 
@@ -13310,34 +13552,67 @@ function pintarConcentradoActas() {
     return;
   }
 
-  const aperturas =
-    ACTAS_PERIODO.aperturas;
+  const registros =
+    ACTAS_PERIODO.actas || [];
 
-  const recepciones =
-    ACTAS_PERIODO.recepciones;
-
-  const aperturasDisponibles =
-    aperturas.filter(
+  const disponibles =
+    registros.filter(
       tieneDocumentoActa
-    ).length;
+    );
 
-  const recepcionesDisponibles =
-    recepciones.filter(
-      tieneDocumentoActa
-    ).length;
+  const pendientes =
+    registros.filter(
+      item =>
+        !tieneDocumentoActa(item)
+    );
 
-  const aperturasPendientes =
-    aperturas.length -
-    aperturasDisponibles;
+  const vistaActual =
+    VISTA_ACTAS.acta ||
+    'disponibles';
 
-  const recepcionesPendientes =
-    recepciones.length -
-    recepcionesDisponibles;
+  const mostrar =
+    vistaActual === 'pendientes'
+      ? pendientes
+      : disponibles;
+
+  const tarjetas =
+    mostrar.length
+      ? mostrar
+          .map(
+            item =>
+              renderActaPeriodoItem(
+                item,
+                'apertura'
+              )
+          )
+          .join('')
+      : `
+        <div
+          style="
+            background:#fff;
+            border:1px solid var(--line);
+            border-radius:9px;
+            padding:18px 14px;
+            text-align:center;
+            color:var(--mut);
+            font-size:11px;
+          "
+        >
+          ${
+            vistaActual === 'disponibles'
+              ? 'No hay actas disponibles en este periodo.'
+              : 'No hay actas pendientes en este periodo.'
+          }
+        </div>
+      `;
 
   contenedor.innerHTML = `
 
     <div class="sect">
-      <h3>Resumen del periodo</h3>
+
+      <h3>
+        Resumen del periodo
+      </h3>
 
       <div
         class="dashcard"
@@ -13346,6 +13621,7 @@ function pintarConcentradoActas() {
             4px solid var(--leche);
         "
       >
+
         <div
           style="
             display:flex;
@@ -13354,14 +13630,17 @@ function pintarConcentradoActas() {
             gap:10px;
           "
         >
+
           <div>
+
             <div
               style="
                 font-size:12px;
                 font-weight:800;
               "
             >
-              Actas de Apertura
+              Actas de Inicio y
+              Entrega Recepción
             </div>
 
             <div
@@ -13373,6 +13652,7 @@ function pintarConcentradoActas() {
             >
               Por fecha compromiso
             </div>
+
           </div>
 
           <div
@@ -13381,142 +13661,179 @@ function pintarConcentradoActas() {
               font-weight:800;
             "
           >
-            ${aperturas.length}
+            ${registros.length}
           </div>
+
         </div>
 
         <div class="dstats">
 
           <div class="s">
+
             <div
               class="v"
-              style="color:var(--done)"
+              style="
+                color:var(--done);
+              "
             >
-              ${aperturasDisponibles}
+              ${disponibles.length}
             </div>
 
             <div class="k">
               Disponibles
             </div>
+
           </div>
 
           <div class="s">
+
             <div
               class="v"
               style="
                 color:${
-                  aperturasPendientes
+                  pendientes.length
                     ? 'var(--wait)'
                     : 'var(--done)'
-                }
+                };
               "
             >
-              ${aperturasPendientes}
+              ${pendientes.length}
             </div>
 
             <div class="k">
               Pendientes
             </div>
+
           </div>
 
         </div>
+
       </div>
 
-      <div
-        class="dashcard"
-        style="
-          border-left:
-            4px solid var(--done);
-        "
-      >
-        <div
-          style="
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            gap:10px;
-          "
-        >
-          <div>
-            <div
-              style="
-                font-size:12px;
-                font-weight:800;
-              "
-            >
-              Actas de Recepción
-            </div>
-
-            <div
-              style="
-                font-size:10px;
-                color:var(--mut);
-                margin-top:2px;
-              "
-            >
-              Por fecha real
-            </div>
-          </div>
-
-          <div
-            style="
-              font-size:22px;
-              font-weight:800;
-            "
-          >
-            ${recepciones.length}
-          </div>
-        </div>
-
-        <div class="dstats">
-
-          <div class="s">
-            <div
-              class="v"
-              style="color:var(--done)"
-            >
-              ${recepcionesDisponibles}
-            </div>
-
-            <div class="k">
-              Disponibles
-            </div>
-          </div>
-
-          <div class="s">
-            <div
-              class="v"
-              style="
-                color:${
-                  recepcionesPendientes
-                    ? 'var(--wait)'
-                    : 'var(--done)'
-                }
-              "
-            >
-              ${recepcionesPendientes}
-            </div>
-
-            <div class="k">
-              Pendientes
-            </div>
-          </div>
-
-        </div>
-      </div>
     </div>
 
-    ${renderGrupoConcentradoActas(
-      'apertura',
-      'Actas de apertura',
-      aperturas
-    )}
 
-    ${renderGrupoConcentradoActas(
-      'recepcion',
-      'Actas de recepción',
-      recepciones
-    )}
+    <div class="sect">
+
+      <h3>
+        Actas del periodo
+      </h3>
+
+      <div
+        style="
+          font-size:10.5px;
+          color:var(--mut);
+          margin-bottom:8px;
+        "
+      >
+        Periodo determinado por
+        Fecha Compromiso
+      </div>
+
+
+      <div
+        style="
+          display:flex;
+          gap:7px;
+          margin-bottom:10px;
+        "
+      >
+
+        <button
+          type="button"
+          class="chip ${
+            vistaActual ===
+              'disponibles'
+                ? 'on'
+                : ''
+          }"
+          style="flex:1"
+          onclick="
+            cambiarVistaActas(
+              'acta',
+              'disponibles'
+            )
+          "
+        >
+          Disponibles
+          (${disponibles.length})
+        </button>
+
+
+        <button
+          type="button"
+          class="chip ${
+            vistaActual ===
+              'pendientes'
+                ? 'on'
+                : ''
+          }"
+          style="flex:1"
+          onclick="
+            cambiarVistaActas(
+              'acta',
+              'pendientes'
+            )
+          "
+        >
+          Pendientes
+          (${pendientes.length})
+        </button>
+
+      </div>
+
+
+      <div
+        style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          margin-bottom:8px;
+          font-size:10px;
+          color:var(--mut);
+        "
+      >
+
+        <span>
+          Mostrando
+          ${mostrar.length}
+        </span>
+
+        <span>
+          Total del periodo:
+          ${registros.length}
+        </span>
+
+      </div>
+
+
+      ${tarjetas}
+
+
+      ${
+        disponibles.length
+          ? `
+            <button
+              class="btn"
+              style="
+                margin-top:10px;
+                background:var(--steel);
+                color:#fff;
+              "
+              onclick="
+                descargarActasPeriodo(
+                  'acta'
+                )
+              "
+            >
+              📦 Descargar actas disponibles
+              (${disponibles.length})
+            </button>
+          `
+          : ''
+      }
+
+    </div>
   `;
 }
 
@@ -13708,10 +14025,7 @@ function cambiarVistaActas(
   clase,
   vista
 ) {
-  if (
-    clase !== 'apertura' &&
-    clase !== 'recepcion'
-  ) {
+  if (clase !== 'acta') {
     return;
   }
 
@@ -13722,7 +14036,7 @@ function cambiarVistaActas(
     return;
   }
 
-  VISTA_ACTAS[clase] =
+  VISTA_ACTAS.acta =
     vista;
 
   pintarConcentradoActas();
@@ -13963,9 +14277,7 @@ async function descargarActasPeriodo(
   }
 
   const registros =
-    clase === 'apertura'
-      ? ACTAS_PERIODO.aperturas
-      : ACTAS_PERIODO.recepciones;
+  ACTAS_PERIODO.actas || [];
 
   const conDocumentos =
     registros.filter(
@@ -14032,9 +14344,9 @@ async function descargarActasPeriodo(
       });
 
     const nombre =
-      `actas_${clase}_` +
-      `${ACTAS_PERIODO.inicio}_` +
-      `${ACTAS_PERIODO.fin}.zip`;
+  `actas_inicio_entrega_recepcion_` +
+  `${ACTAS_PERIODO.inicio}_` +
+  `${ACTAS_PERIODO.fin}.zip`;
 
     const enlace =
       document.createElement('a');
