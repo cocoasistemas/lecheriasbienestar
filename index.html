@@ -55,7 +55,12 @@
   .mmlegend{display:flex;gap:14px;margin-top:22px;font-size:9.5px;color:#8aa0b6}
   .mmlegend b{color:#fff}
 
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);background:var(--navy2);flex:0 0 auto}
+  .kpis{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  background:var(--navy2);
+  flex:0 0 auto
+}
   .kpi{padding:8px 5px;text-align:center;border-left:1px solid #24364a}
   .kpi:first-child{border-left:none}
   .kpi .n{font-size:17px;font-weight:800;color:#fff;line-height:1}
@@ -420,9 +425,37 @@
   <div class="scroll" id="scroll"></div>
   <div id="mapWrap"><div id="map"></div>
     <div class="map-legend">
-      <div><span class="dot" style="background:#1f8a4c"></span>Con Vo.Bo.</div>
-      <div><span class="dot" style="background:#e08a1e"></span>Atendido s/ Vo.Bo.</div>
-      <div><span class="dot" style="background:#9aa7b4"></span>No atendido</div>
+      <div>
+        <span
+          class="dot"
+          style="background:#1f8a4c"
+        ></span>
+        Con Vo.Bo.
+      </div>
+
+      <div>
+        <span
+          class="dot"
+          style="background:#e08a1e"
+        ></span>
+        Atendido s/ Vo.Bo.
+      </div>
+
+      <div>
+        <span
+          class="dot"
+          style="background:#d6a000"
+        ></span>
+        Iniciada
+      </div>
+
+      <div>
+        <span
+          class="dot"
+          style="background:#9aa7b4"
+        ></span>
+        No atendido
+      </div>
     </div>
   </div>
   <div class="rolehint" id="roleHint"></div>
@@ -934,15 +967,89 @@ function renderMinMax() {
   `;
 }
 
-function renderKPI(){
-  const pts=visiblePts();
-  const tot=pts.length, at=pts.filter(p=>p.status==='at').length;
-  const ok=pts.filter(p=>p.vobo==='ok').length, ext=pts.filter(p=>p.m2>M2_STD).length;
-  document.getElementById('kpis').innerHTML=`
-    <div class="kpi"><div class="n">${tot}</div><div class="l">${ROLE==='sub'?'Mi cartera':'Cargadas'}</div></div>
-    <div class="kpi"><div class="n">${at}</div><div class="l">Atendidas</div></div>
-    <div class="kpi"><div class="n acc">${ok}</div><div class="l">Con Vo.Bo.</div></div>
-    <div class="kpi"><div class="n">${ext}</div><div class="l">Con Extra</div></div>`;
+function renderKPI() {
+  const pts =
+    visiblePts();
+
+  const tot =
+    pts.length;
+
+  const ini =
+    pts.filter(
+      p => p.status === 'ini'
+    ).length;
+
+  const at =
+    pts.filter(
+      p => p.status === 'at'
+    ).length;
+
+  const ok =
+    pts.filter(
+      p => p.vobo === 'ok'
+    ).length;
+
+  const ext =
+    pts.filter(
+      p => p.m2 > M2_STD
+    ).length;
+
+  document
+    .getElementById('kpis')
+    .innerHTML = `
+
+      <div class="kpi">
+        <div class="n">
+          ${tot}
+        </div>
+        <div class="l">
+          ${
+            ROLE === 'sub'
+              ? 'Mi cartera'
+              : 'Cargadas'
+          }
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div
+          class="n"
+          style="color:#d6a000"
+        >
+          ${ini}
+        </div>
+        <div class="l">
+          Iniciadas
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div class="n">
+          ${at}
+        </div>
+        <div class="l">
+          Atendidas
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div class="n acc">
+          ${ok}
+        </div>
+        <div class="l">
+          Con Vo.Bo.
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div class="n">
+          ${ext}
+        </div>
+        <div class="l">
+          Con Extra
+        </div>
+      </div>
+    `;
 }
 
 /* ---- tabs ---- */
