@@ -98,7 +98,20 @@
   .addr .a{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .addr .s{font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .stbadge{font-size:9.5px;font-weight:800;letter-spacing:.3px;padding:4px 8px;border-radius:20px;flex:0 0 auto;text-transform:uppercase}
-  .st-no{background:var(--pend-bg);color:var(--mut)} .st-at{background:var(--done-bg);color:var(--done)}
+  ..st-no{
+  background:var(--pend-bg);
+  color:var(--mut)
+    }
+
+    .st-ini{
+      background:#fff2cc;
+      color:#9a6700
+    }
+
+    .st-at{
+      background:var(--done-bg);
+      color:var(--done)
+    }
   .card .row2{display:flex;border-top:1px solid var(--line);font-size:10px}
   .meta{flex:1;padding:6px 8px;border-left:1px solid var(--line);text-align:center}
   .meta:first-child{border-left:none}
@@ -1054,6 +1067,7 @@ function renderFilters(){
   f.innerHTML = `
     <div class="chip ${cur==='all'?'on':''}" onclick="setFilter('all',this)">Todas</div>
     <div class="chip ${cur==='no'?'on':''}" onclick="setFilter('no',this)">No atendido</div>
+    <div class="chip ${cur==='ini'?'on':''}" onclick="setFilter('ini',this)">Iniciada</div>
     <div class="chip ${cur==='at'?'on':''}" onclick="setFilter('at',this)">Atendido</div>
     <div class="chip ${cur==='wait'?'on':''}" onclick="setFilter('wait',this)">Por Vo.Bo.</div>
     <div class="chip ${cur==='ext'?'on':''}" onclick="setFilter('ext',this)">Extra m²</div>
@@ -1152,11 +1166,40 @@ function goEstados(){
   render();
 }
 
-function matchF(p){
-  if(FILTER==='no')return p.status==='no';
-  if(FILTER==='at')return p.status==='at';
-  if(FILTER==='wait')return p.status==='at'&&p.vobo==='wait';
-  if(FILTER==='ext')return p.m2>M2_STD;
+function matchF(p) {
+  if (
+    FILTER === 'no'
+  ) {
+    return p.status === 'no';
+  }
+
+  if (
+    FILTER === 'ini'
+  ) {
+    return p.status === 'ini';
+  }
+
+  if (
+    FILTER === 'at'
+  ) {
+    return p.status === 'at';
+  }
+
+  if (
+    FILTER === 'wait'
+  ) {
+    return (
+      p.status === 'at' &&
+      p.vobo === 'wait'
+    );
+  }
+
+  if (
+    FILTER === 'ext'
+  ) {
+    return p.m2 > M2_STD;
+  }
+
   return true;
 }
 
@@ -1168,7 +1211,19 @@ function renderPuntos(){
   const sc=document.getElementById('scroll'); sc.innerHTML='';
   if(!arr.length){ sc.innerHTML='<div style="text-align:center;color:var(--mut);padding:40px 0">Sin lecherías en este filtro.</div>'; return; }
   arr.forEach(p=>{
-    const stCls=p.status==='at'?'st-at':'st-no', stTx=p.status==='at'?'Atendido':'No atendido';
+  const stCls =
+  p.status === 'at'
+    ? 'st-at'
+    : p.status === 'ini'
+      ? 'st-ini'
+      : 'st-no';
+
+  const stTx =
+  p.status === 'at'
+    ? 'Atendido'
+    : p.status === 'ini'
+      ? 'Iniciada'
+      : 'No atendido';
     let voV='—',voC='v-pe';
     if(p.status==='at'){ if(p.vobo==='ok'){voV='Aprobado';voC='v-ok'} else if(p.vobo==='rej'){voV='Rechazado';voC='v-re'} else {voV='Por revisar';voC='v-wa'} }
     const exc=p.m2-M2_STD;
@@ -2245,9 +2300,34 @@ CUR.actaApertura =
   const p = CUR;
   document.getElementById('shTitle').textContent='P.V. '+p.pv;
   document.getElementById('shSub').textContent=`${p.calle||''} · ${p.municipio}, ${p.estado}`;
-  const bd=document.getElementById('shBadge');
-  bd.className='stbadge '+(p.status==='at'?'st-at':'st-no');
-  bd.textContent=p.status==='at'?'Atendido':'No atendido';
+  const bd =
+  document.getElementById(
+    'shBadge'
+  );
+
+  if (p.status === 'at') {
+    bd.className =
+      'stbadge st-at';
+
+    bd.textContent =
+      'Atendido';
+
+  } else if (
+    p.status === 'ini'
+  ) {
+    bd.className =
+      'stbadge st-ini';
+
+    bd.textContent =
+      'Iniciada';
+
+  } else {
+    bd.className =
+      'stbadge st-no';
+
+    bd.textContent =
+      'No atendido';
+  }
 
   const exc=p.m2-M2_STD;
   const canPintor = ROLE==='sub';
@@ -4879,10 +4959,31 @@ function closeSheet() {
 }
 
 /* ============ MAPA ============ */
-function markerColor(p){
-  if(p.status!=='at') return '#9aa7b4';
-  if(p.vobo==='ok') return '#1f8a4c';
-  if(p.vobo==='rej') return '#c0362c';
+function markerColor(p) {
+  if (
+    p.status === 'ini'
+  ) {
+    return '#d6a000';
+  }
+
+  if (
+    p.status !== 'at'
+  ) {
+    return '#9aa7b4';
+  }
+
+  if (
+    p.vobo === 'ok'
+  ) {
+    return '#1f8a4c';
+  }
+
+  if (
+    p.vobo === 'rej'
+  ) {
+    return '#c0362c';
+  }
+
   return '#e08a1e';
 }
 
@@ -4935,7 +5036,18 @@ function drawMarkers(){
     const lng = Number(p.lng);
     const c=markerColor(p);
     const m=L.circleMarker([lat,lng],{radius:6,color:'#fff',weight:1.5,fillColor:c,fillOpacity:.95});
-    const stTxt = p.status==='at' ? (p.vobo==='ok'?'Con Vo.Bo.':p.vobo==='rej'?'Rechazado':'Atendido s/ Vo.Bo.') : 'No atendido';
+    const stTxt =
+    p.status === 'at'
+      ? (
+          p.vobo === 'ok'
+            ? 'Con Vo.Bo.'
+            : p.vobo === 'rej'
+              ? 'Rechazado'
+              : 'Atendido s/ Vo.Bo.'
+        )
+      : p.status === 'ini'
+        ? 'Iniciada'
+        : 'No atendido';
     m.bindPopup(`<b>P.V. ${p.pv}</b><br>${p.calle||''}<br><span style="color:#6b7b8c">${p.municipio}, ${p.estado}</span><br><b style="color:${c}">${stTxt}</b> · ${p.m2} m²<br><span class="popbtn" onclick="fromMap(${p.id})">Ver detalle</span>`);
     m.addTo(MAPLAYER); bounds.push([lat,lng]);
   });
@@ -4964,10 +5076,11 @@ function renderTablero(){
   subs.forEach(s=>{
     const arr=groups[s], tot=arr.length;
     const at=arr.filter(p=>p.status==='at').length;
+    const ini =arr.filter(p => p.status === 'ini').length;
     const ok=arr.filter(p=>p.vobo==='ok').length;
     const wait=arr.filter(p=>p.status==='at'&&p.vobo==='wait').length;
     const rej=arr.filter(p=>p.vobo==='rej').length;
-    const no=tot-at;
+    const no =arr.filter(p => p.status === 'no').length;
     const pctOk=Math.round(ok/tot*100), pctWait=Math.round(wait/tot*100);
     const zonas =
     [
@@ -5002,10 +5115,51 @@ function renderTablero(){
       </div>
       <div class="dbar"><div class="ok" style="width:${pctOk}%"></div><div class="wa" style="width:${pctWait}%"></div></div>
       <div class="dstats">
-        <div class="s"><div class="v">${no}</div><div class="k">Sin atender</div></div>
-        <div class="s"><div class="v" style="color:var(--wait)">${wait}</div><div class="k">Por Vo.Bo.</div></div>
-        <div class="s"><div class="v" style="color:var(--done)">${ok}</div><div class="k">Aprobadas</div></div>
-        <div class="s"><div class="v" style="color:var(--rej)">${rej}</div><div class="k">Rechazadas</div></div>
+        <div class="s">
+          <div class="v">
+            ${no}
+          </div>
+          <div class="k">
+            Sin atender
+          </div>
+        </div>
+
+        <div class="s">
+          <div
+            class="v"
+            style="color:#9a6700"
+          >
+            ${ini}
+          </div>
+          <div class="k">
+            Iniciadas
+          </div>
+        </div>
+
+        <div class="s">
+          <div
+            class="v"
+            style="color:var(--wait)"
+          >
+            ${wait}
+          </div>
+          <div class="k">
+            Por Vo.Bo.
+          </div>
+        </div>
+
+        <div class="s">
+          <div
+            class="v"
+            style="color:var(--done)"
+          >
+            ${ok}
+          </div>
+          <div class="k">
+            Aprobadas
+          </div>
+        </div>
+
       </div>`;
     sc.appendChild(d);
   });
@@ -14328,12 +14482,20 @@ async function descargarActasPeriodo(
       }
 
       if (
-        acta.documento_firmado_url
+       acta.documento_firmado_url
       ) {
         await agregarArchivoActaZIP(
           zip,
           acta.documento_firmado_url,
-          `${pv}_FIRMADA`
+          `${pv}_ACTA`
+        );
+      } else if (
+        acta.documento_generado_url
+      ) {
+        await agregarArchivoActaZIP(
+          zip,
+          acta.documento_generado_url,
+          `${pv}_ACTA`
         );
       }
     }

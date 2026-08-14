@@ -981,27 +981,147 @@ async function guardarFechaCompromiso(
   }
 }
 
+async function guardarIniciada(pv) {
+  const uid =
+    (await sb.auth.getUser())
+      .data.user.id;
+
+  /*
+   * Primero revisamos el avance actual.
+   * Nunca debemos bajar una lechería
+   * que ya está ATENDIDA.
+   */
+  const {
+    data: avance,
+    error: errorLectura
+  } = await sb
+    .from('avances')
+    .select(
+      'pv, status, m2, vobo, motivo, freal'
+    )
+    .eq('pv', pv)
+    .maybeSingle();
+
+  if (errorLectura) {
+    throw errorLectura;
+  }
+
+  if (
+    avance &&
+    avance.status === 'at'
+  ) {
+    return;
+  }
+
+  const { error } =
+    await sb
+      .from('avances')
+      .upsert(
+        {
+          pv,
+          status: 'ini',
+
+          m2:
+            avance?.m2 ??
+            21,
+
+          vobo:
+            avance?.vobo ??
+            '-',
+
+          motivo:
+            avance?.motivo ??
+            null,
+
+          freal:
+            avance?.freal ??
+            null,
+
+          actualizado_por:
+            uid,
+
+          actualizado:
+            new Date()
+              .toISOString()
+        },
+        {
+          onConflict: 'pv'
+        }
+      );
+
+  if (error) {
+    throw error;
+  }
+}
+
 // Subir una foto al Storage y registrar en la tabla
 async function subirFoto(pv, momento, tipo, archivo, lat, lng) {
   const ruta = `${pv}/${momento}_${tipo}_${Date.now()}.jpg`;
   const { error: eUp } = await sb.storage.from('evidencias').upload(ruta, archivo);
   if (eUp) { throw eUp; }
   const { data: pub } = sb.storage.from('evidencias').getPublicUrl(ruta);
-  const { error } = await sb.from('fotos').insert({
-    pv, momento, tipo, archivo_url: pub.publicUrl, lat, lng,
-    subido_por: (await sb.auth.getUser()).data.user.id
-  });
-  if (error) { throw error; }
-  return pub.publicUrl;
+  const { error } =
+  await sb
+    .from('fotos')
+    .insert({
+      pv,
+      momento,
+      tipo,
+      archivo_url:
+        pub.publicUrl,
+      lat,
+      lng,
+      subido_por:
+        (
+          await sb.auth.getUser()
+        ).data.user.id
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    /*
+     * Primera evidencia DESPUÉS:
+     * la lechería pasa automáticamente
+     * a estado INICIADA.
+     */
+    if (momento === 'fin') {
+      await guardarIniciada(pv);
+    }
+
+    return pub.publicUrl;
 }
 
-async function eliminarFoto(idFoto, archivoUrl) {
+async function eliminarFoto(
+  idFoto,
+  archivoUrl
+) {
   /*
-   * Primero eliminamos el registro de la tabla.
-   * Si Storage falla después, solo quedará un archivo huérfano,
-   * pero la aplicación no mostrará una referencia rota.
+   * Recuperamos los datos antes
+   * de eliminar la fotografía.
    */
-  const { error: errorTabla } = await sb
+  const {
+    data: foto,
+    error: errorFoto
+  } = await sb
+    .from('fotos')
+    .select(
+      'id, pv, momento'
+    )
+    .eq('id', idFoto)
+    .single();
+
+  if (errorFoto) {
+    throw errorFoto;
+  }
+
+  /*
+   * Eliminamos primero el registro.
+   */
+  const {
+    error: errorTabla
+  } = await sb
     .from('fotos')
     .delete()
     .eq('id', idFoto);
@@ -1010,25 +1130,123 @@ async function eliminarFoto(idFoto, archivoUrl) {
     throw errorTabla;
   }
 
-  const marcador = '/storage/v1/object/public/evidencias/';
-  const posicion = archivoUrl.indexOf(marcador);
+  /*
+   * Si era una foto DESPUÉS,
+   * comprobamos si queda alguna.
+   */
+  if (
+    foto.momento === 'fin'
+  ) {
+    const {
+      count,
+      error: errorConteo
+    } = await sb
+      .from('fotos')
+      .select(
+        'id',
+        {
+          count: 'exact',
+          head: true
+        }
+      )
+      .eq(
+        'pv',
+        foto.pv
+      )
+      .eq(
+        'momento',
+        'fin'
+      );
 
-  if (posicion !== -1) {
-    const ruta = decodeURIComponent(
-      archivoUrl.substring(posicion + marcador.length)
+    if (errorConteo) {
+      throw errorConteo;
+    }
+
+    if (count === 0) {
+      const {
+        data: avance,
+        error: errorAvance
+      } = await sb
+        .from('avances')
+        .select(
+          'status'
+        )
+        .eq(
+          'pv',
+          foto.pv
+        )
+        .maybeSingle();
+
+      if (errorAvance) {
+        throw errorAvance;
+      }
+
+      /*
+       * Solo retrocedemos si estaba
+       * INICIADA. Una ATENDIDA nunca
+       * debe regresar automáticamente.
+       */
+      if (
+        avance?.status ===
+        'ini'
+      ) {
+        const { error } =
+          await sb
+            .from(
+              'avances'
+            )
+            .update({
+              status: 'no',
+              actualizado:
+                new Date()
+                  .toISOString()
+            })
+            .eq(
+              'pv',
+              foto.pv
+            );
+
+        if (error) {
+          throw error;
+        }
+      }
+    }
+  }
+
+  /*
+   * Limpiamos Storage.
+   */
+  const marcador =
+    '/storage/v1/object/public/evidencias/';
+
+  const posicion =
+    archivoUrl.indexOf(
+      marcador
     );
 
-    const { error: errorStorage } = await sb.storage
-      .from('evidencias')
-      .remove([ruta]);
+  if (posicion !== -1) {
+    const ruta =
+      decodeURIComponent(
+        archivoUrl.substring(
+          posicion +
+          marcador.length
+        )
+      );
+
+    const {
+      error: errorStorage
+    } =
+      await sb.storage
+        .from('evidencias')
+        .remove([
+          ruta
+        ]);
 
     if (errorStorage) {
-      /*
-       * La foto ya se eliminó de la tabla.
-       * Dejamos aviso en consola para limpiar el archivo después,
-       * sin volver a mostrar una foto que ya fue borrada.
-       */
-      console.warn('No se pudo eliminar el archivo de Storage:', errorStorage);
+      console.warn(
+        'No se pudo eliminar el archivo de Storage:',
+        errorStorage
+      );
     }
   }
 }
