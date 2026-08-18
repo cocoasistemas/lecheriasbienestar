@@ -67,6 +67,118 @@
   .kpi .n.acc{color:#5ea0ff}
   .kpi .l{font-size:8px;letter-spacing:.8px;color:#8aa0b6;text-transform:uppercase;margin-top:3px}
 
+  /* ===== KPI interactivos ===== */
+
+.kpi.kpi-click{
+  cursor:pointer;
+  position:relative;
+  transition:
+    background .12s,
+    transform .08s;
+}
+
+.kpi.kpi-click:active{
+  background:#20344b;
+  transform:scale(.97);
+}
+
+.kpi.kpi-click::after{
+  content:'›';
+  position:absolute;
+  right:4px;
+  top:50%;
+  transform:translateY(-50%);
+  font-size:14px;
+  color:#526981;
+}
+
+
+/* ===== Panel detalle KPI ===== */
+
+.kpi-sheet{
+  position:fixed;
+  inset:0;
+  max-width:540px;
+  margin:0 auto;
+  background:var(--paper);
+  z-index:35;
+
+  display:flex;
+  flex-direction:column;
+
+  transform:translateY(100%);
+  transition:
+    transform .25s
+    cubic-bezier(.3,.7,.3,1);
+}
+
+.kpi-sheet.show{
+  transform:translateY(0);
+}
+
+.kpi-sheet header{
+  background:var(--navy);
+  color:#fff;
+
+  padding:12px 15px;
+
+  display:flex;
+  align-items:center;
+  gap:11px;
+
+  border-bottom:3px solid var(--leche);
+
+  flex:0 0 auto;
+}
+
+.kpi-sheet header .x{
+  background:none;
+  border:none;
+  color:#fff;
+
+  font-size:25px;
+  line-height:1;
+
+  cursor:pointer;
+  padding:0 3px;
+}
+
+.kpi-sheet header .h{
+  flex:1;
+  min-width:0;
+}
+
+.kpi-sheet header .h b{
+  display:block;
+  font-size:14px;
+}
+
+.kpi-sheet header .h span{
+  display:block;
+  font-size:10.5px;
+  color:#8aa0b6;
+}
+
+.kpi-body{
+  flex:1;
+  overflow-y:auto;
+  padding:13px 13px 30px;
+}
+
+.kpi-resumen{
+  background:var(--milk);
+  border-radius:9px;
+  padding:10px 12px;
+  margin-bottom:11px;
+
+  font-size:11.5px;
+  color:var(--steel);
+}
+
+.kpi-resumen b{
+  color:var(--ink);
+}
+
   .crumbs{display:flex;align-items:center;gap:7px;padding:9px 15px 4px;font-size:12px;flex:0 0 auto;color:var(--mut)}
   .crumbs a{color:var(--leche);font-weight:700;cursor:pointer;text-decoration:none}
   .crumbs .sep{color:var(--line)}
@@ -482,6 +594,20 @@
     <span class="stbadge" id="shBadge"></span>
   </header>
   <div class="sbody" id="sbody"></div>
+</div>
+<div class="kpi-sheet" id="kpiSheet">
+  <header>
+    <button class="x" onclick="cerrarDetalleKPI()">
+      &times;
+    </button>
+    <div class="h">
+      <b id="kpiSheetTitle">
+        Detalle
+      </b>
+      <span id="kpiSheetSub"></span>
+    </div>
+  </header>
+  <div class="kpi-body" id="kpiSheetBody"></div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -1002,6 +1128,7 @@ function renderKPI() {
         <div class="n">
           ${tot}
         </div>
+
         <div class="l">
           ${
             ROLE === 'sub'
@@ -1011,45 +1138,357 @@ function renderKPI() {
         </div>
       </div>
 
-      <div class="kpi">
+
+      <div
+        class="kpi kpi-click"
+        onclick="abrirDetalleKPI('ini')"
+      >
         <div
           class="n"
           style="color:#d6a000"
         >
           ${ini}
         </div>
+
         <div class="l">
           Iniciadas
         </div>
       </div>
 
-      <div class="kpi">
+
+      <div
+        class="kpi kpi-click"
+        onclick="abrirDetalleKPI('at')"
+      >
         <div class="n">
           ${at}
         </div>
+
         <div class="l">
           Atendidas
         </div>
       </div>
 
-      <div class="kpi">
+
+      <div
+        class="kpi kpi-click"
+        onclick="abrirDetalleKPI('ok')"
+      >
         <div class="n acc">
           ${ok}
         </div>
+
         <div class="l">
           Con Vo.Bo.
         </div>
       </div>
 
-      <div class="kpi">
+
+      <div
+        class="kpi kpi-click"
+        onclick="abrirDetalleKPI('ext')"
+      >
         <div class="n">
           ${ext}
         </div>
+
         <div class="l">
           Con Extra
         </div>
       </div>
     `;
+}
+
+function obtenerPuntosKPI(tipo) {
+  const pts =
+    visiblePts();
+
+  if (tipo === 'ini') {
+    return pts.filter(
+      p => p.status === 'ini'
+    );
+  }
+
+  if (tipo === 'at') {
+    return pts.filter(
+      p => p.status === 'at'
+    );
+  }
+
+  if (tipo === 'ok') {
+    return pts.filter(
+      p => p.vobo === 'ok'
+    );
+  }
+
+  if (tipo === 'ext') {
+    return pts.filter(
+      p => p.m2 > M2_STD
+    );
+  }
+
+  return [];
+}
+
+
+function obtenerTituloKPI(tipo) {
+  if (tipo === 'ini') {
+    return 'Lecherías iniciadas';
+  }
+
+  if (tipo === 'at') {
+    return 'Lecherías atendidas';
+  }
+
+  if (tipo === 'ok') {
+    return 'Lecherías con Vo.Bo.';
+  }
+
+  if (tipo === 'ext') {
+    return 'Lecherías con superficie extra';
+  }
+
+  return 'Detalle';
+}
+
+
+function abrirDetalleKPI(tipo) {
+  const arr =
+    obtenerPuntosKPI(tipo);
+
+  const sheet =
+    document.getElementById(
+      'kpiSheet'
+    );
+
+  const titulo =
+    document.getElementById(
+      'kpiSheetTitle'
+    );
+
+  const subtitulo =
+    document.getElementById(
+      'kpiSheetSub'
+    );
+
+  const body =
+    document.getElementById(
+      'kpiSheetBody'
+    );
+
+  titulo.textContent =
+    obtenerTituloKPI(tipo);
+
+  subtitulo.textContent =
+    `${arr.length} ${
+      arr.length === 1
+        ? 'lechería'
+        : 'lecherías'
+    }`;
+
+  body.innerHTML = `
+    <div class="kpi-resumen">
+      <b>
+        ${arr.length}
+      </b>
+      ${
+        arr.length === 1
+          ? 'lechería encontrada'
+          : 'lecherías encontradas'
+      }
+    </div>
+  `;
+
+  if (!arr.length) {
+    body.innerHTML += `
+      <div
+        style="
+          text-align:center;
+          color:var(--mut);
+          padding:40px 10px;
+        "
+      >
+        No hay lecherías en esta categoría.
+      </div>
+    `;
+
+    sheet.classList.add('show');
+    return;
+  }
+
+
+  const ordenadas =
+    [...arr].sort((a, b) => {
+
+      const estado =
+        (a.estado || '')
+          .localeCompare(
+            b.estado || '',
+            'es'
+          );
+
+      if (estado !== 0) {
+        return estado;
+      }
+
+      return String(a.pv)
+        .localeCompare(
+          String(b.pv)
+        );
+    });
+
+
+  ordenadas.forEach(p => {
+
+    const stCls =
+      p.status === 'at'
+        ? 'st-at'
+        : p.status === 'ini'
+          ? 'st-ini'
+          : 'st-no';
+
+    const stTx =
+      p.status === 'at'
+        ? 'Atendido'
+        : p.status === 'ini'
+          ? 'Iniciada'
+          : 'No atendido';
+
+
+    let voV = '—';
+    let voC = 'v-pe';
+
+    if (p.status === 'at') {
+
+      if (p.vobo === 'ok') {
+        voV = 'Aprobado';
+        voC = 'v-ok';
+
+      } else if (
+        p.vobo === 'rej'
+      ) {
+        voV = 'Rechazado';
+        voC = 'v-re';
+
+      } else {
+        voV = 'Por revisar';
+        voC = 'v-wa';
+      }
+    }
+
+
+    const exc =
+      p.m2 - M2_STD;
+
+
+    const card =
+      document.createElement(
+        'div'
+      );
+
+    card.className =
+      'card';
+
+    card.onclick = () => {
+      openSheet(p.id);
+    };
+
+
+    card.innerHTML = `
+      <div class="row1">
+
+        <span class="pv">
+          ${p.pv}
+        </span>
+
+        <div class="addr">
+
+          <div class="a">
+            ${p.calle || '(sin calle)'}
+          </div>
+
+          <div class="s">
+            ${p.municipio || ''}
+            ${
+              p.estado
+                ? ' · ' + p.estado
+                : ''
+            }
+          </div>
+
+        </div>
+
+        <span
+          class="stbadge ${stCls}"
+        >
+          ${stTx}
+        </span>
+
+      </div>
+
+
+      <div class="row2">
+
+        <div class="meta">
+          <div class="v ${voC}">
+            ${voV}
+          </div>
+          <div class="k">
+            Vo.Bo.
+          </div>
+        </div>
+
+
+        <div class="meta">
+          <div class="v">
+            ${p.m2} m²
+          </div>
+          <div class="k">
+            Superficie
+          </div>
+        </div>
+
+
+        <div class="meta">
+
+          <div
+            class="v ${
+              exc > 0
+                ? 'v-ex'
+                : ''
+            }"
+          >
+            ${
+              exc > 0
+                ? '+' + exc
+                : '—'
+            }
+          </div>
+
+          <div class="k">
+            Extra m²
+          </div>
+
+        </div>
+
+      </div>
+    `;
+
+    body.appendChild(card);
+  });
+
+
+  sheet.classList.add('show');
+}
+
+
+function cerrarDetalleKPI() {
+  document
+    .getElementById(
+      'kpiSheet'
+    )
+    .classList
+    .remove('show');
 }
 
 /* ---- tabs ---- */
@@ -2654,7 +3093,10 @@ CUR.actaApertura =
   let actions='';
 
   if (ROLE === 'sub') {
-  if (p.status === 'no') {
+  if (
+  p.status === 'no' ||
+  p.status === 'ini'
+  ) {
     const puedeMarcarAtendido =
       reqOk &&
       aperturaAutorizada;
@@ -10059,6 +10501,1512 @@ async function reporteMensual() {
   }
 }
 
+function calcularResumenAvanceInterno(puntos) {
+
+  const cargadas =
+    puntos.length;
+
+  const iniciadas =
+    puntos.filter(
+      p => p.status === 'ini'
+    );
+
+  const atendidas =
+    puntos.filter(
+      p => p.status === 'at'
+    );
+
+  const noAtendidas =
+    puntos.filter(
+      p =>
+        p.status !== 'ini' &&
+        p.status !== 'at'
+    );
+
+  const conVobo =
+    atendidas.filter(
+      p => p.vobo === 'ok'
+    );
+
+  const rechazadas =
+    atendidas.filter(
+      p => p.vobo === 'rej'
+    );
+
+  const enRevision =
+    atendidas.filter(
+      p =>
+        p.vobo !== 'ok' &&
+        p.vobo !== 'rej'
+    );
+
+
+  /*
+   * Solamente una lechería ATENDIDA
+   * forma parte de la superficie
+   * ejecutada consolidada.
+   */
+
+  const m2Base =
+    atendidas.length *
+    M2_STD;
+
+
+  const m2Extra =
+    atendidas.reduce(
+      (total, p) => {
+
+        const extra =
+          Math.max(
+            Number(
+              p.m2 || M2_STD
+            ) - M2_STD,
+            0
+          );
+
+        return total + extra;
+      },
+      0
+    );
+
+
+  const m2Total =
+    m2Base + m2Extra;
+
+
+  return {
+    cargadas,
+    noAtendidas:
+      noAtendidas.length,
+    iniciadas:
+      iniciadas.length,
+    atendidas:
+      atendidas.length,
+    conVobo:
+      conVobo.length,
+    enRevision:
+      enRevision.length,
+    rechazadas:
+      rechazadas.length,
+    m2Base,
+    m2Extra,
+    m2Total
+  };
+}
+
+function exportReporteAvanceInternoXLSX() {
+
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    toast(
+      'Este reporte es exclusivo de control interno'
+    );
+
+    return;
+  }
+
+
+  const puntos =
+    Array.isArray(LECH)
+      ? [...LECH]
+      : [];
+
+
+  if (!puntos.length) {
+    toast(
+      'No hay lecherías cargadas'
+    );
+
+    return;
+  }
+
+
+  /*
+   * ==========================
+   * RESUMEN NACIONAL
+   * ==========================
+   */
+
+  const resumen =
+    calcularResumenAvanceInterno(
+      puntos
+    );
+
+
+  const resumenNacional = [
+
+    {
+      Concepto:
+        'Lecherías cargadas',
+      Total:
+        resumen.cargadas
+    },
+
+    {
+      Concepto:
+        'No atendidas',
+      Total:
+        resumen.noAtendidas
+    },
+
+    {
+      Concepto:
+        'Iniciadas',
+      Total:
+        resumen.iniciadas
+    },
+
+    {
+      Concepto:
+        'Atendidas',
+      Total:
+        resumen.atendidas
+    },
+
+    {
+      Concepto:
+        'Atendidas en revisión',
+      Total:
+        resumen.enRevision
+    },
+
+    {
+      Concepto:
+        'Con Vo.Bo.',
+      Total:
+        resumen.conVobo
+    },
+
+    {
+      Concepto:
+        'Rechazadas',
+      Total:
+        resumen.rechazadas
+    },
+
+    {
+      Concepto:
+        'Superficie base ejecutada',
+      Total:
+        resumen.m2Base,
+      Unidad:
+        'm²'
+    },
+
+    {
+      Concepto:
+        'Superficie excedente ejecutada',
+      Total:
+        resumen.m2Extra,
+      Unidad:
+        'm²'
+    },
+
+    {
+      Concepto:
+        'Superficie total ejecutada',
+      Total:
+        resumen.m2Total,
+      Unidad:
+        'm²'
+    }
+
+  ];
+
+
+  /*
+   * ==========================
+   * POR CUADRILLA
+   * ==========================
+   */
+
+  const grupos = {};
+
+
+  puntos.forEach(p => {
+
+    const cuadrilla =
+      p.sub ||
+      'Sin cuadrilla';
+
+    if (!grupos[cuadrilla]) {
+      grupos[cuadrilla] = [];
+    }
+
+    grupos[cuadrilla]
+      .push(p);
+  });
+
+
+  const porCuadrilla =
+    Object
+      .entries(grupos)
+      .sort(
+        ([a], [b]) =>
+          a.localeCompare(
+            b,
+            'es',
+            {
+              numeric: true
+            }
+          )
+      )
+      .map(
+        ([cuadrilla, registros]) => {
+
+          const r =
+            calcularResumenAvanceInterno(
+              registros
+            );
+
+          const zonas =
+            [
+              ...new Set(
+                registros
+                  .map(p => p.zona)
+                  .filter(Boolean)
+              )
+            ]
+              .join(', ');
+
+
+          return {
+
+            Cuadrilla:
+              cuadrilla,
+
+            Zonas:
+              zonas,
+
+            Cargadas:
+              r.cargadas,
+
+            'No atendidas':
+              r.noAtendidas,
+
+            Iniciadas:
+              r.iniciadas,
+
+            Atendidas:
+              r.atendidas,
+
+            'En revisión':
+              r.enRevision,
+
+            'Con Vo.Bo.':
+              r.conVobo,
+
+            Rechazadas:
+              r.rechazadas,
+
+            'm² base ejecutados':
+              r.m2Base,
+
+            'm² extra':
+              r.m2Extra,
+
+            'm² total ejecutados':
+              r.m2Total
+          };
+        }
+      );
+
+
+  /*
+   * ==========================
+   * DETALLE NACIONAL
+   * ==========================
+   */
+
+  const detalle =
+    puntos
+      .sort(
+        (a, b) =>
+          String(a.pv)
+            .localeCompare(
+              String(b.pv)
+            )
+      )
+      .map(p => {
+
+        const atendida =
+          p.status === 'at';
+
+        const extra =
+          atendida
+            ? Math.max(
+                Number(
+                  p.m2 || M2_STD
+                ) -
+                M2_STD,
+                0
+              )
+            : 0;
+
+        const base =
+          atendida
+            ? M2_STD
+            : 0;
+
+        const total =
+          atendida
+            ? Number(
+                p.m2 || M2_STD
+              )
+            : 0;
+
+
+        return {
+
+          'Clave P.V.':
+            String(p.pv || ''),
+
+          Estado:
+            p.estado || '',
+
+          Municipio:
+            p.municipio || '',
+
+          Localidad:
+            p.localidad || '',
+
+          Zona:
+            p.zona || '',
+
+          Cuadrilla:
+            p.sub || '',
+
+          'Estado de avance':
+            textoEstadoAvance(p),
+
+          'Vo.Bo.':
+            textoVobo(p.vobo),
+
+          'Fecha compromiso':
+            p.fcomp || '',
+
+          'Fecha real':
+            p.freal || '',
+
+          'm² base ejecutados':
+            base,
+
+          'm² extra':
+            extra,
+
+          'm² total ejecutados':
+            total,
+
+          'Motivo rechazo':
+            p.motivo || ''
+        };
+      });
+
+
+  /*
+   * ==========================
+   * CREAR EXCEL
+   * ==========================
+   */
+
+  const libro =
+    XLSX.utils.book_new();
+
+
+  agregarHojaExcel(
+    libro,
+    'Resumen nacional',
+    resumenNacional,
+    [
+      38,
+      18,
+      12
+    ]
+  );
+
+
+  agregarHojaExcel(
+    libro,
+    'Por cuadrilla',
+    porCuadrilla,
+    [
+      18,
+      42,
+      12,
+      14,
+      12,
+      12,
+      14,
+      12,
+      12,
+      20,
+      14,
+      20
+    ]
+  );
+
+
+  agregarHojaExcel(
+    libro,
+    'Detalle nacional',
+    detalle,
+    [
+      16,
+      20,
+      24,
+      24,
+      32,
+      18,
+      24,
+      18,
+      17,
+      15,
+      20,
+      14,
+      20,
+      28
+    ]
+  );
+
+
+  const fecha =
+    new Date()
+      .toISOString()
+      .slice(0, 10);
+
+
+  XLSX.writeFile(
+    libro,
+    `Reporte_avance_interno_${fecha}.xlsx`
+  );
+
+
+  toast(
+    'Reporte de avance interno generado'
+  );
+}
+
+function exportReporteAvanceInternoPDF() {
+
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    toast(
+      'Este reporte es exclusivo de control interno'
+    );
+
+    return;
+  }
+
+
+  const puntos =
+    Array.isArray(LECH)
+      ? [...LECH]
+      : [];
+
+
+  if (!puntos.length) {
+    toast(
+      'No hay lecherías cargadas'
+    );
+
+    return;
+  }
+
+
+  const { jsPDF } =
+    window.jspdf;
+
+
+  /*
+   * Landscape porque tendremos
+   * varias columnas por cuadrilla.
+   */
+  const doc =
+    new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+
+  const resumen =
+    calcularResumenAvanceInterno(
+      puntos
+    );
+
+
+  /*
+   * ==========================
+   * DATOS POR CUADRILLA
+   * ==========================
+   */
+
+  const grupos = {};
+
+
+  puntos.forEach(p => {
+
+    const cuadrilla =
+      p.sub ||
+      'Sin cuadrilla';
+
+    if (!grupos[cuadrilla]) {
+      grupos[cuadrilla] = [];
+    }
+
+    grupos[cuadrilla]
+      .push(p);
+  });
+
+
+  const porCuadrilla =
+    Object
+      .entries(grupos)
+      .sort(
+        ([a], [b]) =>
+          a.localeCompare(
+            b,
+            'es',
+            {
+              numeric: true
+            }
+          )
+      )
+      .map(
+        ([cuadrilla, registros]) => {
+
+          const r =
+            calcularResumenAvanceInterno(
+              registros
+            );
+
+          return {
+            cuadrilla,
+            total:
+              r.cargadas,
+            iniciadas:
+              r.iniciadas,
+            atendidas:
+              r.atendidas,
+            vobo:
+              r.conVobo,
+            rechazadas:
+              r.rechazadas,
+            m2Base:
+              r.m2Base,
+            m2Extra:
+              r.m2Extra,
+            m2Total:
+              r.m2Total
+          };
+        }
+      );
+
+
+  /*
+   * ==========================
+   * HELPERS
+   * ==========================
+   */
+
+  function dineroNumero(valor) {
+    return Number(valor || 0)
+      .toLocaleString(
+        'es-MX',
+        {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        }
+      );
+  }
+
+
+  function encabezadoPagina() {
+
+    /*
+     * Franja principal.
+     */
+
+    doc.setFillColor(
+      10,
+      31,
+      50
+    );
+
+    doc.rect(
+      0,
+      0,
+      297,
+      26,
+      'F'
+    );
+
+
+    doc.setTextColor(
+      255,
+      255,
+      255
+    );
+
+    doc.setFont(
+      undefined,
+      'bold'
+    );
+
+    doc.setFontSize(17);
+
+    doc.text(
+      'Reporte ejecutivo de avance',
+      14,
+      11
+    );
+
+
+    doc.setFontSize(8.5);
+
+    doc.setFont(
+      undefined,
+      'normal'
+    );
+
+    doc.text(
+      'CONTROL INTERNO · LUMEN',
+      14,
+      17
+    );
+
+
+    doc.setFontSize(7.5);
+
+    doc.text(
+      PROCEDIMIENTO,
+      283,
+      10,
+      {
+        align: 'right'
+      }
+    );
+
+
+    doc.text(
+      EMPRESA,
+      283,
+      16,
+      {
+        align: 'right'
+      }
+    );
+
+
+    doc.setTextColor(
+      35,
+      52,
+      70
+    );
+  }
+
+
+  function piePagina() {
+
+    const pagina =
+      doc.getCurrentPageInfo()
+        .pageNumber;
+
+    doc.setFontSize(6.8);
+
+    doc.setTextColor(
+      105,
+      120,
+      135
+    );
+
+    doc.text(
+      'Documento de control interno · No destinado a la dependencia',
+      14,
+      202
+    );
+
+    doc.text(
+      `Página ${pagina}`,
+      283,
+      202,
+      {
+        align: 'right'
+      }
+    );
+  }
+
+
+  encabezadoPagina();
+
+
+  /*
+   * ==========================
+   * FECHA DEL REPORTE
+   * ==========================
+   */
+
+  const hoy =
+    new Date();
+
+
+  const fechaTexto =
+    hoy.toLocaleDateString(
+      'es-MX',
+      {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }
+    );
+
+
+  doc.setFontSize(8);
+
+  doc.setTextColor(
+    100,
+    116,
+    132
+  );
+
+  doc.text(
+    `Corte de información: ${fechaTexto}`,
+    14,
+    34
+  );
+
+
+  /*
+   * ==========================
+   * RESUMEN OPERATIVO
+   * ==========================
+   */
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(10);
+
+  doc.setTextColor(
+    25,
+    43,
+    60
+  );
+
+  doc.text(
+    'Resumen nacional',
+    14,
+    43
+  );
+
+
+  const resumenCards = [
+
+    {
+      label: 'Cargadas',
+      value:
+        resumen.cargadas
+    },
+
+    {
+      label: 'Iniciadas',
+      value:
+        resumen.iniciadas
+    },
+
+    {
+      label: 'Atendidas',
+      value:
+        resumen.atendidas
+    },
+
+    {
+      label: 'Con Vo.Bo.',
+      value:
+        resumen.conVobo
+    },
+
+    {
+      label: 'En revisión',
+      value:
+        resumen.enRevision
+    },
+
+    {
+      label: 'Rechazadas',
+      value:
+        resumen.rechazadas
+    }
+
+  ];
+
+
+  const cardW =
+    42;
+
+  const cardGap =
+    4;
+
+  let cardX =
+    14;
+
+
+  resumenCards.forEach(item => {
+
+    doc.setFillColor(
+      244,
+      247,
+      250
+    );
+
+    doc.setDrawColor(
+      218,
+      225,
+      232
+    );
+
+    doc.roundedRect(
+      cardX,
+      48,
+      cardW,
+      21,
+      2,
+      2,
+      'FD'
+    );
+
+
+    doc.setFont(
+      undefined,
+      'bold'
+    );
+
+    doc.setFontSize(13);
+
+    doc.setTextColor(
+      20,
+      45,
+      68
+    );
+
+    doc.text(
+      String(item.value),
+      cardX + cardW / 2,
+      57,
+      {
+        align: 'center'
+      }
+    );
+
+
+    doc.setFont(
+      undefined,
+      'normal'
+    );
+
+    doc.setFontSize(6.8);
+
+    doc.setTextColor(
+      100,
+      116,
+      132
+    );
+
+    doc.text(
+      item.label.toUpperCase(),
+      cardX + cardW / 2,
+      64,
+      {
+        align: 'center'
+      }
+    );
+
+
+    cardX +=
+      cardW +
+      cardGap;
+  });
+
+
+  /*
+   * ==========================
+   * SUPERFICIE EJECUTADA
+   * ==========================
+   */
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(10);
+
+  doc.setTextColor(
+    25,
+    43,
+    60
+  );
+
+  doc.text(
+    'Superficie ejecutada',
+    14,
+    80
+  );
+
+
+  const superficies = [
+
+    {
+      titulo:
+        'Base',
+      valor:
+        resumen.m2Base,
+      descripcion:
+        '21 m² por lechería atendida'
+    },
+
+    {
+      titulo:
+        'Extra',
+      valor:
+        resumen.m2Extra,
+      descripcion:
+        'Superficie adicional registrada'
+    },
+
+    {
+      titulo:
+        'Total',
+      valor:
+        resumen.m2Total,
+      descripcion:
+        'Base + superficie adicional'
+    }
+
+  ];
+
+
+  let sx =
+    14;
+
+
+  superficies.forEach(
+    (item, index) => {
+
+      const w =
+        85;
+
+      doc.setFillColor(
+        index === 2
+          ? 233
+          : 248,
+        index === 2
+          ? 244
+          : 250,
+        index === 2
+          ? 237
+          : 252
+      );
+
+      doc.setDrawColor(
+        215,
+        224,
+        230
+      );
+
+      doc.roundedRect(
+        sx,
+        85,
+        w,
+        23,
+        2,
+        2,
+        'FD'
+      );
+
+
+      doc.setFont(
+        undefined,
+        'bold'
+      );
+
+      doc.setFontSize(7);
+
+      doc.setTextColor(
+        90,
+        107,
+        122
+      );
+
+      doc.text(
+        item.titulo.toUpperCase(),
+        sx + 5,
+        92
+      );
+
+
+      doc.setFontSize(15);
+
+      doc.setTextColor(
+        20,
+        56,
+        73
+      );
+
+      doc.text(
+        `${dineroNumero(
+          item.valor
+        )} m²`,
+        sx + 5,
+        101
+      );
+
+
+      doc.setFont(
+        undefined,
+        'normal'
+      );
+
+      doc.setFontSize(6.3);
+
+      doc.setTextColor(
+        110,
+        125,
+        138
+      );
+
+      doc.text(
+        item.descripcion,
+        sx + 5,
+        105.5
+      );
+
+
+      sx +=
+        w + 5;
+    }
+  );
+
+
+  /*
+   * ==========================
+   * TABLA POR CUADRILLA
+   * ==========================
+   */
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(10);
+
+  doc.setTextColor(
+    25,
+    43,
+    60
+  );
+
+  doc.text(
+    'Avance por cuadrilla',
+    14,
+    120
+  );
+
+
+  const columnas = [
+    {
+      titulo: 'Cuadrilla',
+      x: 14,
+      w: 31
+    },
+    {
+      titulo: 'Asignadas',
+      x: 45,
+      w: 27
+    },
+    {
+      titulo: 'Iniciadas',
+      x: 72,
+      w: 27
+    },
+    {
+      titulo: 'Atendidas',
+      x: 99,
+      w: 27
+    },
+    {
+      titulo: 'Vo.Bo.',
+      x: 126,
+      w: 23
+    },
+    {
+      titulo: 'Rech.',
+      x: 149,
+      w: 22
+    },
+    {
+      titulo: 'Base m²',
+      x: 171,
+      w: 34
+    },
+    {
+      titulo: 'Extra m²',
+      x: 205,
+      w: 34
+    },
+    {
+      titulo: 'Total m²',
+      x: 239,
+      w: 44
+    }
+  ];
+
+
+  const yHeader =
+    125;
+
+  const rowH =
+    7;
+
+
+  doc.setFillColor(
+    24,
+    52,
+    78
+  );
+
+  doc.rect(
+    14,
+    yHeader,
+    269,
+    8,
+    'F'
+  );
+
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(6.5);
+
+  doc.setTextColor(
+    255,
+    255,
+    255
+  );
+
+
+  columnas.forEach(col => {
+
+    doc.text(
+      col.titulo,
+      col.x + col.w / 2,
+      yHeader + 5,
+      {
+        align: 'center'
+      }
+    );
+
+  });
+
+
+  let y =
+    yHeader + 8;
+
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(6.4);
+
+
+  for (
+    let i = 0;
+    i < porCuadrilla.length;
+    i++
+  ) {
+
+    const r =
+      porCuadrilla[i];
+
+
+    /*
+     * Si en el futuro aumenta mucho
+     * la cantidad de cuadrillas,
+     * continuamos en otra página.
+     */
+    if (y + rowH > 195) {
+
+      piePagina();
+
+      doc.addPage();
+
+      encabezadoPagina();
+
+      y = 34;
+
+
+      doc.setFillColor(
+        24,
+        52,
+        78
+      );
+
+      doc.rect(
+        14,
+        y,
+        269,
+        8,
+        'F'
+      );
+
+
+      doc.setFont(
+        undefined,
+        'bold'
+      );
+
+      doc.setFontSize(6.5);
+
+      doc.setTextColor(
+        255,
+        255,
+        255
+      );
+
+
+      columnas.forEach(col => {
+
+        doc.text(
+          col.titulo,
+          col.x + col.w / 2,
+          y + 5,
+          {
+            align: 'center'
+          }
+        );
+
+      });
+
+
+      y += 8;
+
+      doc.setFont(
+        undefined,
+        'normal'
+      );
+
+      doc.setFontSize(6.4);
+    }
+
+
+    if (i % 2 === 0) {
+
+      doc.setFillColor(
+        247,
+        249,
+        251
+      );
+
+      doc.rect(
+        14,
+        y,
+        269,
+        rowH,
+        'F'
+      );
+    }
+
+
+    doc.setDrawColor(
+      225,
+      230,
+      235
+    );
+
+    doc.line(
+      14,
+      y + rowH,
+      283,
+      y + rowH
+    );
+
+
+    doc.setTextColor(
+      40,
+      55,
+      70
+    );
+
+
+    const valores = [
+
+      r.cuadrilla,
+
+      r.total,
+
+      r.iniciadas,
+
+      r.atendidas,
+
+      r.vobo,
+
+      r.rechazadas,
+
+      dineroNumero(
+        r.m2Base
+      ),
+
+      dineroNumero(
+        r.m2Extra
+      ),
+
+      dineroNumero(
+        r.m2Total
+      )
+
+    ];
+
+
+    valores.forEach(
+      (valor, index) => {
+
+        const col =
+          columnas[index];
+
+        doc.text(
+          String(valor),
+          col.x +
+            col.w / 2,
+          y + 4.6,
+          {
+            align: 'center'
+          }
+        );
+      }
+    );
+
+
+    y += rowH;
+  }
+
+
+  /*
+   * ==========================
+   * OBSERVACIÓN METODOLÓGICA
+   * ==========================
+   */
+
+  if (y + 17 > 195) {
+
+    piePagina();
+
+    doc.addPage();
+
+    encabezadoPagina();
+
+    y = 36;
+  }
+
+
+  doc.setFillColor(
+    251,
+    247,
+    232
+  );
+
+  doc.setDrawColor(
+    232,
+    215,
+    157
+  );
+
+  doc.roundedRect(
+    14,
+    y + 5,
+    269,
+    15,
+    2,
+    2,
+    'FD'
+  );
+
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(6.8);
+
+  doc.setTextColor(
+    105,
+    85,
+    35
+  );
+
+  doc.text(
+    'Criterio de superficie:',
+    19,
+    y + 11
+  );
+
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.text(
+    'los m² consolidados corresponden únicamente a lecherías marcadas como atendidas. ' +
+    'Las iniciadas reflejan avance operativo, pero todavía no se consideran superficie concluida.',
+    48,
+    y + 11,
+    {
+      maxWidth: 228
+    }
+  );
+
+
+  /*
+   * Pie en la última página.
+   */
+
+  piePagina();
+
+
+  /*
+   * ==========================
+   * GUARDAR
+   * ==========================
+   */
+
+  const fechaArchivo =
+    new Date()
+      .toISOString()
+      .slice(0, 10);
+
+
+  doc.save(
+    `Reporte_ejecutivo_avance_${fechaArchivo}.pdf`
+  );
+
+
+  toast(
+    'Reporte ejecutivo PDF generado'
+  );
+}
 
 async function exportReporteInterno() {
   if (
@@ -11074,19 +13022,24 @@ function agregarHojaExcel(
 }
 
 function textoEstadoAvance(punto) {
+
+  if (punto.status === 'ini') {
+    return 'Iniciada';
+  }
+
   if (punto.status !== 'at') {
-    return 'Sin atender';
+    return 'No atendida';
   }
 
   if (punto.vobo === 'ok') {
-    return 'Atendido con Vo.Bo.';
+    return 'Atendida con Vo.Bo.';
   }
 
   if (punto.vobo === 'rej') {
-    return 'Atendido rechazado';
+    return 'Atendida rechazada';
   }
 
-  return 'Atendido en revisión';
+  return 'Atendida en revisión';
 }
 
 function textoVobo(valor) {
@@ -14094,7 +16047,112 @@ function pintarConcentradoActas() {
           : ''
       }
 
+        </div>
+
+
+    <div class="sect">
+
+      <h3>
+        Reporte de avance interno
+      </h3>
+
+
+      <div class="note">
+
+        <b>
+          Control interno LUMEN
+        </b>
+
+        <br><br>
+
+        Concentrado nacional del avance
+        operativo, superficies ejecutadas
+        y metros cuadrados excedentes.
+
+        <br><br>
+
+        Este reporte es exclusivo para
+        los perfiles
+        <b>GEN</b> y
+        <b>ADMIN</b>.
+
+      </div>
+
+
+      <div
+        class="dashcard"
+        style="
+          border-left:
+            4px solid var(--steel);
+        "
+      >
+
+        <div
+          style="
+            font-size:13px;
+            font-weight:800;
+            margin-bottom:4px;
+          "
+        >
+          Avance nacional
+        </div>
+
+        <div
+          style="
+            font-size:10.5px;
+            color:var(--mut);
+            line-height:1.5;
+          "
+        >
+          Incluye resumen nacional,
+          avance por cuadrilla y
+          detalle individual por P.V.
+        </div>
+
+      </div>
+
+
+      <div class="expbtns">
+
+      <button
+        class="expbtn exp-xlsx"
+        onclick="
+          exportReporteAvanceInternoXLSX()
+        "
+      >
+
+        <svg viewBox="0 0 24 24">
+          <path
+            d="M12 3v12M7 10l5 5 5-5M5 21h14"
+          />
+        </svg>
+
+        Excel
+
+      </button>
+
+
+      <button
+        class="expbtn exp-pdf"
+        onclick="
+          exportReporteAvanceInternoPDF()
+        "
+      >
+
+        <svg viewBox="0 0 24 24">
+          <path
+            d="M12 3v12M7 10l5 5 5-5M5 21h14"
+          />
+        </svg>
+
+        PDF
+
+      </button>
+
+</div>
+
     </div>
+
   `;
 }
 
