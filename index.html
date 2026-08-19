@@ -742,8 +742,11 @@ let ACTAS_PERIODO = {
   actas: []
 };
 const VISTA_ACTAS = {
-  acta: 'disponibles'
+  acta: 'disponibles',
+  pagina: 1
 };
+
+const ACTAS_POR_PAGINA = 20;
 
 let ESTIMACION_PERIODO = {
   inicio: '',
@@ -14117,20 +14120,31 @@ function exportEstimPDF() {
 }
 
 /* ============ REPORTE PDF antes/después por punto ============ */
-async function reportePDF() {
-if (ROLE === 'sub') {
-  toast(
-    'Este reporte no está disponible para cuadrillas'
-  );
-  return;
-}
+async function reportePDF(
+  punto = null,
+  descargar = true
+) {
 
-  if (!CUR) {
-    toast('Primero abre una lechería');
-    return;
+  if (ROLE === 'sub') {
+    toast(
+      'Este reporte no está disponible para cuadrillas'
+    );
+    return null;
   }
 
-  const p = CUR;
+  const p =
+  punto || CUR;
+
+  if (!p) {
+
+  if (descargar) {
+    toast(
+      'Primero abre una lechería'
+    );
+  }
+
+  return null;
+  }
 
   const fotosPrev =
     Array.isArray(p.fotosPrev)
@@ -14148,9 +14162,11 @@ if (ROLE === 'sub') {
   }
 
   const boton =
-    document.querySelector(
-      '[onclick="reportePDF()"]'
-    );
+  descargar
+    ? document.querySelector(
+        '[onclick="reportePDF()"]'
+      )
+    : null;
 
   const textoOriginal =
     boton
@@ -15063,13 +15079,29 @@ if (ROLE === 'sub') {
           '_'
         );
 
-    doc.save(
-      `Reporte_fotografico_${pvSeguro}.pdf`
-    );
+    /*
+     * Si viene desde la ficha:
+     * descarga normal.
+     *
+     * Si viene desde un concentrado:
+     * devuelve el PDF como Blob.
+     */
 
-    toast(
-      'Reporte fotográfico generado'
-    );
+    if (descargar) {
+
+      doc.save(
+        `Reporte_fotografico_${pvSeguro}.pdf`
+      );
+
+      toast(
+        'Reporte fotográfico generado'
+      );
+
+      return null;
+    }
+
+
+    return doc.output('blob');
 
   } catch (error) {
     console.error(
@@ -15705,14 +15737,23 @@ const fin =
   ACTAS_PERIODO.fin;
 
 /*
- * El acta homologada se organiza
- * por fecha compromiso.
+ * El concentrado de actas debe coincidir
+ * con las lecherías con Vo.Bo. del módulo
+ * de Estimaciones.
+ *
+ * Mismo criterio:
+ * - Trabajo atendido.
+ * - Fecha real dentro del periodo.
+ * - Vo.Bo. aprobado.
  */
+
 const puntosPeriodo =
   LECH.filter(p =>
-    p.fcomp &&
-    p.fcomp >= inicio &&
-    p.fcomp <= fin
+    p.status === 'at' &&
+    p.vobo === 'ok' &&
+    p.freal &&
+    p.freal >= inicio &&
+    p.freal <= fin
   );
 
 /*
@@ -15780,45 +15821,151 @@ function pintarConcentradoActas() {
         !tieneDocumentoActa(item)
     );
 
+
+  /*Verificación de seguridad de actas*/
+    const sinActa =
+  registros.filter(
+    item =>
+      !tieneDocumentoActa(item)
+  );
+
+
+if (sinActa.length) {
+
+  toast(
+    `${sinActa.length} lecherías con Vo.Bo. no tienen acta disponible`
+  );
+
+  return;
+}
+  /*
+ * Dentro de las actas disponibles:
+ *
+ * - cargadas:
+ *   existe un documento que fue
+ *   cargado/reemplazado por el usuario.
+ *
+ * - soloGeneradas:
+ *   existe únicamente el PDF generado
+ *   por el sistema.
+ */
+
+
+const cargadas =
+  disponibles.filter(
+    item =>
+      item.acta &&
+      item.acta.documento_firmado_url
+  );
+
+const soloGeneradas =
+  disponibles.filter(
+    item =>
+      item.acta &&
+      item.acta.documento_generado_url &&
+      !item.acta.documento_firmado_url
+  );
+
   const vistaActual =
     VISTA_ACTAS.acta ||
     'disponibles';
 
   const mostrar =
-    vistaActual === 'pendientes'
-      ? pendientes
-      : disponibles;
+  vistaActual === 'pendientes'
+    ? pendientes
+    : disponibles;
 
-  const tarjetas =
-    mostrar.length
-      ? mostrar
-          .map(
-            item =>
-              renderActaPeriodoItem(
-                item,
-                'apertura'
-              )
-          )
-          .join('')
-      : `
-        <div
-          style="
-            background:#fff;
-            border:1px solid var(--line);
-            border-radius:9px;
-            padding:18px 14px;
-            text-align:center;
-            color:var(--mut);
-            font-size:11px;
-          "
-        >
-          ${
-            vistaActual === 'disponibles'
-              ? 'No hay actas disponibles en este periodo.'
-              : 'No hay actas pendientes en este periodo.'
-          }
-        </div>
-      `;
+
+/*
+ * ==========================
+ * PAGINACIÓN
+ * ==========================
+ */
+
+const totalPaginas =
+  Math.max(
+    1,
+    Math.ceil(
+      mostrar.length /
+      ACTAS_POR_PAGINA
+    )
+  );
+
+
+/*
+ * Evita quedar en una página
+ * inexistente si cambia el periodo
+ * o cambia de Disponibles/Pendientes.
+ */
+
+if (
+  VISTA_ACTAS.pagina >
+  totalPaginas
+) {
+  VISTA_ACTAS.pagina =
+    totalPaginas;
+}
+
+if (
+  VISTA_ACTAS.pagina < 1
+) {
+  VISTA_ACTAS.pagina = 1;
+}
+
+
+const paginaActual =
+  VISTA_ACTAS.pagina;
+
+
+const inicioPagina =
+  (
+    paginaActual - 1
+  ) *
+  ACTAS_POR_PAGINA;
+
+
+const finPagina =
+  inicioPagina +
+  ACTAS_POR_PAGINA;
+
+
+const mostrarPagina =
+  mostrar.slice(
+    inicioPagina,
+    finPagina
+  );
+
+
+const tarjetas =
+  mostrarPagina.length
+    ? mostrarPagina
+        .map(
+          item =>
+            renderActaPeriodoItem(
+              item,
+              'apertura'
+            )
+        )
+        .join('')
+    : `
+      <div
+        style="
+          background:#fff;
+          border:1px solid var(--line);
+          border-radius:9px;
+          padding:18px 14px;
+          text-align:center;
+          color:var(--mut);
+          font-size:11px;
+        "
+      >
+        ${
+          vistaActual === 'disponibles'
+            ? 'No hay actas disponibles en este periodo.'
+            : 'No hay actas pendientes en este periodo.'
+        }
+      </div>
+    `;
 
   contenedor.innerHTML = `
 
@@ -15864,7 +16011,7 @@ function pintarConcentradoActas() {
                 margin-top:2px;
               "
             >
-              Por fecha compromiso
+              Periodo determinado por Fecha Real · únicamente con Vo.Bo. aprobado
             </div>
 
           </div>
@@ -15880,7 +16027,13 @@ function pintarConcentradoActas() {
 
         </div>
 
-        <div class="dstats">
+        <div
+          class="dstats"
+          style="
+            grid-template-columns:
+              repeat(4, 1fr);
+          "
+        >
 
           <div class="s">
 
@@ -15898,6 +16051,43 @@ function pintarConcentradoActas() {
             </div>
 
           </div>
+
+
+          <div class="s">
+
+            <div
+              class="v"
+              style="
+                color:var(--done);
+              "
+            >
+              ${cargadas.length}
+            </div>
+
+            <div class="k">
+              Cargadas
+            </div>
+
+          </div>
+
+
+          <div class="s">
+
+            <div
+              class="v"
+              style="
+                color:var(--leche);
+              "
+            >
+              ${soloGeneradas.length}
+            </div>
+
+            <div class="k">
+              Sólo generadas
+            </div>
+
+          </div>
+
 
           <div class="s">
 
@@ -15940,8 +16130,7 @@ function pintarConcentradoActas() {
           margin-bottom:8px;
         "
       >
-        Periodo determinado por
-        Fecha Compromiso
+        Periodo determinado por Fecha Real · únicamente con Vo.Bo. aprobado
       </div>
 
 
@@ -16010,7 +16199,27 @@ function pintarConcentradoActas() {
 
         <span>
           Mostrando
+          ${
+            mostrar.length
+              ? inicioPagina + 1
+              : 0
+          }
+          –
+          ${
+            Math.min(
+              finPagina,
+              mostrar.length
+            )
+          }
+          de
           ${mostrar.length}
+        </span>
+
+        <span>
+          Página
+          ${paginaActual}
+          de
+          ${totalPaginas}
         </span>
 
         <span>
@@ -16023,6 +16232,74 @@ function pintarConcentradoActas() {
 
       ${tarjetas}
 
+      ${
+        totalPaginas > 1
+          ? `
+            <div
+              style="
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                gap:8px;
+                margin-top:12px;
+                margin-bottom:4px;
+              "
+            >
+
+              <button
+                type="button"
+                class="chip"
+                ${
+                  paginaActual <= 1
+                    ? 'disabled'
+                    : ''
+                }
+                onclick="
+                  cambiarPaginaActas(
+                    ${paginaActual - 1}
+                  )
+                "
+              >
+                ‹ Anterior
+              </button>
+
+
+              <div
+                style="
+                  min-width:78px;
+                  text-align:center;
+                  font-size:10.5px;
+                  color:var(--mut);
+                  font-weight:700;
+                "
+              >
+                ${paginaActual}
+                /
+                ${totalPaginas}
+              </div>
+
+
+              <button
+                type="button"
+                class="chip"
+                ${
+                  paginaActual >= totalPaginas
+                    ? 'disabled'
+                    : ''
+                }
+                onclick="
+                  cambiarPaginaActas(
+                    ${paginaActual + 1}
+                  )
+                "
+              >
+                Siguiente ›
+              </button>
+
+            </div>
+          `
+          : ''
+      }
 
       ${
         disponibles.length
@@ -16040,7 +16317,7 @@ function pintarConcentradoActas() {
                 )
               "
             >
-              📦 Descargar actas disponibles
+              📦 Descargar expedientes con vobo
               (${disponibles.length})
             </button>
           `
@@ -16154,6 +16431,45 @@ function pintarConcentradoActas() {
     </div>
 
   `;
+}
+
+function cambiarPaginaActas(
+  pagina
+) {
+
+  const nuevaPagina =
+    Number(pagina);
+
+  if (
+    !Number.isFinite(
+      nuevaPagina
+    ) ||
+    nuevaPagina < 1
+  ) {
+    return;
+  }
+
+  VISTA_ACTAS.pagina =
+    nuevaPagina;
+
+  pintarConcentradoActas();
+
+
+  /*
+   * Regresamos al inicio de
+   * la sección de resultados.
+   */
+  const contenedor =
+    document.getElementById(
+      'actasResultado'
+    );
+
+  if (contenedor) {
+    contenedor.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }
 }
 
 function tieneDocumentoActa(item) {
@@ -16329,7 +16645,7 @@ function renderGrupoConcentradoActas(
                 )
               "
             >
-              📦 Descargar actas disponibles
+              📦 Descargar expedientes con vobo
               (${disponibles.length})
             </button>
           `
@@ -16344,6 +16660,7 @@ function cambiarVistaActas(
   clase,
   vista
 ) {
+
   if (clase !== 'acta') {
     return;
   }
@@ -16357,6 +16674,13 @@ function cambiarVistaActas(
 
   VISTA_ACTAS.acta =
     vista;
+
+  /*
+   * Cada vez que cambiamos entre
+   * disponibles y pendientes,
+   * regresamos a la página 1.
+   */
+  VISTA_ACTAS.pagina = 1;
 
   pintarConcentradoActas();
 }
@@ -16633,37 +16957,72 @@ async function descargarActasPeriodo(
           item.punto.pv
         );
 
-      const acta =
+        const acta =
         item.acta;
 
-      if (
-        acta.documento_generado_url
-      ) {
-        await agregarArchivoActaZIP(
-          zip,
-          acta.documento_generado_url,
-          `${pv}_GENERADA`
-        );
-      }
+        const carpetaPv =
+        zip.folder(pv);
 
-      if (
-       acta.documento_firmado_url
-      ) {
-        await agregarArchivoActaZIP(
-          zip,
-          acta.documento_firmado_url,
-          `${pv}_ACTA`
-        );
-      } else if (
-        acta.documento_generado_url
-      ) {
-        await agregarArchivoActaZIP(
-          zip,
-          acta.documento_generado_url,
-          `${pv}_ACTA`
-        );
-      }
+       /*
+       * ==========================
+       * 1. ACTA
+       * ==========================
+       */
+
+    const documentoFinal =
+      acta.documento_firmado_url ||
+      acta.documento_generado_url;
+
+    if (documentoFinal) {
+      await agregarArchivoActaZIP(
+        carpetaPv,
+        documentoFinal,
+        'ACTA_INICIO_ENTREGA_RECEPCION'
+      );
     }
+    /*
+   * ==========================
+   * 2. EVIDENCIA FOTOGRÁFICA
+   * ==========================
+   */
+
+  const fotos =
+    await cargarFotos(
+      pv
+    );
+
+
+  const puntoReporte = {
+    ...item.punto,
+
+    fotosPrev:
+      Array.isArray(fotos?.prev)
+        ? fotos.prev
+        : [],
+
+    fotosFin:
+      Array.isArray(fotos?.fin)
+        ? fotos.fin
+        : []
+  };
+
+
+  const reporteBlob =
+    await reportePDF(
+      puntoReporte,
+      false
+    );
+
+
+  if (reporteBlob) {
+
+    carpetaPv.file(
+    'REPORTE_ANTES_DESPUES.pdf',
+    reporteBlob
+    );
+  }
+
+  }
 
     const blob =
       await zip.generateAsync({
@@ -16671,7 +17030,7 @@ async function descargarActasPeriodo(
       });
 
     const nombre =
-  `actas_inicio_entrega_recepcion_` +
+  `expedientes_vobo_` +
   `${ACTAS_PERIODO.inicio}_` +
   `${ACTAS_PERIODO.fin}.zip`;
 
