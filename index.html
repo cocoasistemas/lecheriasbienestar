@@ -748,6 +748,10 @@ const VISTA_ACTAS = {
 
 const ACTAS_POR_PAGINA = 20;
 
+let REPORTE_SEMANAL = {
+  inicio: ''
+};
+
 let ESTIMACION_PERIODO = {
   inicio: '',
   fin: '',
@@ -15479,16 +15483,22 @@ async function renderActas() {
 
   sc.innerHTML = `
     <div class="note">
-      <b>Concentrado de Actas de Inicio y Entrega Recepción por periodo operativo.</b>
+      <b>
+        Concentrado de Actas de Inicio y
+        Entrega Recepción por periodo de Vo.Bo.
+      </b>
+
       <br><br>
 
       Las actas se incluyen según la
-      <b>Fecha Compromiso</b> de cada lechería.
+      <b>fecha en que fue otorgado el Vo.Bo.</b>
+      por el Administrador.
 
       <br><br>
 
-      El periodo seleccionado no corresponde a la fecha
-      en que se generó o cargó el documento.
+      El periodo seleccionado no corresponde
+      a la fecha en que se generó o cargó
+      el documento.
     </div>
 
     <div class="sect">
@@ -15751,9 +15761,9 @@ const puntosPeriodo =
   LECH.filter(p =>
     p.status === 'at' &&
     p.vobo === 'ok' &&
-    p.freal &&
-    p.freal >= inicio &&
-    p.freal <= fin
+    p.fecha_vobo &&
+    p.fecha_vobo >= inicio &&
+    p.fecha_vobo <= fin
   );
 
 /*
@@ -15795,6 +15805,953 @@ ACTAS_PERIODO.actas =
       </div>
     `;
   }
+}
+
+function sumarDiasISOReporte(
+  iso,
+  dias
+) {
+
+  const partes =
+    String(iso)
+      .split('-')
+      .map(Number);
+
+  const fecha =
+    new Date(
+      partes[0],
+      partes[1] - 1,
+      partes[2],
+      12,
+      0,
+      0
+    );
+
+  fecha.setDate(
+    fecha.getDate() + dias
+  );
+
+  return fechaISOlocal(fecha);
+}
+
+
+function inicioSemanaReporte(
+  iso
+) {
+
+  const partes =
+    String(iso)
+      .split('-')
+      .map(Number);
+
+  const fecha =
+    new Date(
+      partes[0],
+      partes[1] - 1,
+      partes[2],
+      12,
+      0,
+      0
+    );
+
+  const dia =
+    fecha.getDay();
+
+  const mover =
+    dia === 0
+      ? -6
+      : 1 - dia;
+
+  fecha.setDate(
+    fecha.getDate() + mover
+  );
+
+  return fechaISOlocal(fecha);
+}
+
+
+function fechaCortaReporte(
+  iso
+) {
+
+  if (!iso) {
+    return '—';
+  }
+
+  const partes =
+    iso.split('-')
+      .map(Number);
+
+  const fecha =
+    new Date(
+      partes[0],
+      partes[1] - 1,
+      partes[2],
+      12,
+      0,
+      0
+    );
+
+  return fecha
+    .toLocaleDateString(
+      'es-MX',
+      {
+        day: '2-digit',
+        month: 'short'
+      }
+    )
+    .replace('.', '');
+}
+
+
+function obtenerSemanasPrograma() {
+
+  const semanas =
+    new Set();
+
+  (LECH || [])
+    .forEach(p => {
+
+      if (!p.fcomp) {
+        return;
+      }
+
+      semanas.add(
+        inicioSemanaReporte(
+          p.fcomp
+        )
+      );
+    });
+
+  return [...semanas]
+    .sort();
+}
+
+
+function porcentajeReporte(
+  realizado,
+  programado
+) {
+
+  if (!programado) {
+    return 0;
+  }
+
+  return Number(
+    (
+      realizado /
+      programado *
+      100
+    ).toFixed(1)
+  );
+}
+
+
+function desviacionPorcentualReporte(
+  realizado,
+  programado
+) {
+
+  if (!programado) {
+    return 0;
+  }
+
+  return Number(
+    (
+      (
+        realizado -
+        programado
+      ) /
+      programado *
+      100
+    ).toFixed(1)
+  );
+}
+
+
+function calcularReporteSemanal(
+  inicioSemana
+) {
+
+  const inicio =
+    inicioSemana;
+
+  const fin =
+    sumarDiasISOReporte(
+      inicio,
+      6
+    );
+
+  const hoy =
+    fechaISOlocal(
+      new Date()
+    );
+
+
+  /*
+   * ==========================
+   * PROGRAMA DE LA SEMANA
+   * ==========================
+   */
+
+  const programadasSemana =
+    LECH.filter(p =>
+      p.fcomp &&
+      p.fcomp >= inicio &&
+      p.fcomp <= fin
+    );
+
+
+  /*
+   * Producción real:
+   * Vo.Bo. otorgados dentro
+   * de la semana seleccionada.
+   */
+  const atendidasSemana =
+    LECH.filter(p =>
+      p.vobo === 'ok' &&
+      p.fecha_vobo &&
+      p.fecha_vobo >= inicio &&
+      p.fecha_vobo <= fin
+    );
+
+
+  /*
+   * ==========================
+   * ACUMULADO
+   * ==========================
+   *
+   * Programa:
+   * todo lo que debía estar
+   * programado hasta el fin
+   * de esta semana.
+   *
+   * Real:
+   * todos los Vo.Bo. obtenidos
+   * hasta el mismo corte.
+   */
+
+  const programadasAcumuladas =
+    LECH.filter(p =>
+      p.fcomp &&
+      p.fcomp <= fin
+    );
+
+
+  const atendidasAcumuladas =
+    LECH.filter(p =>
+      p.vobo === 'ok' &&
+      p.fecha_vobo &&
+      p.fecha_vobo <= fin
+    );
+
+
+  const faltantesSemana =
+    Math.max(
+      programadasSemana.length -
+      atendidasSemana.length,
+      0
+    );
+
+
+  const faltantesAcumulados =
+    Math.max(
+      programadasAcumuladas.length -
+      atendidasAcumuladas.length,
+      0
+    );
+
+  /*
+   * Lecherías que debían estar
+   * cumplidas al cierre de la
+   * semana y que en ese corte
+   * todavía no tenían Vo.Bo.
+   */
+
+  const programadasPendientes =
+  programadasAcumuladas
+    .filter(p =>
+      !p.fecha_vobo ||
+      p.fecha_vobo > fin
+    )
+    .length;
+
+/*
+ * Trabajos ejecutados antes de la
+ * semana en que estaban programados.
+ *
+ * Tienen Vo.Bo. al corte, pero su
+ * Fecha Compromiso es posterior al
+ * cierre de la semana analizada.
+ */
+const trabajosAdelantados =
+  LECH.filter(p =>
+    p.vobo === 'ok' &&
+    p.fecha_vobo &&
+    p.fecha_vobo <= fin &&
+    p.fcomp &&
+    p.fcomp > fin
+  ).length;
+
+
+  let estadoSemana =
+    'cerrada';
+
+  if (inicio > hoy) {
+    estadoSemana =
+      'futura';
+  } else if (
+    hoy >= inicio &&
+    hoy <= fin
+  ) {
+    estadoSemana =
+      'curso';
+  }
+
+
+  return {
+    inicio,
+    fin,
+    estadoSemana,
+
+    programadasSemana:
+      programadasSemana.length,
+
+    atendidasSemana:
+      atendidasSemana.length,
+
+    faltantesSemana,
+
+    cumplimientoSemana:
+      porcentajeReporte(
+        atendidasSemana.length,
+        programadasSemana.length
+      ),
+
+    desviacionSemana:
+      desviacionPorcentualReporte(
+        atendidasSemana.length,
+        programadasSemana.length
+      ),
+
+    programadasAcumuladas:
+      programadasAcumuladas.length,
+
+    atendidasAcumuladas:
+      atendidasAcumuladas.length,
+
+    faltantesAcumulados,
+
+    cumplimientoAcumulado:
+      porcentajeReporte(
+        atendidasAcumuladas.length,
+        programadasAcumuladas.length
+      ),
+
+    desviacionAcumulada:
+      desviacionPorcentualReporte(
+        atendidasAcumuladas.length,
+        programadasAcumuladas.length
+      ),
+
+      programadasPendientes,
+      trabajosAdelantados
+  };
+}
+
+function renderReporteSemanal() {
+
+  const semanas =
+    obtenerSemanasPrograma();
+
+  if (!semanas.length) {
+    return '';
+  }
+
+  /*
+   * La primera vez seleccionamos
+   * automáticamente la semana actual.
+   */
+
+  if (!REPORTE_SEMANAL.inicio) {
+
+    const actual =
+      obtenerSemanaActual()
+        .inicio;
+
+    REPORTE_SEMANAL.inicio =
+      semanas.includes(actual)
+        ? actual
+        : semanas[0];
+  }
+
+  const r =
+    calcularReporteSemanal(
+      REPORTE_SEMANAL.inicio
+    );
+
+  const opciones =
+    semanas
+      .map(inicio => {
+
+        const fin =
+          sumarDiasISOReporte(
+            inicio,
+            6
+          );
+
+        return `
+          <option
+            value="${inicio}"
+            ${
+              inicio ===
+              REPORTE_SEMANAL.inicio
+                ? 'selected'
+                : ''
+            }
+          >
+            ${fechaCortaReporte(inicio)}
+            —
+            ${fechaCortaReporte(fin)}
+          </option>
+        `;
+      })
+      .join('');
+
+  let etiquetaEstado =
+    'SEMANA CERRADA';
+
+  let colorEstado =
+    'var(--steel)';
+
+  if (
+    r.estadoSemana ===
+    'curso'
+  ) {
+    etiquetaEstado =
+      'SEMANA EN CURSO';
+
+    colorEstado =
+      'var(--wait)';
+  }
+
+  if (
+    r.estadoSemana ===
+    'futura'
+  ) {
+    etiquetaEstado =
+      'SEMANA PROGRAMADA';
+
+    colorEstado =
+      'var(--mut)';
+  }
+
+  const formatearDesviacion =
+    valor => {
+
+      if (valor > 0) {
+        return `+${valor}%`;
+      }
+
+      return `${valor}%`;
+    };
+
+  return `
+    <div
+      class="sect"
+      id="reporteSemanal"
+    >
+
+      <h3>
+        Reporte semanal
+      </h3>
+
+      <div class="note">
+
+        <b>
+          Cumplimiento contra programa
+        </b>
+
+        <br><br>
+
+        Compara el programa establecido
+        contra los Vo.Bo. obtenidos y
+        muestra la desviación semanal
+        y acumulada.
+
+      </div>
+
+      <div
+        class="dashcard"
+        style="
+          border-left:
+            4px solid var(--leche);
+        "
+      >
+
+        <div
+          style="
+            display:flex;
+            justify-content:
+              space-between;
+            align-items:center;
+            gap:10px;
+          "
+        >
+
+          <div>
+
+            <div
+              style="
+                font-size:10px;
+                color:var(--mut);
+                margin-bottom:3px;
+              "
+            >
+              Semana de análisis
+            </div>
+
+            <select
+              onchange="
+                cambiarSemanaReporte(
+                  this.value
+                )
+              "
+              style="
+                border:1px solid var(--line);
+                border-radius:7px;
+                padding:7px 9px;
+                background:#fff;
+                font:inherit;
+                font-size:11px;
+                font-weight:800;
+                color:var(--ink);
+              "
+            >
+              ${opciones}
+            </select>
+
+          </div>
+
+          <div
+            style="
+              padding:5px 8px;
+              border-radius:999px;
+              background:${colorEstado};
+              color:#fff;
+              font-size:8.5px;
+              font-weight:900;
+              white-space:nowrap;
+            "
+          >
+            ${etiquetaEstado}
+          </div>
+
+        </div>
+
+        <div
+          style="
+            margin-top:11px;
+            font-size:10px;
+            color:var(--mut);
+          "
+        >
+          ${fechaCortaReporte(r.inicio)}
+          —
+          ${fechaCortaReporte(r.fin)}
+        </div>
+
+      </div>
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:
+            repeat(2, minmax(0,1fr));
+          gap:9px;
+          margin-top:10px;
+        "
+      >
+
+        <!-- SEMANA -->
+
+        <div
+          class="dashcard"
+          style="
+            margin:0;
+            border-top:
+              3px solid var(--leche);
+          "
+        >
+
+          <div
+            style="
+              font-size:11px;
+              font-weight:900;
+              margin-bottom:9px;
+            "
+          >
+            SEMANA
+          </div>
+
+          <div class="dstats">
+
+            <div class="s">
+              <div class="v">
+                ${r.programadasSemana}
+              </div>
+              <div class="k">
+                Programadas
+              </div>
+            </div>
+
+            <div class="s">
+              <div
+                class="v"
+                style="
+                  color:var(--done);
+                "
+              >
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : r.atendidasSemana
+                }
+              </div>
+              <div class="k">
+                Con Vo.Bo.
+              </div>
+            </div>
+
+            <div class="s">
+              <div
+                class="v"
+                style="
+                  color:var(--wait);
+                "
+              >
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : r.faltantesSemana
+                }
+              </div>
+              <div class="k">
+                Faltantes
+              </div>
+            </div>
+
+          </div>
+
+          <div
+            style="
+              border-top:
+                1px solid var(--line);
+              margin-top:8px;
+              padding-top:8px;
+              display:flex;
+              justify-content:
+                space-between;
+              gap:8px;
+              font-size:10px;
+            "
+          >
+
+            <span>
+              Cumplimiento
+              <b>
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : `${r.cumplimientoSemana}%`
+                }
+              </b>
+            </span>
+
+            <span>
+              Desv.
+              <b
+                style="
+                  color:${
+                    r.desviacionSemana < 0
+                      ? 'var(--rej)'
+                      : 'var(--done)'
+                  };
+                "
+              >
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : formatearDesviacion(
+                        r.desviacionSemana
+                      )
+                }
+              </b>
+            </span>
+
+          </div>
+
+        </div>
+
+        <!-- ACUMULADO -->
+
+        <div
+          class="dashcard"
+          style="
+            margin:0;
+            border-top:
+              3px solid var(--steel);
+          "
+        >
+
+          <div
+            style="
+              font-size:11px;
+              font-weight:900;
+              margin-bottom:9px;
+            "
+          >
+            ACUMULADO
+          </div>
+
+          <div class="dstats">
+
+            <div class="s">
+              <div class="v">
+                ${r.programadasAcumuladas}
+              </div>
+              <div class="k">
+                Programadas
+              </div>
+            </div>
+
+            <div class="s">
+              <div
+                class="v"
+                style="
+                  color:var(--done);
+                "
+              >
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : r.atendidasAcumuladas
+                }
+              </div>
+              <div class="k">
+                Con Vo.Bo.
+              </div>
+            </div>
+
+            <div class="s">
+              <div
+                class="v"
+                style="
+                  color:var(--wait);
+                "
+              >
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : r.faltantesAcumulados
+                }
+              </div>
+              <div class="k">
+                Faltantes
+              </div>
+            </div>
+
+          </div>
+
+          <div
+            style="
+              border-top:
+                1px solid var(--line);
+              margin-top:8px;
+              padding-top:8px;
+              display:flex;
+              justify-content:
+                space-between;
+              gap:8px;
+              font-size:10px;
+            "
+          >
+
+            <span>
+              Cumplimiento
+              <b>
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : `${r.cumplimientoAcumulado}%`
+                }
+              </b>
+            </span>
+
+            <span>
+              Desv.
+              <b
+                style="
+                  color:${
+                    r.desviacionAcumulada < 0
+                      ? 'var(--rej)'
+                      : 'var(--done)'
+                  };
+                "
+              >
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : formatearDesviacion(
+                        r.desviacionAcumulada
+                      )
+                }
+              </b>
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      ${
+        r.estadoSemana !== 'futura'
+          ? `
+            <div
+              class="dashcard"
+              style="
+                margin-top:10px;
+                border-left:
+                  4px solid var(--wait);
+              "
+            >
+
+              <div
+                style="
+                  font-size:11px;
+                  font-weight:900;
+                  margin-bottom:9px;
+                "
+              >
+                COMPOSICIÓN DE LA DESVIACIÓN
+              </div>
+
+              <div class="dstats">
+
+                <div class="s">
+
+                  <div
+                    class="v"
+                    style="
+                      color:var(--rej);
+                    "
+                  >
+                    ${r.programadasPendientes}
+                  </div>
+
+                  <div class="k">
+                    Programadas pendientes
+                  </div>
+
+                </div>
+
+                <div class="s">
+
+                  <div
+                    class="v"
+                    style="
+                      color:var(--done);
+                    "
+                  >
+                    ${r.trabajosAdelantados}
+                  </div>
+
+                  <div class="k">
+                    Adelantadas
+                  </div>
+
+                </div>
+
+                <div class="s">
+
+                  <div
+                    class="v"
+                    style="
+                      color:var(--wait);
+                    "
+                  >
+                    ${r.faltantesAcumulados}
+                  </div>
+
+                  <div class="k">
+                    Desviación neta
+                  </div>
+
+                </div>
+
+              </div>
+
+              <div
+                style="
+                  border-top:
+                    1px solid var(--line);
+                  margin-top:8px;
+                  padding-top:8px;
+                  font-size:9.5px;
+                  line-height:1.45;
+                  color:var(--mut);
+                "
+              >
+                La desviación neta resulta de restar a las
+                lecherías programadas pendientes los trabajos
+                de semanas posteriores que ya fueron adelantados
+                y cuentan con Vo.Bo.
+              </div>
+
+            </div>
+          `
+          : ''
+      }
+
+    </div>
+  `;
+}
+
+function cambiarSemanaReporte(
+  inicio
+) {
+
+  REPORTE_SEMANAL.inicio =
+    inicio;
+
+  REPORTE_SEMANAL.detalleAbierto =
+    false;
+
+  pintarConcentradoActas();
+
+  setTimeout(() => {
+
+    const bloque =
+      document.getElementById(
+        'reporteSemanal'
+      );
+
+    if (bloque) {
+      bloque.scrollIntoView({
+        block: 'start'
+      });
+    }
+
+  }, 0);
 }
 
 function pintarConcentradoActas() {
@@ -16326,6 +17283,7 @@ const tarjetas =
 
         </div>
 
+      ${renderReporteSemanal()}
 
     <div class="sect">
 

@@ -67,7 +67,8 @@ async function cargarLecherias() {
           m2,
           vobo,
           motivo,
-          freal
+          freal,
+          fecha_vobo
         ),
         excedentes (
           m2_excedente,
@@ -151,6 +152,7 @@ async function cargarLecherias() {
       vobo: av.vobo || '-',
       motivo: av.motivo || '',
       freal: av.freal || '',
+      fecha_vobo: av.fecha_vobo || '',
 
       m2_excedente:
         Number(ex.m2_excedente) || 0,
@@ -1314,10 +1316,28 @@ async function guardarAtendido(pv, m2) {
 
 // Vo.Bo. del administrador (aprobar o rechazar)
 async function guardarVobo(pv, estado, motivo = null) {
+
+  const fechaVobo =
+    estado === 'ok'
+      ? new Date().toLocaleDateString(
+          'en-CA',
+          {
+            timeZone: 'America/Mexico_City'
+          }
+        )
+      : null;
+
   const cambios = {
     vobo: estado,
-    motivo: estado === 'rej' ? motivo : null,
-    actualizado: new Date().toISOString()
+    motivo:
+      estado === 'rej'
+        ? motivo
+        : null,
+
+    fecha_vobo: fechaVobo,
+
+    actualizado:
+      new Date().toISOString()
   };
 
   const { error } = await sb
