@@ -16003,10 +16003,10 @@ function calcularReporteSemanal(
 
 
   /*
-   * Producción real:
-   * Vo.Bo. otorgados dentro
-   * de la semana seleccionada.
+   * Vo.Bo. otorgados
+   * durante la semana.
    */
+
   const atendidasSemana =
     LECH.filter(p =>
       p.vobo === 'ok' &&
@@ -16018,17 +16018,12 @@ function calcularReporteSemanal(
 
   /*
    * ==========================
-   * ACUMULADO
+   * PROGRAMA ACUMULADO
    * ==========================
    *
-   * Programa:
-   * todo lo que debía estar
-   * programado hasta el fin
-   * de esta semana.
-   *
-   * Real:
-   * todos los Vo.Bo. obtenidos
-   * hasta el mismo corte.
+   * Todas las lecherías cuya
+   * fecha compromiso ya cayó
+   * hasta el cierre analizado.
    */
 
   const programadasAcumuladas =
@@ -16038,6 +16033,17 @@ function calcularReporteSemanal(
     );
 
 
+  /*
+   * ==========================
+   * Vo.Bo. TOTALES AL CORTE
+   * ==========================
+   *
+   * Incluye tanto las que
+   * pertenecen al programa
+   * acumulado como las que
+   * fueron adelantadas.
+   */
+
   const atendidasAcumuladas =
     LECH.filter(p =>
       p.vobo === 'ok' &&
@@ -16045,6 +16051,65 @@ function calcularReporteSemanal(
       p.fecha_vobo <= fin
     );
 
+
+  /*
+   * ==========================
+   * PENDIENTES DEL PROGRAMA
+   * ==========================
+   *
+   * De las que ya debían estar
+   * cumplidas según fcomp,
+   * cuáles todavía no tenían
+   * Vo.Bo. al cierre.
+   */
+
+  const programadasPendientes =
+    programadasAcumuladas
+      .filter(p =>
+        !p.fecha_vobo ||
+        p.fecha_vobo > fin
+      )
+      .length;
+
+
+  /*
+   * AHORA SÍ podemos calcular
+   * cumplidasPrograma porque
+   * programadasPendientes ya
+   * existe.
+   */
+
+  const cumplidasPrograma =
+    programadasAcumuladas.length -
+    programadasPendientes;
+
+
+  /*
+   * ==========================
+   * TRABAJOS ADELANTADOS
+   * ==========================
+   *
+   * Tienen Vo.Bo. al corte,
+   * pero su fecha compromiso
+   * pertenece a una semana
+   * posterior.
+   */
+
+  const trabajosAdelantados =
+    LECH.filter(p =>
+      p.vobo === 'ok' &&
+      p.fecha_vobo &&
+      p.fecha_vobo <= fin &&
+      p.fcomp &&
+      p.fcomp > fin
+    ).length;
+
+
+  /*
+   * ==========================
+   * SEMANA
+   * ==========================
+   */
 
   const faltantesSemana =
     Math.max(
@@ -16054,65 +16119,63 @@ function calcularReporteSemanal(
     );
 
 
-  const faltantesAcumulados =
-    Math.max(
-      programadasAcumuladas.length -
-      atendidasAcumuladas.length,
-      0
-    );
-
   /*
-   * Lecherías que debían estar
-   * cumplidas al cierre de la
-   * semana y que en ese corte
-   * todavía no tenían Vo.Bo.
+   * ==========================
+   * ACUMULADO
+   * ==========================
+   *
+   * Aquí NO descontamos las
+   * adelantadas.
+   *
+   * Pendientes significa
+   * realmente pendientes del
+   * programa acumulado.
    */
 
-  const programadasPendientes =
-  programadasAcumuladas
-    .filter(p =>
-      !p.fecha_vobo ||
-      p.fecha_vobo > fin
-    )
-    .length;
+  const faltantesAcumulados =
+    programadasPendientes;
 
-/*
- * Trabajos ejecutados antes de la
- * semana en que estaban programados.
- *
- * Tienen Vo.Bo. al corte, pero su
- * Fecha Compromiso es posterior al
- * cierre de la semana analizada.
- */
-const trabajosAdelantados =
-  LECH.filter(p =>
-    p.vobo === 'ok' &&
-    p.fecha_vobo &&
-    p.fecha_vobo <= fin &&
-    p.fcomp &&
-    p.fcomp > fin
-  ).length;
 
+  /*
+   * ==========================
+   * ESTADO DE LA SEMANA
+   * ==========================
+   */
 
   let estadoSemana =
     'cerrada';
 
   if (inicio > hoy) {
+
     estadoSemana =
       'futura';
+
   } else if (
     hoy >= inicio &&
     hoy <= fin
   ) {
+
     estadoSemana =
       'curso';
   }
 
 
+  /*
+   * ==========================
+   * RESULTADO
+   * ==========================
+   */
+
   return {
+
     inicio,
     fin,
     estadoSemana,
+
+
+    /*
+     * SEMANA
+     */
 
     programadasSemana:
       programadasSemana.length,
@@ -16134,28 +16197,42 @@ const trabajosAdelantados =
         programadasSemana.length
       ),
 
+
+    /*
+     * ACUMULADO REAL DEL PROGRAMA
+     */
+
     programadasAcumuladas:
       programadasAcumuladas.length,
 
-    atendidasAcumuladas:
-      atendidasAcumuladas.length,
+    cumplidasPrograma,
+
+    programadasPendientes,
 
     faltantesAcumulados,
 
     cumplimientoAcumulado:
       porcentajeReporte(
-        atendidasAcumuladas.length,
+        cumplidasPrograma,
         programadasAcumuladas.length
       ),
 
     desviacionAcumulada:
       desviacionPorcentualReporte(
-        atendidasAcumuladas.length,
+        cumplidasPrograma,
         programadasAcumuladas.length
       ),
 
-      programadasPendientes,
-      trabajosAdelantados
+
+    /*
+     * PRODUCCIÓN TOTAL
+     */
+
+    trabajosAdelantados,
+
+    atendidasAcumuladas:
+      atendidasAcumuladas.length
+
   };
 }
 
@@ -16540,11 +16617,11 @@ function renderReporteSemanal() {
                   r.estadoSemana ===
                     'futura'
                     ? '—'
-                    : r.atendidasAcumuladas
+                    : r.cumplidasPrograma
                 }
               </div>
               <div class="k">
-                Con Vo.Bo.
+                Cumplidas
               </div>
             </div>
 
@@ -16630,8 +16707,7 @@ function renderReporteSemanal() {
               class="dashcard"
               style="
                 margin-top:10px;
-                border-left:
-                  4px solid var(--wait);
+                border-left:4px solid var(--done);
               "
             >
 
@@ -16642,35 +16718,28 @@ function renderReporteSemanal() {
                   margin-bottom:9px;
                 "
               >
-                COMPOSICIÓN DE LA DESVIACIÓN
+                PRODUCCIÓN REAL AL CORTE
               </div>
 
               <div class="dstats">
 
                 <div class="s">
-
                   <div
                     class="v"
-                    style="
-                      color:var(--rej);
-                    "
+                    style="color:var(--done);"
                   >
-                    ${r.programadasPendientes}
+                    ${r.cumplidasPrograma}
                   </div>
 
                   <div class="k">
-                    Programadas pendientes
+                    Del programa
                   </div>
-
                 </div>
 
                 <div class="s">
-
                   <div
                     class="v"
-                    style="
-                      color:var(--done);
-                    "
+                    style="color:var(--leche);"
                   >
                     ${r.trabajosAdelantados}
                   </div>
@@ -16678,32 +16747,26 @@ function renderReporteSemanal() {
                   <div class="k">
                     Adelantadas
                   </div>
-
                 </div>
 
                 <div class="s">
-
                   <div
                     class="v"
-                    style="
-                      color:var(--wait);
-                    "
+                    style="color:var(--steel);"
                   >
-                    ${r.faltantesAcumulados}
+                    ${r.atendidasAcumuladas}
                   </div>
 
                   <div class="k">
-                    Desviación neta
+                    Vo.Bo. totales
                   </div>
-
                 </div>
 
               </div>
 
               <div
                 style="
-                  border-top:
-                    1px solid var(--line);
+                  border-top:1px solid var(--line);
                   margin-top:8px;
                   padding-top:8px;
                   font-size:9.5px;
@@ -16711,11 +16774,56 @@ function renderReporteSemanal() {
                   color:var(--mut);
                 "
               >
-                La desviación neta resulta de restar a las
-                lecherías programadas pendientes los trabajos
-                de semanas posteriores que ya fueron adelantados
-                y cuentan con Vo.Bo.
+                Los Vo.Bo. totales se integran por las
+                lecherías cumplidas dentro del programa
+                acumulado más los trabajos de semanas
+                posteriores ejecutados por adelantado.
               </div>
+
+            </div>
+          `
+          : ''
+      }
+
+      ${
+        r.estadoSemana !== 'futura'
+          ? `
+            <div
+              class="expbtns"
+              style="
+                margin-top:10px;
+              "
+            >
+
+              <button
+                class="expbtn exp-xlsx"
+                onclick="
+                  exportReporteSemanalXLSX()
+                "
+              >
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M12 3v12M7 10l5 5 5-5M5 21h14"
+                  />
+                </svg>
+
+                Excel
+              </button>
+
+              <button
+                class="expbtn exp-pdf"
+                onclick="
+                  exportReporteSemanalPDF()
+                "
+              >
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M12 3v12M7 10l5 5 5-5M5 21h14"
+                  />
+                </svg>
+
+                PDF
+              </button>
 
             </div>
           `
@@ -16724,6 +16832,872 @@ function renderReporteSemanal() {
 
     </div>
   `;
+}
+
+function exportReporteSemanalXLSX() {
+
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    toast(
+      'Este reporte es exclusivo de control interno'
+    );
+
+    return;
+  }
+
+
+  if (!REPORTE_SEMANAL.inicio) {
+    toast(
+      'Selecciona una semana'
+    );
+
+    return;
+  }
+
+
+  const r =
+    calcularReporteSemanal(
+      REPORTE_SEMANAL.inicio
+    );
+
+
+  if (
+    r.estadoSemana ===
+    'futura'
+  ) {
+    toast(
+      'La semana seleccionada aún no inicia'
+    );
+
+    return;
+  }
+
+
+  const libro =
+    XLSX.utils.book_new();
+
+
+  /*
+   * ==========================
+   * RESUMEN
+   * ==========================
+   */
+
+  const resumen = [
+    {
+      Concepto:
+        'Inicio de semana',
+
+      Valor:
+        r.inicio
+    },
+
+    {
+      Concepto:
+        'Fin de semana',
+
+      Valor:
+        r.fin
+    },
+
+    {
+      Concepto:
+        'Programadas semana',
+
+      Valor:
+        r.programadasSemana
+    },
+
+    {
+      Concepto:
+        'Vo.Bo. obtenidos semana',
+
+      Valor:
+        r.atendidasSemana
+    },
+
+    {
+      Concepto:
+        'Pendientes semana',
+
+      Valor:
+        r.faltantesSemana
+    },
+
+    {
+      Concepto:
+        'Cumplimiento semana',
+
+      Valor:
+        `${r.cumplimientoSemana}%`
+    },
+
+    {
+      Concepto:
+        'Desviación semana',
+
+      Valor:
+        `${r.desviacionSemana}%`
+    },
+
+    {
+      Concepto:
+        'Programadas acumuladas',
+
+      Valor:
+        r.programadasAcumuladas
+    },
+
+    {
+      Concepto:
+        'Cumplidas del programa',
+
+      Valor:
+        r.cumplidasPrograma
+    },
+
+    {
+      Concepto:
+        'Pendientes del programa',
+
+      Valor:
+        r.programadasPendientes
+    },
+
+    {
+      Concepto:
+        'Cumplimiento acumulado',
+
+      Valor:
+        `${r.cumplimientoAcumulado}%`
+    },
+
+    {
+      Concepto:
+        'Desviación acumulada',
+
+      Valor:
+        `${r.desviacionAcumulada}%`
+    },
+
+    {
+      Concepto:
+        'Trabajos adelantados',
+
+      Valor:
+        r.trabajosAdelantados
+    },
+
+    {
+      Concepto:
+        'Vo.Bo. totales al corte',
+
+      Valor:
+        r.atendidasAcumuladas
+    }
+  ];
+
+
+  const hojaResumen =
+    XLSX.utils.json_to_sheet(
+      resumen
+    );
+
+
+  hojaResumen['!cols'] = [
+    {
+      wch: 32
+    },
+    {
+      wch: 22
+    }
+  ];
+
+
+  XLSX.utils.book_append_sheet(
+    libro,
+    hojaResumen,
+    'Resumen semanal'
+  );
+
+
+  /*
+   * ==========================
+   * PROGRAMA DE LA SEMANA
+   * ==========================
+   */
+
+  const programaSemana =
+    LECH
+      .filter(p =>
+        p.fcomp &&
+        p.fcomp >= r.inicio &&
+        p.fcomp <= r.fin
+      )
+      .map(p => ({
+        'P.V.':
+          p.pv,
+
+        Estado:
+          p.estado || '',
+
+        Municipio:
+          p.municipio || '',
+
+        Localidad:
+          p.localidad || '',
+
+        Zona:
+          p.zona || '',
+
+        Cuadrilla:
+          p.sub || '',
+
+        'Fecha compromiso':
+          p.fcomp || '',
+
+        'Fecha real':
+          p.freal || '',
+
+        'Fecha Vo.Bo.':
+          p.fecha_vobo || '',
+
+        Resultado:
+          (
+            p.vobo === 'ok' &&
+            p.fecha_vobo &&
+            p.fecha_vobo <= r.fin
+          )
+            ? 'Cumplida'
+            : 'Pendiente'
+      }));
+
+
+  agregarHojaExcel(
+    libro,
+    'Programa semana',
+    programaSemana,
+    [
+      16,
+      20,
+      24,
+      24,
+      28,
+      15,
+      18,
+      16,
+      16,
+      16
+    ]
+  );
+
+
+  /*
+   * ==========================
+   * TRABAJOS ADELANTADOS
+   * ==========================
+   */
+
+  const adelantadas =
+    LECH
+      .filter(p =>
+        p.vobo === 'ok' &&
+        p.fecha_vobo &&
+        p.fecha_vobo <= r.fin &&
+        p.fcomp &&
+        p.fcomp > r.fin
+      )
+      .map(p => ({
+        'P.V.':
+          p.pv,
+
+        Estado:
+          p.estado || '',
+
+        Municipio:
+          p.municipio || '',
+
+        Zona:
+          p.zona || '',
+
+        Cuadrilla:
+          p.sub || '',
+
+        'Fecha compromiso':
+          p.fcomp || '',
+
+        'Fecha Vo.Bo.':
+          p.fecha_vobo || ''
+      }));
+
+
+  agregarHojaExcel(
+    libro,
+    'Adelantadas',
+    adelantadas,
+    [
+      16,
+      20,
+      24,
+      28,
+      15,
+      18,
+      16
+    ]
+  );
+
+
+  XLSX.writeFile(
+    libro,
+    `Reporte_semanal_${r.inicio}_${r.fin}.xlsx`
+  );
+
+
+  toast(
+    'Reporte semanal Excel generado'
+  );
+}
+
+function exportReporteSemanalPDF() {
+
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    toast(
+      'Este reporte es exclusivo de control interno'
+    );
+
+    return;
+  }
+
+
+  if (!REPORTE_SEMANAL.inicio) {
+    toast(
+      'Selecciona una semana'
+    );
+
+    return;
+  }
+
+
+  const r =
+    calcularReporteSemanal(
+      REPORTE_SEMANAL.inicio
+    );
+
+
+  if (
+    r.estadoSemana ===
+    'futura'
+  ) {
+    toast(
+      'La semana seleccionada aún no inicia'
+    );
+
+    return;
+  }
+
+
+  const { jsPDF } =
+    window.jspdf;
+
+
+  const doc =
+    new jsPDF({
+      orientation:
+        'portrait',
+
+      unit:
+        'mm',
+
+      format:
+        'a4'
+    });
+
+
+  /*
+   * ==========================
+   * ENCABEZADO
+   * ==========================
+   */
+
+  doc.setFillColor(
+    13,
+    27,
+    42
+  );
+
+  doc.rect(
+    0,
+    0,
+    210,
+    34,
+    'F'
+  );
+
+
+  doc.setTextColor(
+    255,
+    255,
+    255
+  );
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(15);
+
+  doc.text(
+    'Reporte semanal de avance',
+    12,
+    12
+  );
+
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(8);
+
+  doc.text(
+    'LECHERÍAS · FACHADAS',
+    12,
+    18
+  );
+
+  doc.text(
+    `Semana: ${r.inicio} al ${r.fin}`,
+    12,
+    24
+  );
+
+  doc.text(
+    'Control interno LUMEN',
+    12,
+    29
+  );
+
+
+  /*
+   * ==========================
+   * SEMANA
+   * ==========================
+   */
+
+  let y =
+    46;
+
+
+  doc.setTextColor(
+    13,
+    27,
+    42
+  );
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(11);
+
+  doc.text(
+    'AVANCE DE LA SEMANA',
+    12,
+    y
+  );
+
+
+  y += 8;
+
+
+  const cajaSemana = [
+    [
+      'Programadas',
+      String(
+        r.programadasSemana
+      )
+    ],
+
+    [
+      'Vo.Bo. obtenidos',
+      String(
+        r.atendidasSemana
+      )
+    ],
+
+    [
+      'Pendientes',
+      String(
+        r.faltantesSemana
+      )
+    ],
+
+    [
+      'Cumplimiento',
+      `${r.cumplimientoSemana}%`
+    ],
+
+    [
+      'Desviación',
+      `${r.desviacionSemana}%`
+    ]
+  ];
+
+
+  doc.setFontSize(9);
+
+
+  cajaSemana.forEach(
+    ([etiqueta, valor]) => {
+
+      doc.setFont(
+        undefined,
+        'normal'
+      );
+
+      doc.text(
+        etiqueta,
+        16,
+        y
+      );
+
+
+      doc.setFont(
+        undefined,
+        'bold'
+      );
+
+      doc.text(
+        valor,
+        92,
+        y,
+        {
+          align:
+            'right'
+        }
+      );
+
+
+      y += 7;
+    }
+  );
+
+
+  /*
+   * ==========================
+   * ACUMULADO
+   * ==========================
+   */
+
+  y += 6;
+
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(11);
+
+  doc.text(
+    'AVANCE ACUMULADO',
+    12,
+    y
+  );
+
+
+  y += 8;
+
+
+  const cajaAcumulado = [
+    [
+      'Programadas acumuladas',
+      String(
+        r.programadasAcumuladas
+      )
+    ],
+
+    [
+      'Cumplidas del programa',
+      String(
+        r.cumplidasPrograma
+      )
+    ],
+
+    [
+      'Pendientes del programa',
+      String(
+        r.programadasPendientes
+      )
+    ],
+
+    [
+      'Cumplimiento acumulado',
+      `${r.cumplimientoAcumulado}%`
+    ],
+
+    [
+      'Desviación acumulada',
+      `${r.desviacionAcumulada}%`
+    ]
+  ];
+
+
+  doc.setFontSize(9);
+
+
+  cajaAcumulado.forEach(
+    ([etiqueta, valor]) => {
+
+      doc.setFont(
+        undefined,
+        'normal'
+      );
+
+      doc.text(
+        etiqueta,
+        16,
+        y
+      );
+
+
+      doc.setFont(
+        undefined,
+        'bold'
+      );
+
+      doc.text(
+        valor,
+        92,
+        y,
+        {
+          align:
+            'right'
+        }
+      );
+
+
+      y += 7;
+    }
+  );
+
+
+  /*
+   * ==========================
+   * PRODUCCIÓN REAL
+   * ==========================
+   */
+
+  y += 6;
+
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(11);
+
+  doc.text(
+    'PRODUCCIÓN REAL AL CORTE',
+    12,
+    y
+  );
+
+
+  y += 9;
+
+
+  doc.setFontSize(16);
+
+
+  doc.text(
+    String(
+      r.cumplidasPrograma
+    ),
+    43,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+
+  doc.text(
+    String(
+      r.trabajosAdelantados
+    ),
+    105,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+
+  doc.text(
+    String(
+      r.atendidasAcumuladas
+    ),
+    167,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+
+  y += 6;
+
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(8);
+
+
+  doc.text(
+    'DEL PROGRAMA',
+    43,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+
+  doc.text(
+    'ADELANTADAS',
+    105,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+
+  doc.text(
+    'Vo.Bo. TOTALES',
+    167,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+
+  y += 13;
+
+
+  /*
+   * ==========================
+   * INTERPRETACIÓN
+   * ==========================
+   */
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(9);
+
+  doc.text(
+    'Lectura del corte',
+    12,
+    y
+  );
+
+
+  y += 6;
+
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(8.5);
+
+
+  const texto =
+    `Al cierre del periodo se tenían ` +
+    `${r.programadasAcumuladas} lecherías ` +
+    `programadas. ` +
+    `${r.cumplidasPrograma} corresponden ` +
+    `al programa acumulado y ` +
+    `${r.trabajosAdelantados} corresponden ` +
+    `a trabajos de semanas posteriores ` +
+    `ejecutados por adelantado. ` +
+    `El cumplimiento del programa es de ` +
+    `${r.cumplimientoAcumulado}% y quedan ` +
+    `${r.programadasPendientes} compromisos ` +
+    `programados pendientes.`;
+
+
+  const lineas =
+    doc.splitTextToSize(
+      texto,
+      182
+    );
+
+
+  doc.text(
+    lineas,
+    14,
+    y
+  );
+
+
+  /*
+   * ==========================
+   * PIE
+   * ==========================
+   */
+
+  doc.setFontSize(7.5);
+
+  doc.setTextColor(
+    107,
+    123,
+    140
+  );
+
+  doc.text(
+    `Generado ${new Date().toLocaleString('es-MX')}`,
+    105,
+    287,
+    {
+      align:
+        'center'
+    }
+  );
+
+
+  doc.save(
+    `Reporte_semanal_${r.inicio}_${r.fin}.pdf`
+  );
+
+
+  toast(
+    'Reporte semanal PDF generado'
+  );
 }
 
 function cambiarSemanaReporte(
