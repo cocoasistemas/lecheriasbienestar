@@ -55,12 +55,129 @@
   .mmlegend{display:flex;gap:14px;margin-top:22px;font-size:9.5px;color:#8aa0b6}
   .mmlegend b{color:#fff}
 
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);background:var(--navy2);flex:0 0 auto}
+  .kpis{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  background:var(--navy2);
+  flex:0 0 auto
+}
   .kpi{padding:8px 5px;text-align:center;border-left:1px solid #24364a}
   .kpi:first-child{border-left:none}
   .kpi .n{font-size:17px;font-weight:800;color:#fff;line-height:1}
   .kpi .n.acc{color:#5ea0ff}
   .kpi .l{font-size:8px;letter-spacing:.8px;color:#8aa0b6;text-transform:uppercase;margin-top:3px}
+
+  /* ===== KPI interactivos ===== */
+
+.kpi.kpi-click{
+  cursor:pointer;
+  position:relative;
+  transition:
+    background .12s,
+    transform .08s;
+}
+
+.kpi.kpi-click:active{
+  background:#20344b;
+  transform:scale(.97);
+}
+
+.kpi.kpi-click::after{
+  content:'›';
+  position:absolute;
+  right:4px;
+  top:50%;
+  transform:translateY(-50%);
+  font-size:14px;
+  color:#526981;
+}
+
+
+/* ===== Panel detalle KPI ===== */
+
+.kpi-sheet{
+  position:fixed;
+  inset:0;
+  max-width:540px;
+  margin:0 auto;
+  background:var(--paper);
+  z-index:35;
+
+  display:flex;
+  flex-direction:column;
+
+  transform:translateY(100%);
+  transition:
+    transform .25s
+    cubic-bezier(.3,.7,.3,1);
+}
+
+.kpi-sheet.show{
+  transform:translateY(0);
+}
+
+.kpi-sheet header{
+  background:var(--navy);
+  color:#fff;
+
+  padding:12px 15px;
+
+  display:flex;
+  align-items:center;
+  gap:11px;
+
+  border-bottom:3px solid var(--leche);
+
+  flex:0 0 auto;
+}
+
+.kpi-sheet header .x{
+  background:none;
+  border:none;
+  color:#fff;
+
+  font-size:25px;
+  line-height:1;
+
+  cursor:pointer;
+  padding:0 3px;
+}
+
+.kpi-sheet header .h{
+  flex:1;
+  min-width:0;
+}
+
+.kpi-sheet header .h b{
+  display:block;
+  font-size:14px;
+}
+
+.kpi-sheet header .h span{
+  display:block;
+  font-size:10.5px;
+  color:#8aa0b6;
+}
+
+.kpi-body{
+  flex:1;
+  overflow-y:auto;
+  padding:13px 13px 30px;
+}
+
+.kpi-resumen{
+  background:var(--milk);
+  border-radius:9px;
+  padding:10px 12px;
+  margin-bottom:11px;
+
+  font-size:11.5px;
+  color:var(--steel);
+}
+
+.kpi-resumen b{
+  color:var(--ink);
+}
 
   .crumbs{display:flex;align-items:center;gap:7px;padding:9px 15px 4px;font-size:12px;flex:0 0 auto;color:var(--mut)}
   .crumbs a{color:var(--leche);font-weight:700;cursor:pointer;text-decoration:none}
@@ -98,7 +215,20 @@
   .addr .a{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .addr .s{font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .stbadge{font-size:9.5px;font-weight:800;letter-spacing:.3px;padding:4px 8px;border-radius:20px;flex:0 0 auto;text-transform:uppercase}
-  .st-no{background:var(--pend-bg);color:var(--mut)} .st-at{background:var(--done-bg);color:var(--done)}
+  ..st-no{
+  background:var(--pend-bg);
+  color:var(--mut)
+    }
+
+    .st-ini{
+      background:#fff2cc;
+      color:#9a6700
+    }
+
+    .st-at{
+      background:var(--done-bg);
+      color:var(--done)
+    }
   .card .row2{display:flex;border-top:1px solid var(--line);font-size:10px}
   .meta{flex:1;padding:6px 8px;border-left:1px solid var(--line);text-align:center}
   .meta:first-child{border-left:none}
@@ -407,9 +537,37 @@
   <div class="scroll" id="scroll"></div>
   <div id="mapWrap"><div id="map"></div>
     <div class="map-legend">
-      <div><span class="dot" style="background:#1f8a4c"></span>Con Vo.Bo.</div>
-      <div><span class="dot" style="background:#e08a1e"></span>Atendido s/ Vo.Bo.</div>
-      <div><span class="dot" style="background:#9aa7b4"></span>No atendido</div>
+      <div>
+        <span
+          class="dot"
+          style="background:#1f8a4c"
+        ></span>
+        Con Vo.Bo.
+      </div>
+
+      <div>
+        <span
+          class="dot"
+          style="background:#e08a1e"
+        ></span>
+        Atendido s/ Vo.Bo.
+      </div>
+
+      <div>
+        <span
+          class="dot"
+          style="background:#d6a000"
+        ></span>
+        Iniciada
+      </div>
+
+      <div>
+        <span
+          class="dot"
+          style="background:#9aa7b4"
+        ></span>
+        No atendido
+      </div>
     </div>
   </div>
   <div class="rolehint" id="roleHint"></div>
@@ -436,6 +594,20 @@
     <span class="stbadge" id="shBadge"></span>
   </header>
   <div class="sbody" id="sbody"></div>
+</div>
+<div class="kpi-sheet" id="kpiSheet">
+  <header>
+    <button class="x" onclick="cerrarDetalleKPI()">
+      &times;
+    </button>
+    <div class="h">
+      <b id="kpiSheetTitle">
+        Detalle
+      </b>
+      <span id="kpiSheetSub"></span>
+    </div>
+  </header>
+  <div class="kpi-body" id="kpiSheetBody"></div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -528,7 +700,7 @@ const METAS={"SUB-1": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino
 const MIN=1000, MAX=2000;
 // ===== PRECIOS =====
 // A LA DEPENDENCIA: unidad estándar por lechería = 21 m² a $17,769.75 + IVA (fijo, sin extraordinarios)
-const PRECIO_FACHADA=17769.75, M2_STD=21, IVA=0.16;
+const PRECIO_FACHADA=17769.75, M2_STD=21, M2_MAX = 28, IVA=0.16;
 // EXTRAORDINARIOS: control INTERNO hacia subcontratistas (la dependencia NO paga extra).
 // Precio por m² adicional configurable por subcontratista (default; se ajusta al cerrar cada subcontrato).
 const PRECIO_M2_EXTRA_DEFAULT=450.00;
@@ -567,13 +739,30 @@ let LOTES=[];
 let ACTAS_PERIODO = {
   inicio: '',
   fin: '',
-  aperturas: [],
-  recepciones: []
+  actas: []
 };
 const VISTA_ACTAS = {
-  apertura: 'disponibles',
-  recepcion: 'disponibles'
+  acta: 'disponibles',
+  pagina: 1
 };
+
+const ACTAS_POR_PAGINA = 20;
+
+let REPORTE_SEMANAL = {
+  inicio: ''
+};
+
+let ESTIMACION_PERIODO = {
+  inicio: '',
+  fin: '',
+  ejecutadas: [],
+  estimables: [],
+  pendientes: [],
+  rechazadas: []
+};
+
+let VISTA_ESTIMACION =
+  'estimables';
 /* ---- state ---- */
 let ROLE='sub',
     CURSUB='',
@@ -584,10 +773,10 @@ let ROLE='sub',
     SEARCH='';
 let TAB='lista', MAP=null, MAPLAYER=null, MAP_READY=false, REGRESAR_A_MAPA = false;
 const ROLEINFO={
-  sub:{band:'rb-sub',txt:()=>'Subcontratista · '+CURSUB,hint:'Toca un estado para ver tus lecherías asignadas'},
+  sub:{band:'rb-sub',txt:()=>'Cuadrilla · '+CURSUB,hint:'Toca un estado para ver tus lecherías asignadas'},
   gen:{band:'rb-gen',txt:()=>'Contratista general · panel completo',hint:'Vista nacional del padrón completo'},
   admin:{band:'rb-admin',txt:()=>'Administrador del contrato · validación',hint:'Otorga Vo.Bo. a lecherías atendidas'},
-  dep:{band:'rb-dep',txt:()=>'Dependencia · consulta y revisión de cartas',hint:'Consulta nacional y revisión de cartas DEP'}
+  dep:{band:'rb-dep',txt:()=>'Dependencia · consulta y seguimiento',hint:'Consulta nacional de avances y estimaciones'}
 };
 
 function visiblePts(){
@@ -911,15 +1100,402 @@ function renderMinMax() {
   `;
 }
 
-function renderKPI(){
-  const pts=visiblePts();
-  const tot=pts.length, at=pts.filter(p=>p.status==='at').length;
-  const ok=pts.filter(p=>p.vobo==='ok').length, ext=pts.filter(p=>p.m2>M2_STD).length;
-  document.getElementById('kpis').innerHTML=`
-    <div class="kpi"><div class="n">${tot}</div><div class="l">${ROLE==='sub'?'Mi zona':'Cargadas'}</div></div>
-    <div class="kpi"><div class="n">${at}</div><div class="l">Atendidas</div></div>
-    <div class="kpi"><div class="n acc">${ok}</div><div class="l">Con Vo.Bo.</div></div>
-    <div class="kpi"><div class="n">${ext}</div><div class="l">Con Extra</div></div>`;
+function renderKPI() {
+  const pts =
+    visiblePts();
+
+  const tot =
+    pts.length;
+
+  const ini =
+    pts.filter(
+      p => p.status === 'ini'
+    ).length;
+
+  const at =
+    pts.filter(
+      p => p.status === 'at'
+    ).length;
+
+  const ok =
+    pts.filter(
+      p => p.vobo === 'ok'
+    ).length;
+
+  const ext =
+    pts.filter(
+      p => p.m2 > M2_STD
+    ).length;
+
+  document
+    .getElementById('kpis')
+    .innerHTML = `
+
+      <div class="kpi">
+        <div class="n">
+          ${tot}
+        </div>
+
+        <div class="l">
+          ${
+            ROLE === 'sub'
+              ? 'Mi cartera'
+              : 'Cargadas'
+          }
+        </div>
+      </div>
+
+
+      <div
+        class="kpi kpi-click"
+        onclick="abrirDetalleKPI('ini')"
+      >
+        <div
+          class="n"
+          style="color:#d6a000"
+        >
+          ${ini}
+        </div>
+
+        <div class="l">
+          Iniciadas
+        </div>
+      </div>
+
+
+      <div
+        class="kpi kpi-click"
+        onclick="abrirDetalleKPI('at')"
+      >
+        <div class="n">
+          ${at}
+        </div>
+
+        <div class="l">
+          Atendidas
+        </div>
+      </div>
+
+
+      <div
+        class="kpi kpi-click"
+        onclick="abrirDetalleKPI('ok')"
+      >
+        <div class="n acc">
+          ${ok}
+        </div>
+
+        <div class="l">
+          Con Vo.Bo.
+        </div>
+      </div>
+
+
+      <div
+        class="kpi kpi-click"
+        onclick="abrirDetalleKPI('ext')"
+      >
+        <div class="n">
+          ${ext}
+        </div>
+
+        <div class="l">
+          Con Extra
+        </div>
+      </div>
+    `;
+}
+
+function obtenerPuntosKPI(tipo) {
+  const pts =
+    visiblePts();
+
+  if (tipo === 'ini') {
+    return pts.filter(
+      p => p.status === 'ini'
+    );
+  }
+
+  if (tipo === 'at') {
+    return pts.filter(
+      p => p.status === 'at'
+    );
+  }
+
+  if (tipo === 'ok') {
+    return pts.filter(
+      p => p.vobo === 'ok'
+    );
+  }
+
+  if (tipo === 'ext') {
+    return pts.filter(
+      p => p.m2 > M2_STD
+    );
+  }
+
+  return [];
+}
+
+
+function obtenerTituloKPI(tipo) {
+  if (tipo === 'ini') {
+    return 'Lecherías iniciadas';
+  }
+
+  if (tipo === 'at') {
+    return 'Lecherías atendidas';
+  }
+
+  if (tipo === 'ok') {
+    return 'Lecherías con Vo.Bo.';
+  }
+
+  if (tipo === 'ext') {
+    return 'Lecherías con superficie extra';
+  }
+
+  return 'Detalle';
+}
+
+
+function abrirDetalleKPI(tipo) {
+  const arr =
+    obtenerPuntosKPI(tipo);
+
+  const sheet =
+    document.getElementById(
+      'kpiSheet'
+    );
+
+  const titulo =
+    document.getElementById(
+      'kpiSheetTitle'
+    );
+
+  const subtitulo =
+    document.getElementById(
+      'kpiSheetSub'
+    );
+
+  const body =
+    document.getElementById(
+      'kpiSheetBody'
+    );
+
+  titulo.textContent =
+    obtenerTituloKPI(tipo);
+
+  subtitulo.textContent =
+    `${arr.length} ${
+      arr.length === 1
+        ? 'lechería'
+        : 'lecherías'
+    }`;
+
+  body.innerHTML = `
+    <div class="kpi-resumen">
+      <b>
+        ${arr.length}
+      </b>
+      ${
+        arr.length === 1
+          ? 'lechería encontrada'
+          : 'lecherías encontradas'
+      }
+    </div>
+  `;
+
+  if (!arr.length) {
+    body.innerHTML += `
+      <div
+        style="
+          text-align:center;
+          color:var(--mut);
+          padding:40px 10px;
+        "
+      >
+        No hay lecherías en esta categoría.
+      </div>
+    `;
+
+    sheet.classList.add('show');
+    return;
+  }
+
+
+  const ordenadas =
+    [...arr].sort((a, b) => {
+
+      const estado =
+        (a.estado || '')
+          .localeCompare(
+            b.estado || '',
+            'es'
+          );
+
+      if (estado !== 0) {
+        return estado;
+      }
+
+      return String(a.pv)
+        .localeCompare(
+          String(b.pv)
+        );
+    });
+
+
+  ordenadas.forEach(p => {
+
+    const stCls =
+      p.status === 'at'
+        ? 'st-at'
+        : p.status === 'ini'
+          ? 'st-ini'
+          : 'st-no';
+
+    const stTx =
+      p.status === 'at'
+        ? 'Atendido'
+        : p.status === 'ini'
+          ? 'Iniciada'
+          : 'No atendido';
+
+
+    let voV = '—';
+    let voC = 'v-pe';
+
+    if (p.status === 'at') {
+
+      if (p.vobo === 'ok') {
+        voV = 'Aprobado';
+        voC = 'v-ok';
+
+      } else if (
+        p.vobo === 'rej'
+      ) {
+        voV = 'Rechazado';
+        voC = 'v-re';
+
+      } else {
+        voV = 'Por revisar';
+        voC = 'v-wa';
+      }
+    }
+
+
+    const exc =
+      p.m2 - M2_STD;
+
+
+    const card =
+      document.createElement(
+        'div'
+      );
+
+    card.className =
+      'card';
+
+    card.onclick = () => {
+      openSheet(p.id);
+    };
+
+
+    card.innerHTML = `
+      <div class="row1">
+
+        <span class="pv">
+          ${p.pv}
+        </span>
+
+        <div class="addr">
+
+          <div class="a">
+            ${p.calle || '(sin calle)'}
+          </div>
+
+          <div class="s">
+            ${p.municipio || ''}
+            ${
+              p.estado
+                ? ' · ' + p.estado
+                : ''
+            }
+          </div>
+
+        </div>
+
+        <span
+          class="stbadge ${stCls}"
+        >
+          ${stTx}
+        </span>
+
+      </div>
+
+
+      <div class="row2">
+
+        <div class="meta">
+          <div class="v ${voC}">
+            ${voV}
+          </div>
+          <div class="k">
+            Vo.Bo.
+          </div>
+        </div>
+
+
+        <div class="meta">
+          <div class="v">
+            ${p.m2} m²
+          </div>
+          <div class="k">
+            Superficie
+          </div>
+        </div>
+
+
+        <div class="meta">
+
+          <div
+            class="v ${
+              exc > 0
+                ? 'v-ex'
+                : ''
+            }"
+          >
+            ${
+              exc > 0
+                ? '+' + exc
+                : '—'
+            }
+          </div>
+
+          <div class="k">
+            Extra m²
+          </div>
+
+        </div>
+
+      </div>
+    `;
+
+    body.appendChild(card);
+  });
+
+
+  sheet.classList.add('show');
+}
+
+
+function cerrarDetalleKPI() {
+  document
+    .getElementById(
+      'kpiSheet'
+    )
+    .classList
+    .remove('show');
 }
 
 /* ---- tabs ---- */
@@ -1018,7 +1594,7 @@ function render(){
 
 function renderCrumbs(){
   const c=document.getElementById('crumbs');
-  if(VIEW==='estados'){ c.innerHTML=`<b style="color:var(--ink)">${ROLE==='sub'?'Estados de mi zona':'Estados'}</b>`; }
+  if(VIEW==='estados'){ c.innerHTML=`<b style="color:var(--ink)">${ROLE==='sub'?'Estados de mi cartera':'Estados'}</b>`; }
   else c.innerHTML=`<a onclick="goEstados()">Estados</a><span class="sep">›</span><b style="color:var(--ink)">${CUR_EST}</b>`;
 }
 
@@ -1044,6 +1620,7 @@ function renderFilters(){
   f.innerHTML = `
     <div class="chip ${cur==='all'?'on':''}" onclick="setFilter('all',this)">Todas</div>
     <div class="chip ${cur==='no'?'on':''}" onclick="setFilter('no',this)">No atendido</div>
+    <div class="chip ${cur==='ini'?'on':''}" onclick="setFilter('ini',this)">Iniciada</div>
     <div class="chip ${cur==='at'?'on':''}" onclick="setFilter('at',this)">Atendido</div>
     <div class="chip ${cur==='wait'?'on':''}" onclick="setFilter('wait',this)">Por Vo.Bo.</div>
     <div class="chip ${cur==='ext'?'on':''}" onclick="setFilter('ext',this)">Extra m²</div>
@@ -1094,10 +1671,32 @@ function renderEstados(){
     const arr=map[e], tot=arr.length, at=arr.filter(p=>p.status==='at').length;
     const pct=Math.round(at/tot*100);
     const abbr=e.replace('Edo. ','').slice(0,4).toUpperCase();
+    const zonasEstado =
+      [
+        ...new Set(
+          arr
+            .map(p => p.zona)
+            .filter(Boolean)
+        )
+      ]
+        .sort((a, b) =>
+          String(a).localeCompare(
+            String(b),
+            'es',
+            {
+              numeric: true,
+              sensitivity: 'base'
+            }
+          )
+        )
+        .join(', ');
     const d=document.createElement('div'); d.className='estcard'; d.onclick=()=>openEstado(e);
     d.innerHTML=`<div class="top">
         <div class="flag">${abbr}</div>
-        <div class="nm"><b>${e}</b><span>${arr[0].zona}</span></div>
+        <div class="nm">
+        <b>${e}</b>
+        <span>${zonasEstado || 'Sin zona'}</span>
+        </div>
         <div class="cnt"><div class="num">${tot}</div><div class="pct">${at} atend · ${pct}%</div></div>
       </div><div class="estbar"><div class="f" style="width:${pct}%"></div></div>`;
     sc.appendChild(d);
@@ -1120,11 +1719,40 @@ function goEstados(){
   render();
 }
 
-function matchF(p){
-  if(FILTER==='no')return p.status==='no';
-  if(FILTER==='at')return p.status==='at';
-  if(FILTER==='wait')return p.status==='at'&&p.vobo==='wait';
-  if(FILTER==='ext')return p.m2>M2_STD;
+function matchF(p) {
+  if (
+    FILTER === 'no'
+  ) {
+    return p.status === 'no';
+  }
+
+  if (
+    FILTER === 'ini'
+  ) {
+    return p.status === 'ini';
+  }
+
+  if (
+    FILTER === 'at'
+  ) {
+    return p.status === 'at';
+  }
+
+  if (
+    FILTER === 'wait'
+  ) {
+    return (
+      p.status === 'at' &&
+      p.vobo === 'wait'
+    );
+  }
+
+  if (
+    FILTER === 'ext'
+  ) {
+    return p.m2 > M2_STD;
+  }
+
   return true;
 }
 
@@ -1136,7 +1764,19 @@ function renderPuntos(){
   const sc=document.getElementById('scroll'); sc.innerHTML='';
   if(!arr.length){ sc.innerHTML='<div style="text-align:center;color:var(--mut);padding:40px 0">Sin lecherías en este filtro.</div>'; return; }
   arr.forEach(p=>{
-    const stCls=p.status==='at'?'st-at':'st-no', stTx=p.status==='at'?'Atendido':'No atendido';
+  const stCls =
+  p.status === 'at'
+    ? 'st-at'
+    : p.status === 'ini'
+      ? 'st-ini'
+      : 'st-no';
+
+  const stTx =
+  p.status === 'at'
+    ? 'Atendido'
+    : p.status === 'ini'
+      ? 'Iniciada'
+      : 'No atendido';
     let voV='—',voC='v-pe';
     if(p.status==='at'){ if(p.vobo==='ok'){voV='Aprobado';voC='v-ok'} else if(p.vobo==='rej'){voV='Rechazado';voC='v-re'} else {voV='Por revisar';voC='v-wa'} }
     const exc=p.m2-M2_STD;
@@ -1294,7 +1934,8 @@ function renderActaAperturaBlock(
    * Los demás perfiles lo consultan.
    */
   const puedeGestionar =
-    ROLE === 'gen';
+  ROLE === 'gen' ||
+  ROLE === 'sub';
 
   /*
    * Todavía no existe.
@@ -1303,7 +1944,7 @@ function renderActaAperturaBlock(
     return `
       <div class="sect">
         <h3>
-          Acta de apertura
+          Acta de inicio y entrega recepción
         </h3>
 
         <div
@@ -1330,10 +1971,7 @@ function renderActaAperturaBlock(
             margin-bottom:10px;
           "
         >
-          Documento individual para
-          autorizar y documentar el
-          inicio de trabajos de esta
-          lechería.
+          Documento individual de inicio y entrega-recepción de los servicios de esta lechería.
         </div>
 
         ${
@@ -1351,12 +1989,12 @@ function renderActaAperturaBlock(
                   generarActaApertura()
                 "
               >
-                📄 Generar acta de apertura
+                📄 Generar acta
               </button>
             `
             : `
               <div class="lock">
-                El acta de apertura
+                El acta
                 aún no ha sido generada.
               </div>
             `
@@ -1379,7 +2017,7 @@ function renderActaAperturaBlock(
         'var(--wait)',
 
       texto:
-        'Documento firmado cargado'
+        'Documento cargado'
     },
 
     aprobada: {
@@ -1452,58 +2090,78 @@ function renderActaAperturaBlock(
         );
 
   const firmado =
-    acta.documento_firmado_url
-      ? `
-        <a
-          href="${acta.documento_firmado_url}"
-          target="_blank"
-          rel="noopener"
-          class="btn"
-          style="
-            display:block;
-            text-align:center;
-            text-decoration:none;
-            background:
-              var(--done);
-            color:#fff;
-            margin-bottom:8px;
-          "
-        >
-          ✓ Abrir acta firmada
-        </a>
-      `
-      : (
-          puedeGestionar
-            ? `
-              <button
-                class="btn"
-                style="
-                  background:
-                    var(--leche);
-                  color:#fff;
-                  width:100%;
-                  margin-bottom:8px;
-                "
-                onclick="
-                  cargarActaAperturaFirmada()
-                "
-              >
-                📎 Cargar acta firmada
-              </button>
-            `
-            : `
-              <div
-                class="lock"
-                style="
-                  margin-bottom:8px;
-                "
-              >
-                Aún no se carga el
-                documento firmado.
-              </div>
-            `
-        );
+  acta.documento_firmado_url
+    ? `
+      <a
+        href="${acta.documento_firmado_url}"
+        target="_blank"
+        rel="noopener"
+        class="btn"
+        style="
+          display:block;
+          text-align:center;
+          text-decoration:none;
+          background:
+            var(--done);
+          color:#fff;
+          margin-bottom:8px;
+        "
+      >
+        ✓ Abrir acta cargada
+      </a>
 
+      ${
+        puedeGestionar
+          ? `
+            <button
+              class="btn"
+              style="
+                background:
+                  var(--leche);
+                color:#fff;
+                width:100%;
+                margin-bottom:8px;
+              "
+              onclick="
+                cargarActaAperturaFirmada()
+              "
+            >
+              📎 Reemplazar acta cargada
+            </button>
+          `
+          : ''
+      }
+    `
+    : (
+        puedeGestionar
+          ? `
+            <button
+              class="btn"
+              style="
+                background:
+                  var(--leche);
+                color:#fff;
+                width:100%;
+                margin-bottom:8px;
+              "
+              onclick="
+                cargarActaAperturaFirmada()
+              "
+            >
+              📎 Cargar acta
+            </button>
+          `
+          : `
+            <div
+              class="lock"
+              style="
+                margin-bottom:8px;
+              "
+            >
+              Aún no se carga el documento.
+            </div>
+          `
+      );
   const bloqueComentarios =
     puedeGestionar
       ? `
@@ -1585,7 +2243,7 @@ function renderActaAperturaBlock(
     <div class="sect">
 
       <h3>
-        Acta de apertura
+        Acta de inicio y entrega recepción
       </h3>
 
       <div
@@ -1643,7 +2301,7 @@ function renderActaAperturaBlock(
 
         <div class="ib">
           <div class="k">
-            Subcontratista
+            Cuadrilla
           </div>
 
           <div class="v">
@@ -1666,7 +2324,7 @@ function renderActaAperturaBlock(
                 margin-top:4px;
               "
             >
-              Fecha de carga/firma:
+              Fecha de carga:
               <b>
                 ${acta.fecha_firma}
               </b>
@@ -1688,7 +2346,8 @@ function renderActaRecepcionBlock(
     p.actaRecepcion;
 
   const puedeGestionar =
-    ROLE === 'gen';
+  ROLE === 'gen' ||
+  ROLE === 'sub';
 
   const trabajoTerminado =
     p.status === 'at';
@@ -1818,7 +2477,7 @@ function renderActaRecepcionBlock(
         'var(--wait)',
 
       texto:
-        'Documento firmado cargado'
+        'Documento cargado'
     },
 
     aprobada: {
@@ -1891,57 +2550,78 @@ function renderActaRecepcionBlock(
         );
 
   const firmado =
-    acta.documento_firmado_url
-      ? `
-        <a
-          href="${acta.documento_firmado_url}"
-          target="_blank"
-          rel="noopener"
-          class="btn"
-          style="
-            display:block;
-            text-align:center;
-            text-decoration:none;
-            background:
-              var(--done);
-            color:#fff;
-            margin-bottom:8px;
-          "
-        >
-          ✓ Abrir acta de recepción firmada
-        </a>
-      `
-      : (
-          puedeGestionar
-            ? `
-              <button
-                class="btn"
-                style="
-                  background:
-                    var(--leche);
-                  color:#fff;
-                  width:100%;
-                  margin-bottom:8px;
-                "
-                onclick="
-                  cargarActaRecepcionFirmada()
-                "
-              >
-                📎 Cargar acta firmada
-              </button>
-            `
-            : `
-              <div
-                class="lock"
-                style="
-                  margin-bottom:8px;
-                "
-              >
-                Aún no se carga el
-                documento firmado.
-              </div>
-            `
-        );
+  acta.documento_firmado_url
+    ? `
+      <a
+        href="${acta.documento_firmado_url}"
+        target="_blank"
+        rel="noopener"
+        class="btn"
+        style="
+          display:block;
+          text-align:center;
+          text-decoration:none;
+          background:
+            var(--done);
+          color:#fff;
+          margin-bottom:8px;
+        "
+      >
+        ✓ Abrir acta de recepción cargada
+      </a>
+
+      ${
+        puedeGestionar
+          ? `
+            <button
+              class="btn"
+              style="
+                background:
+                  var(--leche);
+                color:#fff;
+                width:100%;
+                margin-bottom:8px;
+              "
+              onclick="
+                cargarActaRecepcionFirmada()
+              "
+            >
+              📎 Reemplazar acta cargada
+            </button>
+          `
+          : ''
+      }
+    `
+    : (
+        puedeGestionar
+          ? `
+            <button
+              class="btn"
+              style="
+                background:
+                  var(--leche);
+                color:#fff;
+                width:100%;
+                margin-bottom:8px;
+              "
+              onclick="
+                cargarActaRecepcionFirmada()
+              "
+            >
+              📎 Cargar acta
+            </button>
+          `
+          : `
+            <div
+              class="lock"
+              style="
+                margin-bottom:8px;
+              "
+            >
+              Aún no se carga el documento.
+            </div>
+          `
+      );
 
   const bloqueComentarios =
     puedeGestionar
@@ -2111,7 +2791,7 @@ function renderActaRecepcionBlock(
                 margin-top:4px;
               "
             >
-              Fecha de carga/firma:
+              Fecha de carga:
               <b>
                 ${acta.fecha_firma}
               </b>
@@ -2138,9 +2818,8 @@ async function openSheet(id){
   const [
   fotos,
   adjuntos,
-  actaApertura,
-  actaRecepcion
-  ] = await Promise.all([
+  actaApertura
+] = await Promise.all([
   cargarFotos(
     CUR.pv
   ),
@@ -2152,13 +2831,8 @@ async function openSheet(id){
   cargarActaIndividual(
     CUR.pv,
     'apertura'
-  ),
-
-  cargarActaIndividual(
-    CUR.pv,
-    'recepcion'
   )
-  ]);
+]);
 
 CUR.fotosPrev =
   fotos.prev;
@@ -2171,9 +2845,6 @@ CUR.adjuntos =
 
 CUR.actaApertura =
   actaApertura;
-
-CUR.actaRecepcion =
-  actaRecepcion;
   } catch (error) {
   console.error(error);
   toast('No fue posible cargar toda la información de la lechería');
@@ -2182,9 +2853,34 @@ CUR.actaRecepcion =
   const p = CUR;
   document.getElementById('shTitle').textContent='P.V. '+p.pv;
   document.getElementById('shSub').textContent=`${p.calle||''} · ${p.municipio}, ${p.estado}`;
-  const bd=document.getElementById('shBadge');
-  bd.className='stbadge '+(p.status==='at'?'st-at':'st-no');
-  bd.textContent=p.status==='at'?'Atendido':'No atendido';
+  const bd =
+  document.getElementById(
+    'shBadge'
+  );
+
+  if (p.status === 'at') {
+    bd.className =
+      'stbadge st-at';
+
+    bd.textContent =
+      'Atendido';
+
+  } else if (
+    p.status === 'ini'
+  ) {
+    bd.className =
+      'stbadge st-ini';
+
+    bd.textContent =
+      'Iniciada';
+
+  } else {
+    bd.className =
+      'stbadge st-no';
+
+    bd.textContent =
+      'No atendido';
+  }
 
   const exc=p.m2-M2_STD;
   const canPintor = ROLE==='sub';
@@ -2210,20 +2906,80 @@ CUR.actaRecepcion =
     ${canPintor?`<div class="ph add" onclick="addPhotoMenu()"><span class="plus">+</span>Agregar</div>`:''}</div>
     ${canPintor&&faltantesCat.length?`<div class="photo-req">Obligatorias pendientes: ${faltantesCat.map(c=>CAT_LABEL[c]).join(', ')}</div>`:''}</div>`;
 
-  let sup=`<div class="sect"><h3>Superficie</h3><div class="infogrid">
-    <div class="ib"><div class="k">Unidad estándar (a la dependencia)</div><div class="v">21 m²</div></div>
-    <div class="ib"><div class="k">Superficie real ejecutada</div><div class="v">${
-      canPintor&&p.status==='at'
-      ?`<input class="mono" type="number" min="21" value="${p.m2}" style="width:70px;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:14px;font-weight:700" onchange="setM2(this.value)">`
-      :p.m2+' m²'}</div></div></div>`;
+  let sup=`<div class="sect"><h3>Superficie</h3>
+    <div class="infogrid">
+      <div class="ib">
+        <div class="k">Unidad estándar (a la dependencia)</div>
+        <div class="v">21 m²</div>
+      </div>
+      <div class="ib">
+        <div class="k">Superficie real ejecutada</div>
+        <div class="v">${
+          canPintor &&
+            p.status === 'at' &&
+            !p.m2_protegido
+              ? `
+                <input
+                  class="mono"
+                  type="number"
+                  min="${M2_STD}"
+                  max="${M2_MAX}"
+                  value="${p.m2}"
+                  style="
+                    width:70px;
+                    border:1px solid var(--line);
+                    border-radius:6px;
+                    padding:4px 6px;
+                    font-size:14px;
+                    font-weight:700
+                  "
+                  onchange="setM2(this.value)"
+                >
+              `
+              : `
+                ${p.m2} m²
+                ${
+                  p.m2_protegido
+                    ? `
+                      <div
+                        style="
+                          font-size:9px;
+                          color:var(--wait);
+                          margin-top:3px;
+                        "
+                      >
+                        Superficie histórica protegida
+                      </div>
+                    `
+                    : ''
+                }
+              `}
+        </div>
+      </div>
+  </div>`;
+
   if(exc>0){
-    const precioSub=precioExtraSub(p.sub);
+    //const precioSub=precioExtraSub(p.sub);
     const evOk = p.m2_excedente > 0;
-    sup+=`<div style="height:8px"></div><div class="extra-box">
-      <div class="top"><div class="t">Excedente (pago a subcontratista)</div><div class="badge">+${exc} m²</div></div>
-      <div class="calc">La dependencia paga fijo por unidad estándar; este excedente <b>no se cobra a la dependencia</b>.<br>
-      Es un <b>registro interno</b> para el pago a <b>${p.sub}</b>: ${exc} m² × $${precioSub.toFixed(2)} = <b>$${(exc*precioSub).toLocaleString('es-MX',{minimumFractionDigits:2})}</b><br>
-      <span style="color:var(--mut);font-size:10px">Precio por m² configurable al cerrar el subcontrato.</span></div>
+    sup+=`<div style="height:8px"></div>
+      <div class="extra-box">
+        <div class="top">
+          <div class="t">
+            Superficie excedente
+          </div>
+
+          <div class="badge">
+            +${exc} m²
+          </div>
+        </div>
+
+        <div class="calc">
+          La dependencia paga fijo por la
+          unidad estándar de 21 m².
+          <br>
+          La superficie adicional
+          <b>no incrementa el importe de la estimación</b>.
+        </div>
       <div style="margin-top:8px">
         ${p.evidencia_url
         ?
@@ -2257,7 +3013,7 @@ CUR.actaRecepcion =
     <div class="tldot on"></div>
     <div class="tx">
       <b>Capturado</b>
-      <span>${p.sub || 'Sin subcontratista'} · ${p.zona || 'Sin zona'}</span>
+      <span>${p.sub || 'Sin Cuadrilla'} · ${p.zona || 'Sin zona'}</span>
     </div>
     <div class="when">${nPrevTL ? '✓' : '—'}</div>
     </div>
@@ -2280,6 +3036,7 @@ CUR.actaRecepcion =
   // requisito de fotos (anexo): 3 previas + 3 finales, con fachada global y letrero
   const reqOk = fotosOk(p);
   const aperturaAutorizada =
+  p.actaApertura?.estado === 'en_revision' ||
   p.actaApertura?.estado === 'aprobada';
   const nP=(p.fotosPrev||[]).length, nF=(p.fotosFin||[]).length;
   const faltaCat=faltanCatFin(p);
@@ -2389,7 +3146,10 @@ CUR.actaRecepcion =
   let actions='';
 
   if (ROLE === 'sub') {
-  if (p.status === 'no') {
+  if (
+  p.status === 'no' ||
+  p.status === 'ini'
+  ) {
     const puedeMarcarAtendido =
       reqOk &&
       aperturaAutorizada;
@@ -2551,21 +3311,11 @@ const fechasBlock = p.fcomp
   `
   : '';
 
-  const puedeVerAdministrativo =
-  ROLE !== 'sub';
-
-const actaAperturaBlock =
-  puedeVerAdministrativo
-    ? renderActaAperturaBlock(p)
-    : '';
-
-const actaRecepcionBlock =
-  puedeVerAdministrativo
-    ? renderActaRecepcionBlock(p)
-    : '';
+  const actaAperturaBlock =
+  renderActaAperturaBlock(p);
 
 const repBtn =
-  puedeVerAdministrativo &&
+  ROLE !== 'sub' &&
   (
     (p.fotosPrev || []).length > 0 ||
     (p.fotosFin || []).length > 0
@@ -2642,7 +3392,7 @@ const autorizacionBlock =
     : '';
 
   document.getElementById('sbody').innerHTML=
-    info+fechasBlock+autorizacionBlock+actaAperturaBlock+`<div class="sect"><h3>Evidencia fotográfica</h3>${prevLane}${finLane}</div>`+adjBlock+sup+tl+actaRecepcionBlock+`<div class="actions">${actions}${repBtn}</div>`;
+    info+fechasBlock+autorizacionBlock+actaAperturaBlock+`<div class="sect"><h3>Evidencia fotográfica</h3>${prevLane}${finLane}</div>`+adjBlock+sup+tl+`<div class="actions">${actions}${repBtn}</div>`;
   document.getElementById('sheet').classList.add('show');
 }
 
@@ -2858,18 +3608,22 @@ function crearPDFActaApertura(
 
   const doc =
     new jsPDF({
-      orientation:
-        'portrait',
-
-      unit:
-        'mm',
-
-      format:
-        'a4'
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
     });
 
+  const domicilio =
+    [
+      p.calle,
+      p.colonia,
+      p.localidad
+    ]
+      .filter(Boolean)
+      .join(', ');
+
   /*
-   * Encabezado.
+   * Encabezado institucional.
    */
   doc.setFillColor(
     13,
@@ -2881,7 +3635,7 @@ function crearPDFActaApertura(
     0,
     0,
     210,
-    30,
+    31,
     'F'
   );
 
@@ -2896,99 +3650,116 @@ function crearPDFActaApertura(
     'bold'
   );
 
-  doc.setFontSize(15);
+  doc.setFontSize(13);
 
   doc.text(
-    'Acta de apertura de trabajos',
+    'LUMEN-OAX PROYECTOS Y CONSTRUCCIÓN S.A. DE C.V.',
     14,
-    13
+    10
   );
-
-  doc.setFontSize(8.5);
 
   doc.setFont(
     undefined,
     'normal'
   );
 
+  doc.setFontSize(7.6);
+
   doc.text(
-    `Procedimiento ${PROCEDIMIENTO}`,
+    'PRIV. DE CARRANZA LOTE 2, COLONIA BAJO, SAN LORENZO CACAOTEPEC, OAXACA',
     14,
-    20
+    16
   );
 
   doc.text(
-    `P.V. ${p.pv}`,
+    'R.F.C. LPC230130LRA · CORREO: lumenoax@outlook.com',
     14,
-    25
+    21
   );
 
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(8);
+
+  doc.text(
+    `Procedimiento: ${PROCEDIMIENTO}`,
+    14,
+    27
+  );
+
+  /*
+   * Título.
+   */
   doc.setTextColor(
     20,
     20,
     20
   );
 
-  let y = 42;
+  doc.setFont(
+    undefined,
+    'bold'
+  );
 
-  const domicilio =
-    [
-      p.calle,
-      p.colonia,
-      p.localidad
-    ]
-      .filter(Boolean)
-      .join(', ');
+  doc.setFontSize(13);
 
+  doc.text(
+    'ACTA DE INICIO Y ENTREGA RECEPCIÓN DE SERVICIO',
+    105,
+    41,
+    {
+      align: 'center'
+    }
+  );
+
+  let y = 51;
+
+  /*
+   * Datos del punto de venta.
+   */
   const filas = [
     [
-      'Clave P.V.',
+      'Punto de venta',
       p.pv
     ],
-
     [
       'Entidad',
       p.estado || '—'
     ],
-
     [
       'Municipio',
       p.municipio || '—'
     ],
-
     [
       'Domicilio',
       domicilio || '—'
     ],
-
     [
       'Zona',
       p.zona || '—'
     ],
-
     [
-      'Subcontratista',
+      'Cuadrilla',
       p.sub || '—'
     ],
-
     [
-      'Fecha compromiso',
-      p.fcomp || '—'
+    'Fecha de servicio',
+    '________________________'
     ],
-
     [
-      'Contratista general',
-      acta.contratista ||
-      EMPRESA
+      'Contratista',
+      acta.contratista || EMPRESA
     ],
-
     [
       'Dependencia',
       DEPENDENCIA
     ]
   ];
 
-  doc.setFontSize(9.5);
+  doc.setFontSize(8.5);
 
   filas.forEach(
     ([etiqueta, valor]) => {
@@ -3011,137 +3782,209 @@ function crearPDFActaApertura(
       const lineas =
         doc.splitTextToSize(
           String(valor),
-          118
+          125
         );
 
       doc.text(
         lineas,
-        70,
+        66,
         y
       );
 
       y += Math.max(
-        7,
-        lineas.length * 5
+        4.8,
+        lineas.length * 3.8
       );
     }
   );
 
-  y += 5;
+  y += 1.5;
 
-  doc.setFont(
-    undefined,
-    'bold'
-  );
+  /*
+   * Introducción.
+   */
+  const intro =
+    'Reunidos el personal de LUMEN-OAX PROYECTOS Y CONSTRUCCIÓN S.A. DE C.V. y el Administrador del Punto de Venta de LECHE PARA EL BIENESTAR, S.A. DE C.V., se hace constar el inicio, ejecución y entrega-recepción de los servicios correspondientes al inmueble antes descrito.';
 
-  doc.setFontSize(10);
-
-  doc.text(
-    'Objeto del acta',
-    14,
-    y
-  );
-
-  y += 7;
+  doc.setFontSize(8.3);
 
   doc.setFont(
     undefined,
     'normal'
   );
 
-  doc.setFontSize(9);
-
-  const texto =
-    'Por medio de la presente se deja constancia de la apertura del punto de venta indicado y del inicio de los trabajos correspondientes al servicio de pintura de fachada, conforme al procedimiento y programación aplicables.';
-
-  const lineasTexto =
+  const introLineas =
     doc.splitTextToSize(
-      texto,
-      180
+      intro,
+      182
     );
 
   doc.text(
-    lineasTexto,
+    introLineas,
     14,
     y
   );
 
   y +=
-    lineasTexto.length *
-    5 +
-    7;
-
-  if (
-    acta.comentarios
-  ) {
-    doc.setFont(
-      undefined,
-      'bold'
-    );
-
-    doc.text(
-      'Comentarios:',
-      14,
-      y
-    );
-
-    y += 6;
-
-    doc.setFont(
-      undefined,
-      'normal'
-    );
-
-    const lineasComentarios =
-      doc.splitTextToSize(
-        acta.comentarios,
-        180
-      );
-
-    doc.text(
-      lineasComentarios,
-      14,
-      y
-    );
-
-    y +=
-      lineasComentarios.length *
-      5 +
-      8;
-  }
+    introLineas.length * 3.8 +
+    3;
 
   /*
-   * Firmas.
+   * DECLARACIONES
    */
-  y =
-    Math.max(
-      y + 18,
-      225
-    );
-
-  doc.setDrawColor(
-    100,
-    100,
-    100
+  doc.setFont(
+    undefined,
+    'bold'
   );
 
-  doc.line(
-    20,
-    y,
-    90,
-    y
-  );
+  doc.setFontSize(9.5);
 
-  doc.line(
-    120,
-    y,
-    190,
+  doc.text(
+    'DECLARACIONES',
+    14,
     y
   );
 
   y += 6;
 
-  doc.setFontSize(8.5);
+  doc.setFontSize(8.1);
+
+  const declaraciones = [
+    {
+      titulo:
+        'I. Declara la Contratista, a través de su representante:',
+      textos: [
+        'a) Que los servicios objeto del contrato referido han sido concluidos en su totalidad en el inmueble antes descrito, conforme a las especificaciones técnicas pactadas y detalladas en el Acta de Inicio de Servicios correspondiente.',
+        'b) Que hace entrega formal de los servicios ejecutados al Administrador de la Lechería.'
+      ]
+    },
+    {
+      titulo:
+        'II. Declara el Administrador:',
+      textos: [
+        'a) Que, previa inspección física del inmueble, recibe de conformidad los servicios ejecutados por la Contratista.',
+        'b) Que las observaciones o pendientes, en su caso, quedan asentadas en el apartado correspondiente del presente instrumento.'
+      ]
+    }
+  ];
+
+  declaraciones.forEach(
+    bloque => {
+      doc.setFont(
+        undefined,
+        'bold'
+      );
+
+      const tituloLineas =
+        doc.splitTextToSize(
+          bloque.titulo,
+          182
+        );
+
+      doc.text(
+        tituloLineas,
+        14,
+        y
+      );
+
+      y +=
+        tituloLineas.length *
+        3.8 +
+        1.5;
+
+      doc.setFont(
+        undefined,
+        'normal'
+      );
+
+      bloque.textos.forEach(
+        texto => {
+          const lineas =
+            doc.splitTextToSize(
+              texto,
+              178
+            );
+
+          doc.text(
+            lineas,
+            18,
+            y
+          );
+
+          y +=
+            lineas.length *
+            3.8 +
+            1.5;
+        }
+      );
+
+      y += 0.5;
+    }
+  );
+
+  /*
+   * Salto de página controlado.
+   */
+  if (y > 205) {
+    doc.addPage();
+    y = 18;
+  }
+
+  /*
+   * ACUERDOS
+   */
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(9.5);
+
+  doc.text(
+    'ACUERDOS',
+    14,
+    y
+  );
+
+  y += 6;
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(8.1);
+
+  const acuerdos = [
+    '1. La firma del presente instrumento por parte del Administrador constituye la aceptación de conformidad de los servicios entregados por la Contratista en los términos aquí descritos.',
+    '2. La garantía de los servicios ejecutados será la señalada en el apartado anterior, contada a partir de la fecha de firma de la presente Acta.'
+  ];
+
+  acuerdos.forEach(
+    texto => {
+      const lineas =
+        doc.splitTextToSize(
+          texto,
+          182
+        );
+
+      doc.text(
+        lineas,
+        14,
+        y
+      );
+
+      y +=
+        lineas.length *
+        3.8 +
+        2;
+    }
+  );
+
+  /*
+   * Observaciones.
+   */
+  y += 2;
 
   doc.setFont(
     undefined,
@@ -3149,64 +3992,260 @@ function crearPDFActaApertura(
   );
 
   doc.text(
-    'CONTRATISTA GENERAL',
-    55,
-    y,
-    {
-      align:
-        'center'
-    }
+    'Observaciones, impedimentos o pendientes, en su caso (inicio y/o entrega-recepción):',
+    14,
+    y
   );
 
-  doc.text(
-    'DEPENDENCIA',
-    155,
-    y,
-    {
-      align:
-        'center'
-    }
-  );
-
-  y += 5;
+  y += 6;
 
   doc.setFont(
     undefined,
     'normal'
   );
 
-  const empresaCorta =
-    doc.splitTextToSize(
-      acta.contratista ||
-      EMPRESA,
-      66
+  const comentarios =
+    acta.comentarios &&
+    acta.comentarios.trim()
+      ? acta.comentarios.trim()
+      : '';
+
+  if (comentarios) {
+    const lineas =
+      doc.splitTextToSize(
+        comentarios,
+        182
+      );
+
+    doc.text(
+      lineas,
+      14,
+      y
     );
 
-  const dependenciaCorta =
+    y +=
+      lineas.length *
+      4.2 +
+      3;
+  }
+
+  /*
+   * Líneas libres para observaciones manuales.
+   */
+  for (
+    let i = 0;
+    i < 2;
+    i++
+  ) {
+    doc.line(
+      14,
+      y,
+      196,
+      y
+    );
+
+    y += 5;
+  }
+
+  /*
+   * Texto de cierre.
+   */
+  const cierre =
+    'Con lo anterior, ambas partes dejan constancia de la puesta a disposición del inmueble, del inicio operativo del servicio y de la entrega-recepción de los trabajos de pintura de fachada y mantenimiento de letrero ya concluidos, sin que la presente acta modifique el contrato ni sus anexos. No habiendo más asuntos que tratar, se firma de conformidad la presente Acta al calce por quienes en ella intervienen, para los efectos legales y administrativos a que haya lugar.';
+
+  const cierreLineas =
     doc.splitTextToSize(
-      DEPENDENCIA,
-      66
+      cierre,
+      182
     );
 
   doc.text(
-    empresaCorta,
-    55,
-    y,
-    {
-      align:
-        'center'
-    }
+    cierreLineas,
+    14,
+    y
   );
 
-  doc.text(
-    dependenciaCorta,
-    155,
-    y,
-    {
-      align:
-        'center'
-    }
-  );
+  y +=
+    cierreLineas.length *
+    3.8 +
+    6;
+
+  /*
+   * Si no cabe la zona de firmas,
+   * mandamos firmas a página nueva.
+   */
+  if (y > 250) {
+    doc.addPage();
+    y = 45;
+  }
+
+  /*
+ * Firmas.
+ *
+ * Distribución:
+ *
+ * Nombre y firma
+ *
+ *
+ * ____________________
+ *
+ * Cargo
+ * Institución
+ */
+
+/*
+ * Si por algún domicilio o texto largo
+ * las firmas ya no caben, las mandamos
+ * a una página nueva.
+ */
+if (y > 238) {
+  doc.addPage();
+  y = 45;
+}
+
+/*
+ * Dejamos una separación cómoda
+ * después del texto de cierre.
+ */
+y += 7;
+
+/*
+ * Usamos coordenadas independientes
+ * para que ambos lados queden
+ * perfectamente alineados.
+ */
+const yNombreFirma =
+  y;
+
+const yLineaFirma =
+  y + 14;
+
+const yCargoFirma =
+  y + 20;
+
+const yEmpresaFirma =
+  y + 25;
+
+
+/*
+ * "Nombre y firma"
+ * ARRIBA de la línea.
+ */
+doc.setTextColor(
+  20,
+  20,
+  20
+);
+
+doc.setFont(
+  undefined,
+  'normal'
+);
+
+doc.setFontSize(7.5);
+
+doc.text(
+  'Nombre y firma',
+  55,
+  yNombreFirma,
+  {
+    align: 'center'
+  }
+);
+
+doc.text(
+  'Nombre y firma',
+  155,
+  yNombreFirma,
+  {
+    align: 'center'
+  }
+);
+
+
+/*
+ * Líneas de firma.
+ */
+doc.setDrawColor(
+  90,
+  90,
+  90
+);
+
+doc.line(
+  20,
+  yLineaFirma,
+  90,
+  yLineaFirma
+);
+
+doc.line(
+  120,
+  yLineaFirma,
+  190,
+  yLineaFirma
+);
+
+
+/*
+ * Cargos.
+ */
+doc.setFont(
+  undefined,
+  'bold'
+);
+
+doc.setFontSize(8);
+
+doc.text(
+  'ADMINISTRADOR DE LA LECHERÍA',
+  55,
+  yCargoFirma,
+  {
+    align: 'center'
+  }
+);
+
+doc.text(
+  'REPRESENTANTE / SUPERVISOR',
+  155,
+  yCargoFirma,
+  {
+    align: 'center'
+  }
+);
+
+
+/*
+ * Instituciones.
+ */
+doc.setFont(
+  undefined,
+  'normal'
+);
+
+doc.setFontSize(7.6);
+
+doc.text(
+  'LECHE PARA EL BIENESTAR, S.A. DE C.V.',
+  55,
+  yEmpresaFirma,
+  {
+    align: 'center'
+  }
+);
+
+doc.text(
+  [
+    'LUMEN-OAX PROYECTOS Y CONSTRUCCIÓN',
+    'S.A. DE C.V.'
+  ],
+  155,
+  yEmpresaFirma,
+  {
+    align: 'center'
+  }
+);
 
   /*
    * Pie.
@@ -3220,12 +4259,11 @@ function crearPDFActaApertura(
   );
 
   doc.text(
-    `Generada por Bitácora de Lecherías · ${new Date().toLocaleString('es-MX')}`,
+    'Se firma para constancia de inicio y entrega-recepción de los servicios.',
     105,
-    290,
+    286,
     {
-      align:
-        'center'
+      align: 'center'
     }
   );
 
@@ -3357,7 +4395,7 @@ function crearPDFActaRecepcion(
     ],
 
     [
-      'Subcontratista',
+      'Cuadrilla',
       p.sub || '—'
     ],
 
@@ -3670,12 +4708,16 @@ async function generarActaApertura() {
     return;
   }
 
-  if (ROLE !== 'gen') {
-    toast(
-      'Solo el contratista general puede generar el acta de apertura'
-    );
-    return;
-  }
+  if (
+  ROLE !== 'gen' &&
+  ROLE !== 'sub'
+) {
+  toast(
+    'Tu perfil no puede generar el acta de apertura'
+  );
+
+  return;
+}
 
   try {
     let acta =
@@ -3735,11 +4777,11 @@ async function generarActaApertura() {
      * para impresión/firma.
      */
     doc.save(
-      `Acta_Apertura_${CUR.pv}.pdf`
+      `Acta_Inicio_Entrega_Recepcion_${CUR.pv}.pdf`
     );
 
     toast(
-      'Acta de apertura generada'
+      'Acta de inicio y entrega-recepción generada'
     );
 
     await openSheet(
@@ -3763,13 +4805,16 @@ async function generarActaRecepcion() {
     return;
   }
 
-  if (ROLE !== 'gen') {
-    toast(
-      'Solo el contratista general puede generar el acta de recepción'
-    );
+  if (
+  ROLE !== 'gen' &&
+  ROLE !== 'sub'
+) {
+  toast(
+    'Tu perfil no puede generar el acta de recepción'
+  );
 
-    return;
-  }
+  return;
+}
 
   if (CUR.status !== 'at') {
     toast(
@@ -3861,13 +4906,14 @@ async function guardarComentarioApertura() {
   }
 
   if (
-    ROLE !== 'gen'
-  ) {
-    toast(
-      'Tu perfil no puede modificar los comentarios'
-    );
-    return;
-  }
+  ROLE !== 'gen' &&
+  ROLE !== 'sub'
+) {
+  toast(
+    'Tu perfil no puede modificar los comentarios'
+  );
+  return;
+}
 
   const campo =
     document.getElementById(
@@ -3917,7 +4963,10 @@ async function guardarComentarioRecepcion() {
     return;
   }
 
-  if (ROLE !== 'gen') {
+  if (
+  ROLE !== 'gen' &&
+  ROLE !== 'sub'
+) {
     toast(
       'Tu perfil no puede modificar los comentarios'
     );
@@ -4003,13 +5052,14 @@ async function cargarActaAperturaFirmada() {
   }
 
   if (
-    ROLE !== 'gen'
-  ) {
-    toast(
-      'Solo el contratista general puede cargar el acta firmada'
-    );
-    return;
-  }
+  ROLE !== 'gen' &&
+  ROLE !== 'sub'
+) {
+  toast(
+    'Tu perfil no puede cargar el acta firmada'
+  );
+  return;
+}
 
   const archivo =
     await seleccionarDocumentoActa();
@@ -4056,13 +5106,16 @@ async function cargarActaRecepcionFirmada() {
     return;
   }
 
-  if (ROLE !== 'gen') {
-    toast(
-      'Solo el contratista general puede cargar el acta firmada'
-    );
+  if (
+  ROLE !== 'gen' &&
+  ROLE !== 'sub'
+) {
+  toast(
+    'Tu perfil no puede cargar el acta firmada'
+  );
 
-    return;
-  }
+  return;
+}
 
   const archivo =
     await seleccionarDocumentoActa();
@@ -4171,16 +5224,20 @@ async function addExtraEvidencia() {
 async function markAt() {
   if (!CUR || ROLE !== 'sub') return;
 
-  if (
-    CUR.actaApertura?.estado !==
-    'aprobada'
-  ) {
-    toast(
-      'Esta lechería aún no está autorizada para iniciar trabajos'
-    );
+  const estadoApertura =
+  CUR.actaApertura?.estado;
 
-    return;
-  }
+const aperturaAutorizada =
+  estadoApertura === 'en_revision' ||
+  estadoApertura === 'aprobada';
+
+if (!aperturaAutorizada) {
+  toast(
+    'Esta lechería aún no está autorizada para iniciar trabajos'
+  );
+
+  return;
+}
 
   const nP = (CUR.fotosPrev || []).length;
   const nF = (CUR.fotosFin || []).length;
@@ -4223,12 +5280,81 @@ async function markAt() {
 }
 
 async function setM2(v) {
-  const m2Anterior = CUR.m2;
 
-  CUR.m2 = Math.max(M2_STD, Number(v) || M2_STD);
-  CUR.m2_excedente = Math.max(0, CUR.m2 - M2_STD);
+  if (!CUR || ROLE !== 'sub') {
+    return;
+  }
+
+  const m2Anterior =
+    Number(CUR.m2);
+
+  const valor =
+    Number(v);
+
+
+  if (!Number.isFinite(valor)) {
+
+    toast(
+      'Ingresa una superficie válida'
+    );
+
+    await openSheet(CUR.id);
+    return;
+  }
+
+
+  /*
+   * HISTÓRICOS PROTEGIDOS
+   *
+   * Si ya tenían más de 28 m² antes
+   * del nuevo límite, no permitimos
+   * modificarlos.
+   */
+  if (CUR.m2_protegido) {
+
+  toast(
+    `Este registro conserva su superficie histórica de ${m2Anterior} m²`
+  );
+
+  await openSheet(CUR.id);
+  return;
+}
+
+
+  if (valor < M2_STD) {
+
+    toast(
+      `La superficie mínima es de ${M2_STD} m²`
+    );
+
+    await openSheet(CUR.id);
+    return;
+  }
+
+
+  if (valor > M2_MAX) {
+
+    toast(
+      `La superficie máxima permitida es de ${M2_MAX} m²`
+    );
+
+    await openSheet(CUR.id);
+    return;
+  }
+
+
+  CUR.m2 =
+    valor;
+
+  CUR.m2_excedente =
+    Math.max(
+      0,
+      valor - M2_STD
+    );
+
 
   try {
+
     await guardarM2(
       CUR.pv,
       CUR.m2,
@@ -4238,19 +5364,34 @@ async function setM2(v) {
       CUR.freal
     );
 
-    openSheet(CUR.id);
+    await openSheet(
+      CUR.id
+    );
+
     render();
+
   } catch (error) {
+
     console.error(error);
 
-    CUR.m2 = m2Anterior;
-    CUR.m2_excedente = Math.max(0, m2Anterior - M2_STD);
+    CUR.m2 =
+      m2Anterior;
 
-    toast('No se pudo guardar la superficie');
-    openSheet(CUR.id);
+    CUR.m2_excedente =
+      Math.max(
+        0,
+        m2Anterior - M2_STD
+      );
+
+    toast(
+      'No se pudo guardar la superficie'
+    );
+
+    await openSheet(
+      CUR.id
+    );
   }
 }
-
 async function vobo(aprobado) {
   if (!CUR || ROLE !== 'admin') return;
 
@@ -4291,7 +5432,7 @@ async function vobo(aprobado) {
     CUR.vobo = 'rej';
     CUR.motivo = motivo;
 
-    toast('Rechazado — regresa al subcontratista');
+    toast('Rechazado — regresa a la cuadrilla');
     await openSheet(CUR.id);
     render();
   } catch (error) {
@@ -4446,10 +5587,31 @@ function closeSheet() {
 }
 
 /* ============ MAPA ============ */
-function markerColor(p){
-  if(p.status!=='at') return '#9aa7b4';
-  if(p.vobo==='ok') return '#1f8a4c';
-  if(p.vobo==='rej') return '#c0362c';
+function markerColor(p) {
+  if (
+    p.status === 'ini'
+  ) {
+    return '#d6a000';
+  }
+
+  if (
+    p.status !== 'at'
+  ) {
+    return '#9aa7b4';
+  }
+
+  if (
+    p.vobo === 'ok'
+  ) {
+    return '#1f8a4c';
+  }
+
+  if (
+    p.vobo === 'rej'
+  ) {
+    return '#c0362c';
+  }
+
   return '#e08a1e';
 }
 
@@ -4502,7 +5664,18 @@ function drawMarkers(){
     const lng = Number(p.lng);
     const c=markerColor(p);
     const m=L.circleMarker([lat,lng],{radius:6,color:'#fff',weight:1.5,fillColor:c,fillOpacity:.95});
-    const stTxt = p.status==='at' ? (p.vobo==='ok'?'Con Vo.Bo.':p.vobo==='rej'?'Rechazado':'Atendido s/ Vo.Bo.') : 'No atendido';
+    const stTxt =
+    p.status === 'at'
+      ? (
+          p.vobo === 'ok'
+            ? 'Con Vo.Bo.'
+            : p.vobo === 'rej'
+              ? 'Rechazado'
+              : 'Atendido s/ Vo.Bo.'
+        )
+      : p.status === 'ini'
+        ? 'Iniciada'
+        : 'No atendido';
     m.bindPopup(`<b>P.V. ${p.pv}</b><br>${p.calle||''}<br><span style="color:#6b7b8c">${p.municipio}, ${p.estado}</span><br><b style="color:${c}">${stTxt}</b> · ${p.m2} m²<br><span class="popbtn" onclick="fromMap(${p.id})">Ver detalle</span>`);
     m.addTo(MAPLAYER); bounds.push([lat,lng]);
   });
@@ -4525,31 +5698,96 @@ function renderTablero(){
   pts.forEach(p=>{ (groups[p.sub||'(sin asignar)']=groups[p.sub||'(sin asignar)']||[]).push(p); });
   const heading=document.createElement('div');
   heading.className='sectlabel'; heading.style.margin='6px 0 10px';
-  heading.textContent = ROLE==='sub' ? 'Avance de mi cartera' : 'Avance por subcontratista';
+  heading.textContent = ROLE==='sub' ? 'Avance de mi cartera' : 'Avance por cuadrilla';
   sc.appendChild(heading);
   const subs=Object.keys(groups).sort();
   subs.forEach(s=>{
     const arr=groups[s], tot=arr.length;
     const at=arr.filter(p=>p.status==='at').length;
+    const ini =arr.filter(p => p.status === 'ini').length;
     const ok=arr.filter(p=>p.vobo==='ok').length;
     const wait=arr.filter(p=>p.status==='at'&&p.vobo==='wait').length;
     const rej=arr.filter(p=>p.vobo==='rej').length;
-    const no=tot-at;
+    const no =arr.filter(p => p.status === 'no').length;
     const pctOk=Math.round(ok/tot*100), pctWait=Math.round(wait/tot*100);
-    const zona=arr[0].zona||'';
+    const zonas =
+    [
+      ...new Set(
+        arr
+          .map(p => p.zona)
+          .filter(Boolean)
+      )
+    ]
+      .sort((a, b) =>
+        String(a).localeCompare(
+          String(b),
+          'es',
+          {
+            numeric: true,
+            sensitivity: 'base'
+          }
+        )
+      )
+    .join(', ');
     const d=document.createElement('div'); d.className='dashcard';
     d.innerHTML=`
       <div class="hd">
         <div class="av">${s.replace(/[^0-9A-Za-z]/g,'').slice(-3).toUpperCase()}</div>
-        <div class="nm"><b>${s}</b><span>${zona} · ${tot} lecherías</span></div>
+        <div class="nm"><b>${s}</b>
+        <span>
+          ${zonas || 'Sin zona'}
+          ·
+          ${tot} lecherías
+        </span></div>
         <div class="big"><div class="p">${Math.round(at/tot*100)}%</div><div class="l">atendido</div></div>
       </div>
       <div class="dbar"><div class="ok" style="width:${pctOk}%"></div><div class="wa" style="width:${pctWait}%"></div></div>
       <div class="dstats">
-        <div class="s"><div class="v">${no}</div><div class="k">Sin atender</div></div>
-        <div class="s"><div class="v" style="color:var(--wait)">${wait}</div><div class="k">Por Vo.Bo.</div></div>
-        <div class="s"><div class="v" style="color:var(--done)">${ok}</div><div class="k">Aprobadas</div></div>
-        <div class="s"><div class="v" style="color:var(--rej)">${rej}</div><div class="k">Rechazadas</div></div>
+        <div class="s">
+          <div class="v">
+            ${no}
+          </div>
+          <div class="k">
+            Sin atender
+          </div>
+        </div>
+
+        <div class="s">
+          <div
+            class="v"
+            style="color:#9a6700"
+          >
+            ${ini}
+          </div>
+          <div class="k">
+            Iniciadas
+          </div>
+        </div>
+
+        <div class="s">
+          <div
+            class="v"
+            style="color:var(--wait)"
+          >
+            ${wait}
+          </div>
+          <div class="k">
+            Por Vo.Bo.
+          </div>
+        </div>
+
+        <div class="s">
+          <div
+            class="v"
+            style="color:var(--done)"
+          >
+            ${ok}
+          </div>
+          <div class="k">
+            Aprobadas
+          </div>
+        </div>
+
       </div>`;
     sc.appendChild(d);
   });
@@ -4595,7 +5833,7 @@ function detalleExcedentes(datos) {
   const grupos = {};
 
   (datos.extras || []).forEach(extra => {
-    const sub = extra.sub || 'Sin subcontratista';
+    const sub = extra.sub || 'Sin cuadrilla';
 
     if (!grupos[sub]) {
       grupos[sub] = {
@@ -4628,522 +5866,784 @@ function detalleExcedentes(datos) {
   return grupos;
 }
 
-async function renderEstim() {
-  document.getElementById('crumbs').style.display =
-    'none';
+function renderEstim() {
+  document
+    .getElementById('crumbs')
+    .style.display = 'none';
 
-  document.getElementById('filters').style.display =
-    'none';
+  document
+    .getElementById('filters')
+    .style.display = 'none';
 
   const sc =
     document.getElementById('scroll');
 
-  sc.innerHTML = `
-    <div
-      style="
-        text-align:center;
-        color:var(--mut);
-        padding:45px 15px
-      "
-    >
-      Cargando estimación…
-    </div>
-  `;
-
-  try {
-    ESTIMACION =
-      await obtenerEstimacion();
-
-  } catch (error) {
-    console.error(
-      'No fue posible cargar la estimación:',
-      error
-    );
-
-    ESTIMACION = null;
-
+  /*
+   * SUB no debería llegar aquí porque
+   * la pestaña está oculta, pero dejamos
+   * también la protección lógica.
+   */
+  if (ROLE === 'sub') {
     sc.innerHTML = `
       <div
         style="
           text-align:center;
-          color:var(--rej);
-          padding:40px 15px
+          color:var(--mut);
+          padding:40px 15px;
         "
       >
-        No fue posible cargar la estimación.
-        <br><br>
-
-        <button
-          class="btn btn-leche"
-          onclick="renderEstim()"
-        >
-          Reintentar
-        </button>
+        Tu perfil no tiene acceso
+        al módulo de estimaciones.
       </div>
     `;
-
-    toast(
-      error.message ||
-      'No fue posible cargar la estimación'
-    );
 
     return;
   }
 
   /*
-   * Evita pintar la estimación si el usuario cambió
-   * de pestaña mientras cargaba.
+   * Primera entrada:
+   * usamos la semana actual, igual
+   * que en el concentrado de actas.
    */
-  if (TAB !== 'estim') {
+  if (
+    !ESTIMACION_PERIODO.inicio ||
+    !ESTIMACION_PERIODO.fin
+  ) {
+    const rango =
+      obtenerSemanaActual();
+
+    ESTIMACION_PERIODO.inicio =
+      rango.inicio;
+
+    ESTIMACION_PERIODO.fin =
+      rango.fin;
+  }
+
+  sc.innerHTML = `
+    <div class="note">
+      <b>Estimación por periodo de ejecución.</b>
+      <br><br>
+
+      Se consideran las lecherías cuya
+      <b>Fecha Real</b> se encuentre dentro
+      del periodo seleccionado.
+
+      <br><br>
+
+      Solamente las lecherías con
+      <b>Vo.Bo. aprobado</b> forman parte
+      del importe estimable.
+
+      <br><br>
+
+      Los metros excedentes no forman parte
+      del cobro a la dependencia.
+    </div>
+
+    <div class="sect">
+      <h3>Periodo</h3>
+
+      <div class="infogrid">
+
+        <div class="ib">
+          <div class="k">
+            Fecha inicial
+          </div>
+
+          <div class="v">
+            <input
+              id="estimFechaInicio"
+              type="date"
+              value="${ESTIMACION_PERIODO.inicio}"
+              style="
+                width:100%;
+                border:none;
+                background:transparent;
+                font:inherit;
+                font-weight:700;
+                color:var(--ink);
+                outline:none;
+              "
+            >
+          </div>
+        </div>
+
+        <div class="ib">
+          <div class="k">
+            Fecha final
+          </div>
+
+          <div class="v">
+            <input
+              id="estimFechaFin"
+              type="date"
+              value="${ESTIMACION_PERIODO.fin}"
+              style="
+                width:100%;
+                border:none;
+                background:transparent;
+                font:inherit;
+                font-weight:700;
+                color:var(--ink);
+                outline:none;
+              "
+            >
+          </div>
+        </div>
+
+      </div>
+
+      <div
+        style="
+          display:flex;
+          gap:8px;
+          margin-top:9px;
+        "
+      >
+        <button
+          class="btn"
+          style="
+            background:var(--milk);
+            color:var(--steel);
+          "
+          onclick="ponerSemanaActualEstimacion()"
+        >
+          Esta semana
+        </button>
+
+        <button
+          class="btn btn-leche"
+          onclick="aplicarPeriodoEstimacion()"
+        >
+          Consultar
+        </button>
+      </div>
+    </div>
+
+    <div id="estimResultado"></div>
+  `;
+
+  calcularEstimacionPeriodo();
+}
+
+function ponerSemanaActualEstimacion() {
+  const rango =
+    obtenerSemanaActual();
+
+  document
+    .getElementById(
+      'estimFechaInicio'
+    )
+    .value =
+      rango.inicio;
+
+  document
+    .getElementById(
+      'estimFechaFin'
+    )
+    .value =
+      rango.fin;
+
+  aplicarPeriodoEstimacion();
+}
+
+function aplicarPeriodoEstimacion() {
+  const inicio =
+    document
+      .getElementById(
+        'estimFechaInicio'
+      )
+      .value;
+
+  const fin =
+    document
+      .getElementById(
+        'estimFechaFin'
+      )
+      .value;
+
+  if (!inicio || !fin) {
+    toast(
+      'Selecciona fecha inicial y final'
+    );
+
     return;
   }
 
-  const datos = ESTIMACION;
-
-  const resumen =
-    datos.resumen || {};
-
-  const cartas =
-    Array.isArray(datos.cartas)
-      ? datos.cartas
-      : [];
-
-  const extras =
-    Array.isArray(datos.extras)
-      ? datos.extras
-      : [];
-
-  const gruposExtra =
-    detalleExcedentes(datos);
-
-  const totalM2Extra =
-    extras.reduce(
-      (suma, extra) =>
-        suma +
-        Number(extra.m2_excedente || 0),
-      0
+  if (inicio > fin) {
+    toast(
+      'La fecha inicial no puede ser posterior a la final'
     );
 
-  const totalCostoExtra =
-    Object.values(gruposExtra).reduce(
-      (suma, grupo) =>
-        suma + grupo.importe,
-      0
+    return;
+  }
+
+  ESTIMACION_PERIODO.inicio =
+    inicio;
+
+  ESTIMACION_PERIODO.fin =
+    fin;
+
+  /*
+   * Al consultar otro periodo regresamos
+   * a la vista principal.
+   */
+  VISTA_ESTIMACION =
+    'estimables';
+
+  calcularEstimacionPeriodo();
+}
+
+function calcularEstimacionPeriodo() {
+  const inicio =
+    ESTIMACION_PERIODO.inicio;
+
+  const fin =
+    ESTIMACION_PERIODO.fin;
+
+  /*
+   * Primero obtenemos únicamente trabajos
+   * realmente ejecutados dentro del periodo.
+   *
+   * freal = fecha real de ejecución.
+   */
+  const ejecutadas =
+    LECH.filter(p =>
+      p.status === 'at' &&
+      p.freal &&
+      p.freal >= inicio &&
+      p.freal <= fin
     );
 
-  const cartasHTML =
-    cartas.length
-      ? cartas.map(carta => `
-          <div class="lotecard">
-            <div class="top">
-              <div class="ic ic-dep">
-                📄
-              </div>
+  /*
+   * Con Vo.Bo. aprobado:
+   * sí forman parte de la estimación.
+   */
+  const estimables =
+    ejecutadas.filter(
+      p => p.vobo === 'ok'
+    );
 
-              <div class="nm">
-                <b>
-                  ${carta.numero || 'Carta sin folio'}
-                </b>
+  /*
+   * Ejecutadas que todavía están
+   * esperando validación.
+   */
+  const pendientes =
+    ejecutadas.filter(
+      p =>
+        p.vobo !== 'ok' &&
+        p.vobo !== 'rej'
+    );
 
-                <span>
-                  ${carta.fini || '—'}
-                  al
-                  ${carta.ffin || '—'}
-                </span>
-              </div>
+  /*
+   * Ejecutadas pero rechazadas.
+   */
+  const rechazadas =
+    ejecutadas.filter(
+      p => p.vobo === 'rej'
+    );
 
-              <span
-                class="
-                  acta-badge
-                  ${claseEstadoCarta(carta.estado)}
-                "
-              >
-                ${etiquetaEstadoCarta(carta.estado)}
-              </span>
-            </div>
+  ESTIMACION_PERIODO.ejecutadas =
+    ejecutadas;
 
-            <div class="foot">
-              <div class="f">
-                <div class="v">
-                  ${Number(
-                    carta.cantidad_visible || 0
-                  )}
-                </div>
+  ESTIMACION_PERIODO.estimables =
+    estimables;
 
-                <div class="k">
-                  Lecherías
-                </div>
-              </div>
+  ESTIMACION_PERIODO.pendientes =
+    pendientes;
 
-              <div class="f">
-                <div class="v">
-                  ${money(carta.monto_visible)}
-                </div>
+  ESTIMACION_PERIODO.rechazadas =
+    rechazadas;
 
-                <div class="k">
-                  Importe
-                </div>
-              </div>
-            </div>
+  pintarEstimacionPeriodo();
+}
+
+function pintarEstimacionPeriodo() {
+  const contenedor =
+    document.getElementById(
+      'estimResultado'
+    );
+
+  if (!contenedor) {
+    return;
+  }
+
+  const ejecutadas =
+    ESTIMACION_PERIODO.ejecutadas;
+
+  const estimables =
+    ESTIMACION_PERIODO.estimables;
+
+  const pendientes =
+    ESTIMACION_PERIODO.pendientes;
+
+  const rechazadas =
+    ESTIMACION_PERIODO.rechazadas;
+
+  const subtotal =
+    estimables.length *
+    PRECIO_FACHADA;
+
+  const iva =
+    subtotal *
+    IVA;
+
+  const total =
+    subtotal +
+    iva;
+
+  contenedor.innerHTML = `
+
+    <div class="sect">
+      <h3>Resumen del periodo</h3>
+
+      <div class="progsum">
+
+        <div class="s">
+          <div class="v">
+            ${ejecutadas.length}
           </div>
-        `).join('')
-      : `
+
+          <div class="k">
+            Ejecutadas
+          </div>
+        </div>
+
+        <div class="s">
           <div
-            style="
-              font-size:12px;
-              color:var(--mut);
-              padding:8px 2px
-            "
+            class="v"
+            style="color:var(--done)"
           >
-            Todavía no existen cartas para la dependencia.
+            ${estimables.length}
           </div>
-        `;
 
-  const extrasHTML =
-    Object.keys(gruposExtra).length
-      ? Object.keys(gruposExtra)
-          .sort()
-          .map(sub => {
-            const grupo =
-              gruposExtra[sub];
+          <div class="k">
+            Con Vo.Bo.
+          </div>
+        </div>
 
-            return `
-              <div class="estim-row extra-row">
-                <span class="l">
-                  ${sub}
-                  ·
-                  ${grupo.m2.toFixed(2)} m²
-                  (${grupo.cantidad} lech.)
+        <div class="s">
+          <div
+            class="v"
+            style="color:var(--wait)"
+          >
+            ${pendientes.length}
+          </div>
 
-                  ${
-                    grupo.sinEvidencia
-                      ? `
-                        ·
-                        <span
-                          style="color:var(--rej)"
-                        >
-                          ${grupo.sinEvidencia}
-                          sin evidencia
-                        </span>
-                      `
-                      : ''
-                  }
-                </span>
+          <div class="k">
+            Pendientes
+          </div>
+        </div>
 
-                <span class="v">
-                  ${money(grupo.importe)}
-                </span>
-              </div>
-            `;
-          })
+        <div class="s">
+          <div
+            class="v"
+            style="color:var(--rej)"
+          >
+            ${rechazadas.length}
+          </div>
+
+          <div class="k">
+            Rechazadas
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="sect">
+      <h3>Importe estimable</h3>
+
+      <div class="estim-hero">
+
+        <div class="lbl">
+          Total del periodo con Vo.Bo.
+        </div>
+
+        <div class="amt">
+          ${money(total)}
+        </div>
+
+        <div class="sub">
+          ${estimables.length}
+          ${
+            estimables.length === 1
+              ? 'lechería'
+              : 'lecherías'
+          }
+          ×
+          ${money(PRECIO_FACHADA)}
+          + IVA
+        </div>
+
+      </div>
+
+      <div class="estim-row">
+        <span class="l">
+          Unidades estimables
+        </span>
+
+        <span class="v">
+          ${estimables.length}
+        </span>
+      </div>
+
+      <div class="estim-row">
+        <span class="l">
+          Precio unitario
+        </span>
+
+        <span class="v">
+          ${money(PRECIO_FACHADA)}
+        </span>
+      </div>
+
+      <div class="estim-row">
+        <span class="l">
+          Subtotal
+        </span>
+
+        <span class="v">
+          ${money(subtotal)}
+        </span>
+      </div>
+
+      <div class="estim-row">
+        <span class="l">
+          IVA 16%
+        </span>
+
+        <span class="v">
+          ${money(iva)}
+        </span>
+      </div>
+
+      <div class="estim-row tot">
+        <span class="l">
+          Total
+        </span>
+
+        <span class="v">
+          ${money(total)}
+        </span>
+      </div>
+
+    </div>
+
+    ${renderDetalleEstimacionPeriodo()}
+
+    ${
+      estimables.length
+        ? `
+          <div class="sect">
+            <h3>Exportación</h3>
+
+            <div class="expbtns">
+
+              <button
+                class="expbtn exp-xlsx"
+                onclick="exportEstimPeriodoXLSX()"
+              >
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
+                </svg>
+
+                Excel
+              </button>
+
+              <button
+                class="expbtn exp-pdf"
+                onclick="exportEstimPeriodoPDF()"
+              >
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
+                </svg>
+
+                PDF
+              </button>
+
+            </div>
+          </div>
+        `
+        : ''
+    }
+  `;
+}
+
+function renderDetalleEstimacionPeriodo() {
+  const estimables =
+    ESTIMACION_PERIODO.estimables;
+
+  const pendientes =
+    ESTIMACION_PERIODO.pendientes;
+
+  const rechazadas =
+    ESTIMACION_PERIODO.rechazadas;
+
+  let registros = [];
+
+  if (
+    VISTA_ESTIMACION ===
+    'pendientes'
+  ) {
+    registros =
+      pendientes;
+
+  } else if (
+    VISTA_ESTIMACION ===
+    'rechazadas'
+  ) {
+    registros =
+      rechazadas;
+
+  } else {
+    registros =
+      estimables;
+  }
+
+  const tarjetas =
+    registros.length
+      ? registros
+          .map(
+            p =>
+              renderEstimacionPeriodoItem(p)
+          )
           .join('')
       : `
-          <div
-            style="
-              font-size:12px;
-              color:var(--mut);
-              padding:4px 2px
-            "
-          >
-            Sin excedentes registrados.
-          </div>
-        `;
+        <div
+          style="
+            background:#fff;
+            border:1px solid var(--line);
+            border-radius:9px;
+            padding:18px 14px;
+            text-align:center;
+            color:var(--mut);
+            font-size:11px;
+          "
+        >
+          No hay lecherías en esta
+          categoría para el periodo.
+        </div>
+      `;
 
-  const wrap =
-    document.createElement('div');
+  return `
+    <div class="sect">
 
-  wrap.innerHTML = `
-    <div class="estim-hero">
-      <div class="lbl">
-        Total aprobado para cobro
-        ·
-        ${datos.alcance || 'Nacional'}
-      </div>
+      <h3>Detalle del periodo</h3>
 
-      <div class="amt">
-        ${money(resumen.total)}
-      </div>
-
-      <div class="sub">
-        ${Number(resumen.cobrables || 0)}
-        lecherías
-        ·
-        ${money(resumen.subtotal)}
-        + IVA
-      </div>
-    </div>
-
-    <div class="cobro-flag">
-      <span
-        class="k"
+      <div
         style="
-          background:
-          ${
-            Number(resumen.cartas_aprobadas || 0) > 0
-              ? 'var(--done)'
-              : 'var(--wait)'
-          }
+          display:flex;
+          gap:6px;
+          margin-bottom:10px;
+          overflow-x:auto;
         "
-      ></span>
-
-      ${
-        Number(resumen.cartas_aprobadas || 0) > 0
-          ? `
-            <b>
-              ${Number(resumen.cartas_aprobadas || 0)}
-            </b>
-
-            ${
-              Number(resumen.cartas_aprobadas || 0) === 1
-                ? 'carta aprobada lista para cobro.'
-                : 'cartas aprobadas listas para cobro.'
-            }
-          `
-          : `
-            Aún no hay cartas DEP aprobadas para cobro.
-          `
-      }
-    </div>
-
-    <div class="sectlabel">
-      Resumen financiero
-    </div>
-
-    <div class="estim-row">
-      <span class="l">
-        Lecherías con Vo.Bo.
-      </span>
-
-      <span class="v">
-        ${Number(resumen.con_vobo || 0)}
-      </span>
-    </div>
-
-    <div class="estim-row">
-      <span class="l">
-        Lecherías en cartas aprobadas
-      </span>
-
-      <span class="v">
-        ${Number(resumen.cobrables || 0)}
-      </span>
-    </div>
-
-    <div class="estim-row">
-      <span class="l">
-        Subtotal aprobado
-      </span>
-
-      <span class="v">
-        ${money(resumen.subtotal)}
-      </span>
-    </div>
-
-    <div class="estim-row">
-      <span class="l">
-        IVA 16%
-      </span>
-
-      <span class="v">
-        ${money(resumen.iva)}
-      </span>
-    </div>
-
-    <div class="estim-row tot">
-      <span class="l">
-        Total aprobado
-      </span>
-
-      <span class="v">
-        ${money(resumen.total)}
-      </span>
-    </div>
-
-    <div class="sectlabel">
-      Estado de las cartas DEP
-    </div>
-
-    <div class="progsum">
-      <div class="s">
-        <div
-          class="v"
-          style="color:var(--done)"
-        >
-          ${Number(resumen.cartas_aprobadas || 0)}
-        </div>
-
-        <div class="k">
-          Aprobadas
-        </div>
-      </div>
-
-      <div class="s">
-        <div
-          class="v"
-          style="color:var(--wait)"
-        >
-          ${Number(resumen.cartas_revision || 0)}
-        </div>
-
-        <div class="k">
-          En revisión
-        </div>
-      </div>
-
-      <div class="s">
-        <div
-          class="v"
-          style="color:var(--rej)"
-        >
-          ${Number(resumen.cartas_rechazadas || 0)}
-        </div>
-
-        <div class="k">
-          Rechazadas
-        </div>
-      </div>
-
-      <div class="s">
-        <div
-          class="v"
-          style="color:var(--mut)"
-        >
-          ${Number(resumen.cartas_por_armar || 0)}
-        </div>
-
-        <div class="k">
-          Por armar
-        </div>
-      </div>
-    </div>
-
-    <div class="sectlabel">
-      Cartas para la dependencia
-    </div>
-
-    ${cartasHTML}
-
-    <div class="sectlabel">
-      Excedentes
-      ·
-      pago interno a subcontratistas
-    </div>
-
-    <div
-      style="
-        font-size:11px;
-        color:var(--mut);
-        margin-bottom:7px
-      "
-    >
-      Estos importes no forman parte del cobro a la
-      dependencia.
-    </div>
-
-    ${extrasHTML}
-
-    <div
-      class="estim-row tot"
-      style="
-        border-left:
-        3px solid var(--extra)
-      "
-    >
-      <span class="l">
-        Total excedentes
-        (${totalM2Extra.toFixed(2)} m²)
-      </span>
-
-      <span class="v">
-        ${money(totalCostoExtra)}
-      </span>
-    </div>
-
-    <div class="sectlabel">
-      Exportación
-    </div>
-
-    <div class="expbtns">
-  <button
-    class="expbtn exp-xlsx"
-    onclick="exportXLSX()"
-  >
-    <svg viewBox="0 0 24 24">
-      <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
-    </svg>
-
-    Excel estimación
-  </button>
-
-  <button
-    class="expbtn exp-pdf"
-    onclick="exportEstimPDF()"
-  >
-    <svg viewBox="0 0 24 24">
-      <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
-    </svg>
-
-    PDF dependencia
-  </button>
-</div>
-
-${
-  ROLE === 'gen' || ROLE === 'admin'
-    ? `
-      <button
-        class="expbtn"
-        style="
-          background:var(--navy);
-          color:#fff;
-          width:100%;
-          margin:2px 0 12px
-        "
-        onclick="exportReporteInterno()"
       >
-        <svg viewBox="0 0 24 24">
-          <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
-        </svg>
 
-        Reporte interno completo
-      </button>
-    `
-    : ''
-}
-    <div class="expbtns">
-  <button
-    class="expbtn"
-    style="
-      background:var(--steel);
-      color:#fff
-    "
-    onclick="reporteSemanal()"
-  >
-    <svg viewBox="0 0 24 24">
-      <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
-    </svg>
+        <button
+          type="button"
+          class="chip ${
+            VISTA_ESTIMACION ===
+            'estimables'
+              ? 'on'
+              : ''
+          }"
+          onclick="
+            cambiarVistaEstimacion(
+              'estimables'
+            )
+          "
+        >
+          Con Vo.Bo.
+          (${estimables.length})
+        </button>
 
-    Reporte semanal
-  </button>
+        <button
+          type="button"
+          class="chip ${
+            VISTA_ESTIMACION ===
+            'pendientes'
+              ? 'on'
+              : ''
+          }"
+          onclick="
+            cambiarVistaEstimacion(
+              'pendientes'
+            )
+          "
+        >
+          Pendientes
+          (${pendientes.length})
+        </button>
 
-  <button
-    class="expbtn"
-    style="
-      background:var(--steel);
-      color:#fff
-    "
-    onclick="reporteMensual()"
-  >
-    <svg viewBox="0 0 24 24">
-      <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
-    </svg>
+        <button
+          type="button"
+          class="chip ${
+            VISTA_ESTIMACION ===
+            'rechazadas'
+              ? 'on'
+              : ''
+          }"
+          onclick="
+            cambiarVistaEstimacion(
+              'rechazadas'
+            )
+          "
+        >
+          Rechazadas
+          (${rechazadas.length})
+        </button>
 
-    Reporte mensual
-  </button>
-</div>
+      </div>
+
+      <div
+        style="
+          font-size:10.5px;
+          color:var(--mut);
+          margin-bottom:8px;
+        "
+      >
+        El periodo se determina
+        exclusivamente por Fecha Real.
+      </div>
+
+      ${tarjetas}
+
+    </div>
   `;
+}
 
-  sc.innerHTML = '';
-  sc.appendChild(wrap);
+function renderEstimacionPeriodoItem(p) {
+  let estadoTexto =
+    'Pendiente de Vo.Bo.';
+
+  let estadoColor =
+    'var(--wait)';
+
+  if (p.vobo === 'ok') {
+    estadoTexto =
+      'Incluida en estimación';
+
+    estadoColor =
+      'var(--done)';
+  }
+
+  if (p.vobo === 'rej') {
+    estadoTexto =
+      'Rechazada';
+
+    estadoColor =
+      'var(--rej)';
+  }
+
+  return `
+    <div
+      class="estim-row"
+      style="
+        align-items:flex-start;
+        cursor:pointer;
+      "
+      onclick="openSheet(${p.id})"
+    >
+
+      <div
+        class="l"
+        style="
+          flex:1;
+          min-width:0;
+        "
+      >
+        <b>
+          P.V. ${p.pv}
+        </b>
+
+        <div
+          style="
+            font-size:10px;
+            color:var(--mut);
+            margin-top:2px;
+          "
+        >
+          ${p.municipio || '—'},
+          ${p.estado || '—'}
+        </div>
+
+        <div
+          style="
+            font-size:10px;
+            color:var(--mut);
+            margin-top:2px;
+          "
+        >
+          ${p.zona || 'Sin zona'}
+        </div>
+
+        <div
+          style="
+            font-size:10px;
+            font-weight:700;
+            color:${estadoColor};
+            margin-top:4px;
+          "
+        >
+          ${estadoTexto}
+        </div>
+
+      </div>
+
+      <div
+        style="
+          text-align:right;
+          margin-left:10px;
+        "
+      >
+        <div
+          class="v"
+          style="font-size:11px"
+        >
+          ${p.freal || '—'}
+        </div>
+
+        ${
+          p.vobo === 'ok'
+            ? `
+              <div
+                style="
+                  font-size:10px;
+                  color:var(--done);
+                  margin-top:4px;
+                "
+              >
+                ${money(PRECIO_FACHADA)}
+              </div>
+            `
+            : ''
+        }
+      </div>
+
+    </div>
+  `;
+}
+
+function cambiarVistaEstimacion(
+  vista
+) {
+  const permitidas = [
+    'estimables',
+    'pendientes',
+    'rechazadas'
+  ];
+
+  if (
+    !permitidas.includes(vista)
+  ) {
+    return;
+  }
+
+  VISTA_ESTIMACION =
+    vista;
+
+  pintarEstimacionPeriodo();
 }
 
 async function reporteSemanal() {
@@ -5832,7 +7332,7 @@ async function reporteSemanal() {
               )
             : (
                 punto.sub ||
-                'Sin subcontratista'
+                'Sin cuadrilla'
               );
 
         if (!grupos[clave]) {
@@ -6657,7 +8157,7 @@ async function reporteSemanal() {
     tituloSeccion(
       ROLE === 'sub'
         ? 'Productividad por entidad'
-        : 'Productividad por subcontratista'
+        : 'Productividad por cuadrilla'
     );
 
     encabezadoTabla([
@@ -6665,7 +8165,7 @@ async function reporteSemanal() {
         texto:
           ROLE === 'sub'
             ? 'Entidad'
-            : 'Subcontratista',
+            : 'Cuadrilla',
         x: 15
       },
       {
@@ -7954,7 +9454,7 @@ async function reporteMensual() {
             )
           : (
               punto.sub ||
-              'Sin subcontratista'
+              'Sin cuadrilla'
             );
 
       if (!grupos[clave]) {
@@ -8479,7 +9979,7 @@ async function reporteMensual() {
     tituloSeccion(
       ROLE === 'sub'
         ? 'Desglose por entidad'
-        : 'Desglose por subcontratista'
+        : 'Desglose por cuadrilla'
     );
 
     asegurarEspacio(15);
@@ -8514,7 +10014,7 @@ async function reporteMensual() {
     doc.text(
       ROLE === 'sub'
         ? 'Entidad'
-        : 'Subcontratista',
+        : 'Cuadrilla',
       15,
       y + 6
     );
@@ -9080,6 +10580,1512 @@ async function reporteMensual() {
   }
 }
 
+function calcularResumenAvanceInterno(puntos) {
+
+  const cargadas =
+    puntos.length;
+
+  const iniciadas =
+    puntos.filter(
+      p => p.status === 'ini'
+    );
+
+  const atendidas =
+    puntos.filter(
+      p => p.status === 'at'
+    );
+
+  const noAtendidas =
+    puntos.filter(
+      p =>
+        p.status !== 'ini' &&
+        p.status !== 'at'
+    );
+
+  const conVobo =
+    atendidas.filter(
+      p => p.vobo === 'ok'
+    );
+
+  const rechazadas =
+    atendidas.filter(
+      p => p.vobo === 'rej'
+    );
+
+  const enRevision =
+    atendidas.filter(
+      p =>
+        p.vobo !== 'ok' &&
+        p.vobo !== 'rej'
+    );
+
+
+  /*
+   * Solamente una lechería ATENDIDA
+   * forma parte de la superficie
+   * ejecutada consolidada.
+   */
+
+  const m2Base =
+    atendidas.length *
+    M2_STD;
+
+
+  const m2Extra =
+    atendidas.reduce(
+      (total, p) => {
+
+        const extra =
+          Math.max(
+            Number(
+              p.m2 || M2_STD
+            ) - M2_STD,
+            0
+          );
+
+        return total + extra;
+      },
+      0
+    );
+
+
+  const m2Total =
+    m2Base + m2Extra;
+
+
+  return {
+    cargadas,
+    noAtendidas:
+      noAtendidas.length,
+    iniciadas:
+      iniciadas.length,
+    atendidas:
+      atendidas.length,
+    conVobo:
+      conVobo.length,
+    enRevision:
+      enRevision.length,
+    rechazadas:
+      rechazadas.length,
+    m2Base,
+    m2Extra,
+    m2Total
+  };
+}
+
+function exportReporteAvanceInternoXLSX() {
+
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    toast(
+      'Este reporte es exclusivo de control interno'
+    );
+
+    return;
+  }
+
+
+  const puntos =
+    Array.isArray(LECH)
+      ? [...LECH]
+      : [];
+
+
+  if (!puntos.length) {
+    toast(
+      'No hay lecherías cargadas'
+    );
+
+    return;
+  }
+
+
+  /*
+   * ==========================
+   * RESUMEN NACIONAL
+   * ==========================
+   */
+
+  const resumen =
+    calcularResumenAvanceInterno(
+      puntos
+    );
+
+
+  const resumenNacional = [
+
+    {
+      Concepto:
+        'Lecherías cargadas',
+      Total:
+        resumen.cargadas
+    },
+
+    {
+      Concepto:
+        'No atendidas',
+      Total:
+        resumen.noAtendidas
+    },
+
+    {
+      Concepto:
+        'Iniciadas',
+      Total:
+        resumen.iniciadas
+    },
+
+    {
+      Concepto:
+        'Atendidas',
+      Total:
+        resumen.atendidas
+    },
+
+    {
+      Concepto:
+        'Atendidas en revisión',
+      Total:
+        resumen.enRevision
+    },
+
+    {
+      Concepto:
+        'Con Vo.Bo.',
+      Total:
+        resumen.conVobo
+    },
+
+    {
+      Concepto:
+        'Rechazadas',
+      Total:
+        resumen.rechazadas
+    },
+
+    {
+      Concepto:
+        'Superficie base ejecutada',
+      Total:
+        resumen.m2Base,
+      Unidad:
+        'm²'
+    },
+
+    {
+      Concepto:
+        'Superficie excedente ejecutada',
+      Total:
+        resumen.m2Extra,
+      Unidad:
+        'm²'
+    },
+
+    {
+      Concepto:
+        'Superficie total ejecutada',
+      Total:
+        resumen.m2Total,
+      Unidad:
+        'm²'
+    }
+
+  ];
+
+
+  /*
+   * ==========================
+   * POR CUADRILLA
+   * ==========================
+   */
+
+  const grupos = {};
+
+
+  puntos.forEach(p => {
+
+    const cuadrilla =
+      p.sub ||
+      'Sin cuadrilla';
+
+    if (!grupos[cuadrilla]) {
+      grupos[cuadrilla] = [];
+    }
+
+    grupos[cuadrilla]
+      .push(p);
+  });
+
+
+  const porCuadrilla =
+    Object
+      .entries(grupos)
+      .sort(
+        ([a], [b]) =>
+          a.localeCompare(
+            b,
+            'es',
+            {
+              numeric: true
+            }
+          )
+      )
+      .map(
+        ([cuadrilla, registros]) => {
+
+          const r =
+            calcularResumenAvanceInterno(
+              registros
+            );
+
+          const zonas =
+            [
+              ...new Set(
+                registros
+                  .map(p => p.zona)
+                  .filter(Boolean)
+              )
+            ]
+              .join(', ');
+
+
+          return {
+
+            Cuadrilla:
+              cuadrilla,
+
+            Zonas:
+              zonas,
+
+            Cargadas:
+              r.cargadas,
+
+            'No atendidas':
+              r.noAtendidas,
+
+            Iniciadas:
+              r.iniciadas,
+
+            Atendidas:
+              r.atendidas,
+
+            'En revisión':
+              r.enRevision,
+
+            'Con Vo.Bo.':
+              r.conVobo,
+
+            Rechazadas:
+              r.rechazadas,
+
+            'm² base ejecutados':
+              r.m2Base,
+
+            'm² extra':
+              r.m2Extra,
+
+            'm² total ejecutados':
+              r.m2Total
+          };
+        }
+      );
+
+
+  /*
+   * ==========================
+   * DETALLE NACIONAL
+   * ==========================
+   */
+
+  const detalle =
+    puntos
+      .sort(
+        (a, b) =>
+          String(a.pv)
+            .localeCompare(
+              String(b.pv)
+            )
+      )
+      .map(p => {
+
+        const atendida =
+          p.status === 'at';
+
+        const extra =
+          atendida
+            ? Math.max(
+                Number(
+                  p.m2 || M2_STD
+                ) -
+                M2_STD,
+                0
+              )
+            : 0;
+
+        const base =
+          atendida
+            ? M2_STD
+            : 0;
+
+        const total =
+          atendida
+            ? Number(
+                p.m2 || M2_STD
+              )
+            : 0;
+
+
+        return {
+
+          'Clave P.V.':
+            String(p.pv || ''),
+
+          Estado:
+            p.estado || '',
+
+          Municipio:
+            p.municipio || '',
+
+          Localidad:
+            p.localidad || '',
+
+          Zona:
+            p.zona || '',
+
+          Cuadrilla:
+            p.sub || '',
+
+          'Estado de avance':
+            textoEstadoAvance(p),
+
+          'Vo.Bo.':
+            textoVobo(p.vobo),
+
+          'Fecha compromiso':
+            p.fcomp || '',
+
+          'Fecha real':
+            p.freal || '',
+
+          'm² base ejecutados':
+            base,
+
+          'm² extra':
+            extra,
+
+          'm² total ejecutados':
+            total,
+
+          'Motivo rechazo':
+            p.motivo || ''
+        };
+      });
+
+
+  /*
+   * ==========================
+   * CREAR EXCEL
+   * ==========================
+   */
+
+  const libro =
+    XLSX.utils.book_new();
+
+
+  agregarHojaExcel(
+    libro,
+    'Resumen nacional',
+    resumenNacional,
+    [
+      38,
+      18,
+      12
+    ]
+  );
+
+
+  agregarHojaExcel(
+    libro,
+    'Por cuadrilla',
+    porCuadrilla,
+    [
+      18,
+      42,
+      12,
+      14,
+      12,
+      12,
+      14,
+      12,
+      12,
+      20,
+      14,
+      20
+    ]
+  );
+
+
+  agregarHojaExcel(
+    libro,
+    'Detalle nacional',
+    detalle,
+    [
+      16,
+      20,
+      24,
+      24,
+      32,
+      18,
+      24,
+      18,
+      17,
+      15,
+      20,
+      14,
+      20,
+      28
+    ]
+  );
+
+
+  const fecha =
+    new Date()
+      .toISOString()
+      .slice(0, 10);
+
+
+  XLSX.writeFile(
+    libro,
+    `Reporte_avance_interno_${fecha}.xlsx`
+  );
+
+
+  toast(
+    'Reporte de avance interno generado'
+  );
+}
+
+function exportReporteAvanceInternoPDF() {
+
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    toast(
+      'Este reporte es exclusivo de control interno'
+    );
+
+    return;
+  }
+
+
+  const puntos =
+    Array.isArray(LECH)
+      ? [...LECH]
+      : [];
+
+
+  if (!puntos.length) {
+    toast(
+      'No hay lecherías cargadas'
+    );
+
+    return;
+  }
+
+
+  const { jsPDF } =
+    window.jspdf;
+
+
+  /*
+   * Landscape porque tendremos
+   * varias columnas por cuadrilla.
+   */
+  const doc =
+    new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+
+  const resumen =
+    calcularResumenAvanceInterno(
+      puntos
+    );
+
+
+  /*
+   * ==========================
+   * DATOS POR CUADRILLA
+   * ==========================
+   */
+
+  const grupos = {};
+
+
+  puntos.forEach(p => {
+
+    const cuadrilla =
+      p.sub ||
+      'Sin cuadrilla';
+
+    if (!grupos[cuadrilla]) {
+      grupos[cuadrilla] = [];
+    }
+
+    grupos[cuadrilla]
+      .push(p);
+  });
+
+
+  const porCuadrilla =
+    Object
+      .entries(grupos)
+      .sort(
+        ([a], [b]) =>
+          a.localeCompare(
+            b,
+            'es',
+            {
+              numeric: true
+            }
+          )
+      )
+      .map(
+        ([cuadrilla, registros]) => {
+
+          const r =
+            calcularResumenAvanceInterno(
+              registros
+            );
+
+          return {
+            cuadrilla,
+            total:
+              r.cargadas,
+            iniciadas:
+              r.iniciadas,
+            atendidas:
+              r.atendidas,
+            vobo:
+              r.conVobo,
+            rechazadas:
+              r.rechazadas,
+            m2Base:
+              r.m2Base,
+            m2Extra:
+              r.m2Extra,
+            m2Total:
+              r.m2Total
+          };
+        }
+      );
+
+
+  /*
+   * ==========================
+   * HELPERS
+   * ==========================
+   */
+
+  function dineroNumero(valor) {
+    return Number(valor || 0)
+      .toLocaleString(
+        'es-MX',
+        {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        }
+      );
+  }
+
+
+  function encabezadoPagina() {
+
+    /*
+     * Franja principal.
+     */
+
+    doc.setFillColor(
+      10,
+      31,
+      50
+    );
+
+    doc.rect(
+      0,
+      0,
+      297,
+      26,
+      'F'
+    );
+
+
+    doc.setTextColor(
+      255,
+      255,
+      255
+    );
+
+    doc.setFont(
+      undefined,
+      'bold'
+    );
+
+    doc.setFontSize(17);
+
+    doc.text(
+      'Reporte ejecutivo de avance',
+      14,
+      11
+    );
+
+
+    doc.setFontSize(8.5);
+
+    doc.setFont(
+      undefined,
+      'normal'
+    );
+
+    doc.text(
+      'CONTROL INTERNO · LUMEN',
+      14,
+      17
+    );
+
+
+    doc.setFontSize(7.5);
+
+    doc.text(
+      PROCEDIMIENTO,
+      283,
+      10,
+      {
+        align: 'right'
+      }
+    );
+
+
+    doc.text(
+      EMPRESA,
+      283,
+      16,
+      {
+        align: 'right'
+      }
+    );
+
+
+    doc.setTextColor(
+      35,
+      52,
+      70
+    );
+  }
+
+
+  function piePagina() {
+
+    const pagina =
+      doc.getCurrentPageInfo()
+        .pageNumber;
+
+    doc.setFontSize(6.8);
+
+    doc.setTextColor(
+      105,
+      120,
+      135
+    );
+
+    doc.text(
+      'Documento de control interno · No destinado a la dependencia',
+      14,
+      202
+    );
+
+    doc.text(
+      `Página ${pagina}`,
+      283,
+      202,
+      {
+        align: 'right'
+      }
+    );
+  }
+
+
+  encabezadoPagina();
+
+
+  /*
+   * ==========================
+   * FECHA DEL REPORTE
+   * ==========================
+   */
+
+  const hoy =
+    new Date();
+
+
+  const fechaTexto =
+    hoy.toLocaleDateString(
+      'es-MX',
+      {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }
+    );
+
+
+  doc.setFontSize(8);
+
+  doc.setTextColor(
+    100,
+    116,
+    132
+  );
+
+  doc.text(
+    `Corte de información: ${fechaTexto}`,
+    14,
+    34
+  );
+
+
+  /*
+   * ==========================
+   * RESUMEN OPERATIVO
+   * ==========================
+   */
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(10);
+
+  doc.setTextColor(
+    25,
+    43,
+    60
+  );
+
+  doc.text(
+    'Resumen nacional',
+    14,
+    43
+  );
+
+
+  const resumenCards = [
+
+    {
+      label: 'Cargadas',
+      value:
+        resumen.cargadas
+    },
+
+    {
+      label: 'Iniciadas',
+      value:
+        resumen.iniciadas
+    },
+
+    {
+      label: 'Atendidas',
+      value:
+        resumen.atendidas
+    },
+
+    {
+      label: 'Con Vo.Bo.',
+      value:
+        resumen.conVobo
+    },
+
+    {
+      label: 'En revisión',
+      value:
+        resumen.enRevision
+    },
+
+    {
+      label: 'Rechazadas',
+      value:
+        resumen.rechazadas
+    }
+
+  ];
+
+
+  const cardW =
+    42;
+
+  const cardGap =
+    4;
+
+  let cardX =
+    14;
+
+
+  resumenCards.forEach(item => {
+
+    doc.setFillColor(
+      244,
+      247,
+      250
+    );
+
+    doc.setDrawColor(
+      218,
+      225,
+      232
+    );
+
+    doc.roundedRect(
+      cardX,
+      48,
+      cardW,
+      21,
+      2,
+      2,
+      'FD'
+    );
+
+
+    doc.setFont(
+      undefined,
+      'bold'
+    );
+
+    doc.setFontSize(13);
+
+    doc.setTextColor(
+      20,
+      45,
+      68
+    );
+
+    doc.text(
+      String(item.value),
+      cardX + cardW / 2,
+      57,
+      {
+        align: 'center'
+      }
+    );
+
+
+    doc.setFont(
+      undefined,
+      'normal'
+    );
+
+    doc.setFontSize(6.8);
+
+    doc.setTextColor(
+      100,
+      116,
+      132
+    );
+
+    doc.text(
+      item.label.toUpperCase(),
+      cardX + cardW / 2,
+      64,
+      {
+        align: 'center'
+      }
+    );
+
+
+    cardX +=
+      cardW +
+      cardGap;
+  });
+
+
+  /*
+   * ==========================
+   * SUPERFICIE EJECUTADA
+   * ==========================
+   */
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(10);
+
+  doc.setTextColor(
+    25,
+    43,
+    60
+  );
+
+  doc.text(
+    'Superficie ejecutada',
+    14,
+    80
+  );
+
+
+  const superficies = [
+
+    {
+      titulo:
+        'Base',
+      valor:
+        resumen.m2Base,
+      descripcion:
+        '21 m² por lechería atendida'
+    },
+
+    {
+      titulo:
+        'Extra',
+      valor:
+        resumen.m2Extra,
+      descripcion:
+        'Superficie adicional registrada'
+    },
+
+    {
+      titulo:
+        'Total',
+      valor:
+        resumen.m2Total,
+      descripcion:
+        'Base + superficie adicional'
+    }
+
+  ];
+
+
+  let sx =
+    14;
+
+
+  superficies.forEach(
+    (item, index) => {
+
+      const w =
+        85;
+
+      doc.setFillColor(
+        index === 2
+          ? 233
+          : 248,
+        index === 2
+          ? 244
+          : 250,
+        index === 2
+          ? 237
+          : 252
+      );
+
+      doc.setDrawColor(
+        215,
+        224,
+        230
+      );
+
+      doc.roundedRect(
+        sx,
+        85,
+        w,
+        23,
+        2,
+        2,
+        'FD'
+      );
+
+
+      doc.setFont(
+        undefined,
+        'bold'
+      );
+
+      doc.setFontSize(7);
+
+      doc.setTextColor(
+        90,
+        107,
+        122
+      );
+
+      doc.text(
+        item.titulo.toUpperCase(),
+        sx + 5,
+        92
+      );
+
+
+      doc.setFontSize(15);
+
+      doc.setTextColor(
+        20,
+        56,
+        73
+      );
+
+      doc.text(
+        `${dineroNumero(
+          item.valor
+        )} m²`,
+        sx + 5,
+        101
+      );
+
+
+      doc.setFont(
+        undefined,
+        'normal'
+      );
+
+      doc.setFontSize(6.3);
+
+      doc.setTextColor(
+        110,
+        125,
+        138
+      );
+
+      doc.text(
+        item.descripcion,
+        sx + 5,
+        105.5
+      );
+
+
+      sx +=
+        w + 5;
+    }
+  );
+
+
+  /*
+   * ==========================
+   * TABLA POR CUADRILLA
+   * ==========================
+   */
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(10);
+
+  doc.setTextColor(
+    25,
+    43,
+    60
+  );
+
+  doc.text(
+    'Avance por cuadrilla',
+    14,
+    120
+  );
+
+
+  const columnas = [
+    {
+      titulo: 'Cuadrilla',
+      x: 14,
+      w: 31
+    },
+    {
+      titulo: 'Asignadas',
+      x: 45,
+      w: 27
+    },
+    {
+      titulo: 'Iniciadas',
+      x: 72,
+      w: 27
+    },
+    {
+      titulo: 'Atendidas',
+      x: 99,
+      w: 27
+    },
+    {
+      titulo: 'Vo.Bo.',
+      x: 126,
+      w: 23
+    },
+    {
+      titulo: 'Rech.',
+      x: 149,
+      w: 22
+    },
+    {
+      titulo: 'Base m²',
+      x: 171,
+      w: 34
+    },
+    {
+      titulo: 'Extra m²',
+      x: 205,
+      w: 34
+    },
+    {
+      titulo: 'Total m²',
+      x: 239,
+      w: 44
+    }
+  ];
+
+
+  const yHeader =
+    125;
+
+  const rowH =
+    7;
+
+
+  doc.setFillColor(
+    24,
+    52,
+    78
+  );
+
+  doc.rect(
+    14,
+    yHeader,
+    269,
+    8,
+    'F'
+  );
+
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(6.5);
+
+  doc.setTextColor(
+    255,
+    255,
+    255
+  );
+
+
+  columnas.forEach(col => {
+
+    doc.text(
+      col.titulo,
+      col.x + col.w / 2,
+      yHeader + 5,
+      {
+        align: 'center'
+      }
+    );
+
+  });
+
+
+  let y =
+    yHeader + 8;
+
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(6.4);
+
+
+  for (
+    let i = 0;
+    i < porCuadrilla.length;
+    i++
+  ) {
+
+    const r =
+      porCuadrilla[i];
+
+
+    /*
+     * Si en el futuro aumenta mucho
+     * la cantidad de cuadrillas,
+     * continuamos en otra página.
+     */
+    if (y + rowH > 195) {
+
+      piePagina();
+
+      doc.addPage();
+
+      encabezadoPagina();
+
+      y = 34;
+
+
+      doc.setFillColor(
+        24,
+        52,
+        78
+      );
+
+      doc.rect(
+        14,
+        y,
+        269,
+        8,
+        'F'
+      );
+
+
+      doc.setFont(
+        undefined,
+        'bold'
+      );
+
+      doc.setFontSize(6.5);
+
+      doc.setTextColor(
+        255,
+        255,
+        255
+      );
+
+
+      columnas.forEach(col => {
+
+        doc.text(
+          col.titulo,
+          col.x + col.w / 2,
+          y + 5,
+          {
+            align: 'center'
+          }
+        );
+
+      });
+
+
+      y += 8;
+
+      doc.setFont(
+        undefined,
+        'normal'
+      );
+
+      doc.setFontSize(6.4);
+    }
+
+
+    if (i % 2 === 0) {
+
+      doc.setFillColor(
+        247,
+        249,
+        251
+      );
+
+      doc.rect(
+        14,
+        y,
+        269,
+        rowH,
+        'F'
+      );
+    }
+
+
+    doc.setDrawColor(
+      225,
+      230,
+      235
+    );
+
+    doc.line(
+      14,
+      y + rowH,
+      283,
+      y + rowH
+    );
+
+
+    doc.setTextColor(
+      40,
+      55,
+      70
+    );
+
+
+    const valores = [
+
+      r.cuadrilla,
+
+      r.total,
+
+      r.iniciadas,
+
+      r.atendidas,
+
+      r.vobo,
+
+      r.rechazadas,
+
+      dineroNumero(
+        r.m2Base
+      ),
+
+      dineroNumero(
+        r.m2Extra
+      ),
+
+      dineroNumero(
+        r.m2Total
+      )
+
+    ];
+
+
+    valores.forEach(
+      (valor, index) => {
+
+        const col =
+          columnas[index];
+
+        doc.text(
+          String(valor),
+          col.x +
+            col.w / 2,
+          y + 4.6,
+          {
+            align: 'center'
+          }
+        );
+      }
+    );
+
+
+    y += rowH;
+  }
+
+
+  /*
+   * ==========================
+   * OBSERVACIÓN METODOLÓGICA
+   * ==========================
+   */
+
+  if (y + 17 > 195) {
+
+    piePagina();
+
+    doc.addPage();
+
+    encabezadoPagina();
+
+    y = 36;
+  }
+
+
+  doc.setFillColor(
+    251,
+    247,
+    232
+  );
+
+  doc.setDrawColor(
+    232,
+    215,
+    157
+  );
+
+  doc.roundedRect(
+    14,
+    y + 5,
+    269,
+    15,
+    2,
+    2,
+    'FD'
+  );
+
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(6.8);
+
+  doc.setTextColor(
+    105,
+    85,
+    35
+  );
+
+  doc.text(
+    'Criterio de superficie:',
+    19,
+    y + 11
+  );
+
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.text(
+    'los m² consolidados corresponden únicamente a lecherías marcadas como atendidas. ' +
+    'Las iniciadas reflejan avance operativo, pero todavía no se consideran superficie concluida.',
+    48,
+    y + 11,
+    {
+      maxWidth: 228
+    }
+  );
+
+
+  /*
+   * Pie en la última página.
+   */
+
+  piePagina();
+
+
+  /*
+   * ==========================
+   * GUARDAR
+   * ==========================
+   */
+
+  const fechaArchivo =
+    new Date()
+      .toISOString()
+      .slice(0, 10);
+
+
+  doc.save(
+    `Reporte_ejecutivo_avance_${fechaArchivo}.pdf`
+  );
+
+
+  toast(
+    'Reporte ejecutivo PDF generado'
+  );
+}
 
 async function exportReporteInterno() {
   if (
@@ -9385,7 +12391,7 @@ async function exportReporteInterno() {
     puntos.forEach(punto => {
       const sub =
         punto.sub ||
-        'Sin subcontratista';
+        'Sin cuadrilla';
 
       if (!gruposSub[sub]) {
         gruposSub[sub] = [];
@@ -9394,7 +12400,7 @@ async function exportReporteInterno() {
       gruposSub[sub].push(punto);
     });
 
-    const porSubcontratista =
+    const porCuadrilla =
       Object.entries(gruposSub)
         .sort(([a], [b]) =>
           a.localeCompare(b)
@@ -9408,7 +12414,7 @@ async function exportReporteInterno() {
               .filter(Boolean);
 
           return {
-            Subcontratista:
+            Cuadrilla:
               sub,
 
             Zona:
@@ -9621,7 +12627,7 @@ async function exportReporteInterno() {
             Zona:
               punto.zona || '',
 
-            Subcontratista:
+            Cuadrilla:
               punto.sub || '',
 
             Beneficiarios:
@@ -9723,7 +12729,7 @@ async function exportReporteInterno() {
             Zona:
               punto.zona || '',
 
-            Subcontratista:
+            Cuadrilla:
               punto.sub || '',
 
             Compromiso:
@@ -9773,7 +12779,7 @@ async function exportReporteInterno() {
           Zona:
             extra.zona || '',
 
-          Subcontratista:
+          Cuadrilla:
             extra.sub || '',
 
           'm² real':
@@ -9817,7 +12823,7 @@ async function exportReporteInterno() {
             Folio:
               acta.numero || '',
 
-            Subcontratista:
+            Cuadrilla:
               acta.sub || '',
 
             Zona:
@@ -9920,8 +12926,8 @@ async function exportReporteInterno() {
 
     agregarHojaExcel(
       libro,
-      'Por subcontratista',
-      porSubcontratista,
+      'Por cuadrilla',
+      porCuadrilla,
       [
         18, 26, 10, 12, 12,
         18, 12, 12, 21, 21,
@@ -10095,19 +13101,24 @@ function agregarHojaExcel(
 }
 
 function textoEstadoAvance(punto) {
+
+  if (punto.status === 'ini') {
+    return 'Iniciada';
+  }
+
   if (punto.status !== 'at') {
-    return 'Sin atender';
+    return 'No atendida';
   }
 
   if (punto.vobo === 'ok') {
-    return 'Atendido con Vo.Bo.';
+    return 'Atendida con Vo.Bo.';
   }
 
   if (punto.vobo === 'rej') {
-    return 'Atendido rechazado';
+    return 'Atendida rechazada';
   }
 
-  return 'Atendido en revisión';
+  return 'Atendida en revisión';
 }
 
 function textoVobo(valor) {
@@ -10121,6 +13132,542 @@ function textoVobo(valor) {
   return textos[valor] ||
     valor ||
     'No solicitado';
+}
+
+function exportEstimPeriodoXLSX() {
+  const estimables =
+    ESTIMACION_PERIODO.estimables;
+
+  if (!estimables.length) {
+    toast(
+      'No hay lecherías estimables en este periodo'
+    );
+
+    return;
+  }
+
+  const subtotal =
+    estimables.length *
+    PRECIO_FACHADA;
+
+  const iva =
+    subtotal *
+    IVA;
+
+  const total =
+    subtotal +
+    iva;
+
+  const wb =
+    XLSX.utils.book_new();
+
+  const resumen = [
+    {
+      Concepto:
+        'Periodo inicial',
+
+      Valor:
+        ESTIMACION_PERIODO.inicio
+    },
+    {
+      Concepto:
+        'Periodo final',
+
+      Valor:
+        ESTIMACION_PERIODO.fin
+    },
+    {
+      Concepto:
+        'Lecherías ejecutadas',
+
+      Valor:
+        ESTIMACION_PERIODO
+          .ejecutadas
+          .length
+    },
+    {
+      Concepto:
+        'Lecherías con Vo.Bo.',
+
+      Valor:
+        estimables.length
+    },
+    {
+      Concepto:
+        'Pendientes de Vo.Bo.',
+
+      Valor:
+        ESTIMACION_PERIODO
+          .pendientes
+          .length
+    },
+    {
+      Concepto:
+        'Rechazadas',
+
+      Valor:
+        ESTIMACION_PERIODO
+          .rechazadas
+          .length
+    },
+    {
+      Concepto:
+        'Precio unitario',
+
+      Valor:
+        PRECIO_FACHADA
+    },
+    {
+      Concepto:
+        'Subtotal',
+
+      Valor:
+        subtotal
+    },
+    {
+      Concepto:
+        'IVA 16%',
+
+      Valor:
+        iva
+    },
+    {
+      Concepto:
+        'Total',
+
+      Valor:
+        total
+    }
+  ];
+
+  const hojaResumen =
+    XLSX.utils.json_to_sheet(
+      resumen
+    );
+
+  hojaResumen['!cols'] = [
+    { wch: 26 },
+    { wch: 22 }
+  ];
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    hojaResumen,
+    'Resumen'
+  );
+
+  const detalle =
+    estimables.map(p => ({
+      'Clave P.V.':
+        p.pv,
+
+      Estado:
+        p.estado || '',
+
+      Municipio:
+        p.municipio || '',
+
+      Localidad:
+        p.localidad || '',
+
+      Zona:
+        p.zona || '',
+
+      Cuadrilla:
+        p.sub || '',
+
+      'Fecha real':
+        p.freal || '',
+
+      'Vo.Bo.':
+        'Aprobado',
+
+      'Precio unitario':
+        PRECIO_FACHADA
+    }));
+
+  const hojaDetalle =
+    XLSX.utils.json_to_sheet(
+      detalle
+    );
+
+  hojaDetalle['!cols'] = [
+    { wch: 18 },
+    { wch: 20 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 18 }
+  ];
+
+  hojaDetalle['!autofilter'] = {
+    ref:
+      hojaDetalle['!ref']
+  };
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    hojaDetalle,
+    'Lecherias estimables'
+  );
+
+  XLSX.writeFile(
+    wb,
+    `Estimacion_${ESTIMACION_PERIODO.inicio}_${ESTIMACION_PERIODO.fin}.xlsx`
+  );
+
+  toast(
+    'Excel de estimación generado'
+  );
+}
+
+function exportEstimPeriodoPDF() {
+  const estimables =
+    ESTIMACION_PERIODO.estimables;
+
+  if (!estimables.length) {
+    toast(
+      'No hay lecherías estimables en este periodo'
+    );
+
+    return;
+  }
+
+  const { jsPDF } =
+    window.jspdf;
+
+  const doc =
+    new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+  const subtotal =
+    estimables.length *
+    PRECIO_FACHADA;
+
+  const iva =
+    subtotal *
+    IVA;
+
+  const total =
+    subtotal +
+    iva;
+
+  /*
+   * Encabezado.
+   */
+  doc.setFillColor(
+    13,
+    27,
+    42
+  );
+
+  doc.rect(
+    0,
+    0,
+    210,
+    36,
+    'F'
+  );
+
+  doc.setTextColor(
+    255,
+    255,
+    255
+  );
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(15);
+
+  doc.text(
+    'Estimación de obra',
+    12,
+    12
+  );
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(8);
+
+  doc.text(
+    `Proc. ${PROCEDIMIENTO}`,
+    12,
+    19
+  );
+
+  doc.text(
+    EMPRESA,
+    12,
+    25
+  );
+
+  doc.text(
+    DEPENDENCIA,
+    12,
+    31
+  );
+
+  doc.setTextColor(
+    20,
+    20,
+    20
+  );
+
+  let y = 47;
+
+  /*
+   * Periodo.
+   */
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(11);
+
+  doc.text(
+    'Periodo de estimación',
+    12,
+    y
+  );
+
+  y += 7;
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(9);
+
+  doc.text(
+    `${ESTIMACION_PERIODO.inicio} al ${ESTIMACION_PERIODO.fin}`,
+    12,
+    y
+  );
+
+  y += 10;
+
+  /*
+   * Resumen.
+   */
+  const filasResumen = [
+    [
+      'Ejecutadas',
+      String(
+        ESTIMACION_PERIODO
+          .ejecutadas
+          .length
+      )
+    ],
+    [
+      'Con Vo.Bo.',
+      String(
+        estimables.length
+      )
+    ],
+    [
+      'Pendientes',
+      String(
+        ESTIMACION_PERIODO
+          .pendientes
+          .length
+      )
+    ],
+    [
+      'Rechazadas',
+      String(
+        ESTIMACION_PERIODO
+          .rechazadas
+          .length
+      )
+    ],
+    [
+      'Precio unitario',
+      money(
+        PRECIO_FACHADA
+      )
+    ],
+    [
+      'Subtotal',
+      money(subtotal)
+    ],
+    [
+      'IVA 16%',
+      money(iva)
+    ],
+    [
+      'TOTAL',
+      money(total)
+    ]
+  ];
+
+  filasResumen.forEach(
+    ([concepto, valor]) => {
+      doc.setFont(
+        undefined,
+        concepto === 'TOTAL'
+          ? 'bold'
+          : 'normal'
+      );
+
+      doc.text(
+        concepto,
+        14,
+        y
+      );
+
+      doc.text(
+        valor,
+        195,
+        y,
+        {
+          align: 'right'
+        }
+      );
+
+      y += 6;
+    }
+  );
+
+  y += 6;
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(10);
+
+  doc.text(
+    'Lecherías incluidas',
+    12,
+    y
+  );
+
+  y += 7;
+
+  doc.setFontSize(7.5);
+
+  estimables.forEach(
+    (p, indice) => {
+      if (y > 280) {
+        doc.addPage();
+
+        y = 18;
+      }
+
+      doc.setFont(
+        undefined,
+        'bold'
+      );
+
+      doc.text(
+        String(p.pv),
+        14,
+        y
+      );
+
+      doc.setFont(
+        undefined,
+        'normal'
+      );
+
+      doc.text(
+        String(
+          p.estado || ''
+        ).slice(
+          0,
+          24
+        ),
+        48,
+        y
+      );
+
+      doc.text(
+        String(
+          p.municipio || ''
+        ).slice(
+          0,
+          30
+        ),
+        90,
+        y
+      );
+
+      doc.text(
+        String(
+          p.freal || ''
+        ),
+        156,
+        y
+      );
+
+      doc.text(
+        money(
+          PRECIO_FACHADA
+        ),
+        196,
+        y,
+        {
+          align: 'right'
+        }
+      );
+
+      y += 5.5;
+    }
+  );
+
+  /*
+   * Numeración de páginas.
+   */
+  const paginas =
+    doc.getNumberOfPages();
+
+  for (
+    let pagina = 1;
+    pagina <= paginas;
+    pagina++
+  ) {
+    doc.setPage(pagina);
+
+    doc.setFontSize(7.5);
+
+    doc.setTextColor(
+      107,
+      123,
+      140
+    );
+
+    doc.text(
+      `Estimación ${ESTIMACION_PERIODO.inicio} al ${ESTIMACION_PERIODO.fin} · Página ${pagina} de ${paginas}`,
+      105,
+      292,
+      {
+        align: 'center'
+      }
+    );
+  }
+
+  doc.save(
+    `Estimacion_${ESTIMACION_PERIODO.inicio}_${ESTIMACION_PERIODO.fin}.pdf`
+  );
+
+  toast(
+    'PDF de estimación generado'
+  );
 }
 
 function exportXLSX() {
@@ -10260,7 +13807,7 @@ function exportXLSX() {
       Zona:
         p.zona || '',
 
-      Subcontratista:
+      Cuadrilla:
         p.sub || '',
 
       'm²':
@@ -10304,7 +13851,7 @@ function exportXLSX() {
         Zona:
           extra.zona || '',
 
-        Subcontratista:
+        Cuadrilla:
           extra.sub || '',
 
         'm² real':
@@ -10649,13 +14196,31 @@ function exportEstimPDF() {
 }
 
 /* ============ REPORTE PDF antes/después por punto ============ */
-async function reportePDF() {
-  if (!CUR) {
-    toast('Primero abre una lechería');
-    return;
+async function reportePDF(
+  punto = null,
+  descargar = true
+) {
+
+  if (ROLE === 'sub') {
+    toast(
+      'Este reporte no está disponible para cuadrillas'
+    );
+    return null;
   }
 
-  const p = CUR;
+  const p =
+  punto || CUR;
+
+  if (!p) {
+
+  if (descargar) {
+    toast(
+      'Primero abre una lechería'
+    );
+  }
+
+  return null;
+  }
 
   const fotosPrev =
     Array.isArray(p.fotosPrev)
@@ -10673,9 +14238,11 @@ async function reportePDF() {
   }
 
   const boton =
-    document.querySelector(
-      '[onclick="reportePDF()"]'
-    );
+  descargar
+    ? document.querySelector(
+        '[onclick="reportePDF()"]'
+      )
+    : null;
 
   const textoOriginal =
     boton
@@ -11358,8 +14925,8 @@ async function reportePDF() {
         ubicacion
       ],
       [
-        'Zona / subcontratista',
-        `${p.zona || 'Sin zona'} / ${p.sub || 'Sin subcontratista'}`
+        'Zona / cuadrilla',
+        `${p.zona || 'Sin zona'} / ${p.sub || 'Sin Cuadrilla'}`
       ],
       [
         'Coordenadas del P.V.',
@@ -11588,13 +15155,29 @@ async function reportePDF() {
           '_'
         );
 
-    doc.save(
-      `Reporte_fotografico_${pvSeguro}.pdf`
-    );
+    /*
+     * Si viene desde la ficha:
+     * descarga normal.
+     *
+     * Si viene desde un concentrado:
+     * devuelve el PDF como Blob.
+     */
 
-    toast(
-      'Reporte fotográfico generado'
-    );
+    if (descargar) {
+
+      doc.save(
+        `Reporte_fotografico_${pvSeguro}.pdf`
+      );
+
+      toast(
+        'Reporte fotográfico generado'
+      );
+
+      return null;
+    }
+
+
+    return doc.output('blob');
 
   } catch (error) {
     console.error(
@@ -11680,7 +15263,7 @@ function renderPrograma(){
       <div class="dates">
         <div class="dt"><div class="v">${p.fcomp||'—'}</div><div class="k">Compromiso</div></div>
         <div class="dt"><div class="v">${p.freal||'—'}</div><div class="k">Real</div></div>
-        <div class="dt"><div class="v">${p.sub||'—'}</div><div class="k">Subcontr.</div></div>
+        <div class="dt"><div class="v">${p.sub||'—'}</div><div class="k">Cuadrilla</div></div>
       </div>`;
     sc.appendChild(row);
   });
@@ -11743,7 +15326,7 @@ async function generarActaSubDesdeUI() {
   const subSugerido = CURSUB || Object.keys(SUBS)[0] || 'SUB-1';
 
   const sub = window.prompt(
-    'Subcontratista para el corte (ejemplo: SUB-6):',
+    'Cuadrilla para el corte (ejemplo: SUB-6):',
     subSugerido
   );
 
@@ -11752,7 +15335,7 @@ async function generarActaSubDesdeUI() {
   const subNormalizado = sub.trim().toUpperCase();
 
   if (!SUBS[subNormalizado]) {
-    toast('El subcontratista indicado no existe');
+    toast('La cuadrilla indicada no existe');
     return;
   }
 
@@ -11972,21 +15555,22 @@ async function renderActas() {
 
   sc.innerHTML = `
     <div class="note">
-      <b>Concentrado de actas por periodo operativo.</b>
-      <br><br>
-
-      Las <b>Actas de Apertura</b> se incluyen
-      según la <b>Fecha Compromiso</b> de cada lechería.
-
-      <br><br>
-
-      Las <b>Actas de Recepción</b> se incluyen
-      según la <b>Fecha Real</b> de ejecución.
+      <b>
+        Concentrado de Actas de Inicio y
+        Entrega Recepción por periodo de Vo.Bo.
+      </b>
 
       <br><br>
 
-      El periodo seleccionado no corresponde a la fecha
-      en que se generó o cargó el PDF.
+      Las actas se incluyen según la
+      <b>fecha en que fue otorgado el Vo.Bo.</b>
+      por el Administrador.
+
+      <br><br>
+
+      El periodo seleccionado no corresponde
+      a la fecha en que se generó o cargó
+      el documento.
     </div>
 
     <div class="sect">
@@ -12226,65 +15810,50 @@ async function cargarConcentradoActas() {
 
   try {
     const todasActas =
-      await cargarActas();
+  await cargarActas();
 
-    const inicio =
-      ACTAS_PERIODO.inicio;
+const inicio =
+  ACTAS_PERIODO.inicio;
 
-    const fin =
-      ACTAS_PERIODO.fin;
+const fin =
+  ACTAS_PERIODO.fin;
 
-    /*
-     * APERTURAS:
-     * manda la fecha compromiso.
-     */
-    const puntosApertura =
-      LECH.filter(p =>
-        p.fcomp &&
-        p.fcomp >= inicio &&
-        p.fcomp <= fin
-      );
+/*
+ * El concentrado de actas debe coincidir
+ * con las lecherías con Vo.Bo. del módulo
+ * de Estimaciones.
+ *
+ * Mismo criterio:
+ * - Trabajo atendido.
+ * - Fecha real dentro del periodo.
+ * - Vo.Bo. aprobado.
+ */
 
-    /*
-     * RECEPCIONES:
-     * manda la fecha real.
-     */
-    const puntosRecepcion =
-      LECH.filter(p =>
-        p.freal &&
-        p.freal >= inicio &&
-        p.freal <= fin
-      );
+const puntosPeriodo =
+  LECH.filter(p =>
+    p.status === 'at' &&
+    p.vobo === 'ok' &&
+    p.fecha_vobo &&
+    p.fecha_vobo >= inicio &&
+    p.fecha_vobo <= fin
+  );
 
-    /*
-     * Relacionamos cada lechería
-     * con su acta individual.
-     */
-    ACTAS_PERIODO.aperturas =
-      puntosApertura.map(p => ({
-        punto: p,
+/*
+ * Internamente seguimos utilizando
+ * clase = 'apertura' por compatibilidad.
+ */
+ACTAS_PERIODO.actas =
+  puntosPeriodo.map(p => ({
+    punto: p,
 
-        acta:
-          todasActas.find(a =>
-            String(a.pv) ===
-              String(p.pv) &&
-            a.clase ===
-              'apertura'
-          ) || null
-      }));
-
-    ACTAS_PERIODO.recepciones =
-      puntosRecepcion.map(p => ({
-        punto: p,
-
-        acta:
-          todasActas.find(a =>
-            String(a.pv) ===
-              String(p.pv) &&
-            a.clase ===
-              'recepcion'
-          ) || null
-      }));
+    acta:
+      todasActas.find(a =>
+        String(a.pv) ===
+          String(p.pv) &&
+        a.clase ===
+          'apertura'
+      ) || null
+  }));
 
     pintarConcentradoActas();
 
@@ -12310,6 +15879,1927 @@ async function cargarConcentradoActas() {
   }
 }
 
+function sumarDiasISOReporte(
+  iso,
+  dias
+) {
+
+  const partes =
+    String(iso)
+      .split('-')
+      .map(Number);
+
+  const fecha =
+    new Date(
+      partes[0],
+      partes[1] - 1,
+      partes[2],
+      12,
+      0,
+      0
+    );
+
+  fecha.setDate(
+    fecha.getDate() + dias
+  );
+
+  return fechaISOlocal(fecha);
+}
+
+
+function inicioSemanaReporte(
+  iso
+) {
+
+  const partes =
+    String(iso)
+      .split('-')
+      .map(Number);
+
+  const fecha =
+    new Date(
+      partes[0],
+      partes[1] - 1,
+      partes[2],
+      12,
+      0,
+      0
+    );
+
+  const dia =
+    fecha.getDay();
+
+  const mover =
+    dia === 0
+      ? -6
+      : 1 - dia;
+
+  fecha.setDate(
+    fecha.getDate() + mover
+  );
+
+  return fechaISOlocal(fecha);
+}
+
+
+function fechaCortaReporte(
+  iso
+) {
+
+  if (!iso) {
+    return '—';
+  }
+
+  const partes =
+    iso.split('-')
+      .map(Number);
+
+  const fecha =
+    new Date(
+      partes[0],
+      partes[1] - 1,
+      partes[2],
+      12,
+      0,
+      0
+    );
+
+  return fecha
+    .toLocaleDateString(
+      'es-MX',
+      {
+        day: '2-digit',
+        month: 'short'
+      }
+    )
+    .replace('.', '');
+}
+
+
+function obtenerSemanasPrograma() {
+
+  const semanas =
+    new Set();
+
+  (LECH || [])
+    .forEach(p => {
+
+      if (!p.fcomp) {
+        return;
+      }
+
+      semanas.add(
+        inicioSemanaReporte(
+          p.fcomp
+        )
+      );
+    });
+
+  return [...semanas]
+    .sort();
+}
+
+
+function porcentajeReporte(
+  realizado,
+  programado
+) {
+
+  if (!programado) {
+    return 0;
+  }
+
+  return Number(
+    (
+      realizado /
+      programado *
+      100
+    ).toFixed(1)
+  );
+}
+
+
+function desviacionPorcentualReporte(
+  realizado,
+  programado
+) {
+
+  if (!programado) {
+    return 0;
+  }
+
+  return Number(
+    (
+      (
+        realizado -
+        programado
+      ) /
+      programado *
+      100
+    ).toFixed(1)
+  );
+}
+
+
+function calcularReporteSemanal(
+  inicioSemana
+) {
+
+  const inicio =
+    inicioSemana;
+
+  const fin =
+    sumarDiasISOReporte(
+      inicio,
+      6
+    );
+
+  const hoy =
+    fechaISOlocal(
+      new Date()
+    );
+
+
+  /*
+   * ==========================
+   * PROGRAMA DE LA SEMANA
+   * ==========================
+   */
+
+  const programadasSemana =
+    LECH.filter(p =>
+      p.fcomp &&
+      p.fcomp >= inicio &&
+      p.fcomp <= fin
+    );
+
+
+  /*
+   * Vo.Bo. otorgados
+   * durante la semana.
+   */
+
+  const atendidasSemana =
+    LECH.filter(p =>
+      p.vobo === 'ok' &&
+      p.fecha_vobo &&
+      p.fecha_vobo >= inicio &&
+      p.fecha_vobo <= fin
+    );
+
+
+  /*
+   * ==========================
+   * PROGRAMA ACUMULADO
+   * ==========================
+   *
+   * Todas las lecherías cuya
+   * fecha compromiso ya cayó
+   * hasta el cierre analizado.
+   */
+
+  const programadasAcumuladas =
+    LECH.filter(p =>
+      p.fcomp &&
+      p.fcomp <= fin
+    );
+
+
+  /*
+   * ==========================
+   * Vo.Bo. TOTALES AL CORTE
+   * ==========================
+   *
+   * Incluye tanto las que
+   * pertenecen al programa
+   * acumulado como las que
+   * fueron adelantadas.
+   */
+
+  const atendidasAcumuladas =
+    LECH.filter(p =>
+      p.vobo === 'ok' &&
+      p.fecha_vobo &&
+      p.fecha_vobo <= fin
+    );
+
+
+  /*
+   * ==========================
+   * PENDIENTES DEL PROGRAMA
+   * ==========================
+   *
+   * De las que ya debían estar
+   * cumplidas según fcomp,
+   * cuáles todavía no tenían
+   * Vo.Bo. al cierre.
+   */
+
+  const programadasPendientes =
+    programadasAcumuladas
+      .filter(p =>
+        !p.fecha_vobo ||
+        p.fecha_vobo > fin
+      )
+      .length;
+
+
+  /*
+   * AHORA SÍ podemos calcular
+   * cumplidasPrograma porque
+   * programadasPendientes ya
+   * existe.
+   */
+
+  const cumplidasPrograma =
+    programadasAcumuladas.length -
+    programadasPendientes;
+
+
+  /*
+   * ==========================
+   * TRABAJOS ADELANTADOS
+   * ==========================
+   *
+   * Tienen Vo.Bo. al corte,
+   * pero su fecha compromiso
+   * pertenece a una semana
+   * posterior.
+   */
+
+  const trabajosAdelantados =
+    LECH.filter(p =>
+      p.vobo === 'ok' &&
+      p.fecha_vobo &&
+      p.fecha_vobo <= fin &&
+      p.fcomp &&
+      p.fcomp > fin
+    ).length;
+
+
+  /*
+   * ==========================
+   * SEMANA
+   * ==========================
+   */
+
+  const faltantesSemana =
+    Math.max(
+      programadasSemana.length -
+      atendidasSemana.length,
+      0
+    );
+
+
+  /*
+   * ==========================
+   * ACUMULADO
+   * ==========================
+   *
+   * Aquí NO descontamos las
+   * adelantadas.
+   *
+   * Pendientes significa
+   * realmente pendientes del
+   * programa acumulado.
+   */
+
+  const faltantesAcumulados =
+    programadasPendientes;
+
+
+  /*
+   * ==========================
+   * ESTADO DE LA SEMANA
+   * ==========================
+   */
+
+  let estadoSemana =
+    'cerrada';
+
+  if (inicio > hoy) {
+
+    estadoSemana =
+      'futura';
+
+  } else if (
+    hoy >= inicio &&
+    hoy <= fin
+  ) {
+
+    estadoSemana =
+      'curso';
+  }
+
+
+  /*
+   * ==========================
+   * RESULTADO
+   * ==========================
+   */
+
+  return {
+
+    inicio,
+    fin,
+    estadoSemana,
+
+
+    /*
+     * SEMANA
+     */
+
+    programadasSemana:
+      programadasSemana.length,
+
+    atendidasSemana:
+      atendidasSemana.length,
+
+    faltantesSemana,
+
+    cumplimientoSemana:
+      porcentajeReporte(
+        atendidasSemana.length,
+        programadasSemana.length
+      ),
+
+    desviacionSemana:
+      desviacionPorcentualReporte(
+        atendidasSemana.length,
+        programadasSemana.length
+      ),
+
+
+    /*
+     * ACUMULADO REAL DEL PROGRAMA
+     */
+
+    programadasAcumuladas:
+      programadasAcumuladas.length,
+
+    cumplidasPrograma,
+
+    programadasPendientes,
+
+    faltantesAcumulados,
+
+    cumplimientoAcumulado:
+      porcentajeReporte(
+        cumplidasPrograma,
+        programadasAcumuladas.length
+      ),
+
+    desviacionAcumulada:
+      desviacionPorcentualReporte(
+        cumplidasPrograma,
+        programadasAcumuladas.length
+      ),
+
+
+    /*
+     * PRODUCCIÓN TOTAL
+     */
+
+    trabajosAdelantados,
+
+    atendidasAcumuladas:
+      atendidasAcumuladas.length
+
+  };
+}
+
+function renderReporteSemanal() {
+
+  const semanas =
+    obtenerSemanasPrograma();
+
+  if (!semanas.length) {
+    return '';
+  }
+
+  /*
+   * La primera vez seleccionamos
+   * automáticamente la semana actual.
+   */
+
+  if (!REPORTE_SEMANAL.inicio) {
+
+    const actual =
+      obtenerSemanaActual()
+        .inicio;
+
+    REPORTE_SEMANAL.inicio =
+      semanas.includes(actual)
+        ? actual
+        : semanas[0];
+  }
+
+  const r =
+    calcularReporteSemanal(
+      REPORTE_SEMANAL.inicio
+    );
+
+  const opciones =
+    semanas
+      .map(inicio => {
+
+        const fin =
+          sumarDiasISOReporte(
+            inicio,
+            6
+          );
+
+        return `
+          <option
+            value="${inicio}"
+            ${
+              inicio ===
+              REPORTE_SEMANAL.inicio
+                ? 'selected'
+                : ''
+            }
+          >
+            ${fechaCortaReporte(inicio)}
+            —
+            ${fechaCortaReporte(fin)}
+          </option>
+        `;
+      })
+      .join('');
+
+  let etiquetaEstado =
+    'SEMANA CERRADA';
+
+  let colorEstado =
+    'var(--steel)';
+
+  if (
+    r.estadoSemana ===
+    'curso'
+  ) {
+    etiquetaEstado =
+      'SEMANA EN CURSO';
+
+    colorEstado =
+      'var(--wait)';
+  }
+
+  if (
+    r.estadoSemana ===
+    'futura'
+  ) {
+    etiquetaEstado =
+      'SEMANA PROGRAMADA';
+
+    colorEstado =
+      'var(--mut)';
+  }
+
+  const formatearDesviacion =
+    valor => {
+
+      if (valor > 0) {
+        return `+${valor}%`;
+      }
+
+      return `${valor}%`;
+    };
+
+  return `
+    <div
+      class="sect"
+      id="reporteSemanal"
+    >
+
+      <h3>
+        Reporte semanal
+      </h3>
+
+      <div class="note">
+
+        <b>
+          Cumplimiento contra programa
+        </b>
+
+        <br><br>
+
+        Compara el programa establecido
+        contra los Vo.Bo. obtenidos y
+        muestra la desviación semanal
+        y acumulada.
+
+      </div>
+
+      <div
+        class="dashcard"
+        style="
+          border-left:
+            4px solid var(--leche);
+        "
+      >
+
+        <div
+          style="
+            display:flex;
+            justify-content:
+              space-between;
+            align-items:center;
+            gap:10px;
+          "
+        >
+
+          <div>
+
+            <div
+              style="
+                font-size:10px;
+                color:var(--mut);
+                margin-bottom:3px;
+              "
+            >
+              Semana de análisis
+            </div>
+
+            <select
+              onchange="
+                cambiarSemanaReporte(
+                  this.value
+                )
+              "
+              style="
+                border:1px solid var(--line);
+                border-radius:7px;
+                padding:7px 9px;
+                background:#fff;
+                font:inherit;
+                font-size:11px;
+                font-weight:800;
+                color:var(--ink);
+              "
+            >
+              ${opciones}
+            </select>
+
+          </div>
+
+          <div
+            style="
+              padding:5px 8px;
+              border-radius:999px;
+              background:${colorEstado};
+              color:#fff;
+              font-size:8.5px;
+              font-weight:900;
+              white-space:nowrap;
+            "
+          >
+            ${etiquetaEstado}
+          </div>
+
+        </div>
+
+        <div
+          style="
+            margin-top:11px;
+            font-size:10px;
+            color:var(--mut);
+          "
+        >
+          ${fechaCortaReporte(r.inicio)}
+          —
+          ${fechaCortaReporte(r.fin)}
+        </div>
+
+      </div>
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:
+            repeat(2, minmax(0,1fr));
+          gap:9px;
+          margin-top:10px;
+        "
+      >
+
+        <!-- SEMANA -->
+
+        <div
+          class="dashcard"
+          style="
+            margin:0;
+            border-top:
+              3px solid var(--leche);
+          "
+        >
+
+          <div
+            style="
+              font-size:11px;
+              font-weight:900;
+              margin-bottom:9px;
+            "
+          >
+            SEMANA
+          </div>
+
+          <div class="dstats">
+
+            <div class="s">
+              <div class="v">
+                ${r.programadasSemana}
+              </div>
+              <div class="k">
+                Programadas
+              </div>
+            </div>
+
+            <div class="s">
+              <div
+                class="v"
+                style="
+                  color:var(--done);
+                "
+              >
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : r.atendidasSemana
+                }
+              </div>
+              <div class="k">
+                Con Vo.Bo.
+              </div>
+            </div>
+
+            <div class="s">
+              <div
+                class="v"
+                style="
+                  color:var(--wait);
+                "
+              >
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : r.faltantesSemana
+                }
+              </div>
+              <div class="k">
+                Faltantes
+              </div>
+            </div>
+
+          </div>
+
+          <div
+            style="
+              border-top:
+                1px solid var(--line);
+              margin-top:8px;
+              padding-top:8px;
+              display:flex;
+              justify-content:
+                space-between;
+              gap:8px;
+              font-size:10px;
+            "
+          >
+
+            <span>
+              Cumplimiento
+              <b>
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : `${r.cumplimientoSemana}%`
+                }
+              </b>
+            </span>
+
+            <span>
+              Desv.
+              <b
+                style="
+                  color:${
+                    r.desviacionSemana < 0
+                      ? 'var(--rej)'
+                      : 'var(--done)'
+                  };
+                "
+              >
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : formatearDesviacion(
+                        r.desviacionSemana
+                      )
+                }
+              </b>
+            </span>
+
+          </div>
+
+        </div>
+
+        <!-- ACUMULADO -->
+
+        <div
+          class="dashcard"
+          style="
+            margin:0;
+            border-top:
+              3px solid var(--steel);
+          "
+        >
+
+          <div
+            style="
+              font-size:11px;
+              font-weight:900;
+              margin-bottom:9px;
+            "
+          >
+            ACUMULADO
+          </div>
+
+          <div class="dstats">
+
+            <div class="s">
+              <div class="v">
+                ${r.programadasAcumuladas}
+              </div>
+              <div class="k">
+                Programadas
+              </div>
+            </div>
+
+            <div class="s">
+              <div
+                class="v"
+                style="
+                  color:var(--done);
+                "
+              >
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : r.cumplidasPrograma
+                }
+              </div>
+              <div class="k">
+                Cumplidas
+              </div>
+            </div>
+
+            <div class="s">
+              <div
+                class="v"
+                style="
+                  color:var(--wait);
+                "
+              >
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : r.faltantesAcumulados
+                }
+              </div>
+              <div class="k">
+                Faltantes
+              </div>
+            </div>
+
+          </div>
+
+          <div
+            style="
+              border-top:
+                1px solid var(--line);
+              margin-top:8px;
+              padding-top:8px;
+              display:flex;
+              justify-content:
+                space-between;
+              gap:8px;
+              font-size:10px;
+            "
+          >
+
+            <span>
+              Cumplimiento
+              <b>
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : `${r.cumplimientoAcumulado}%`
+                }
+              </b>
+            </span>
+
+            <span>
+              Desv.
+              <b
+                style="
+                  color:${
+                    r.desviacionAcumulada < 0
+                      ? 'var(--rej)'
+                      : 'var(--done)'
+                  };
+                "
+              >
+                ${
+                  r.estadoSemana ===
+                    'futura'
+                    ? '—'
+                    : formatearDesviacion(
+                        r.desviacionAcumulada
+                      )
+                }
+              </b>
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      ${
+        r.estadoSemana !== 'futura'
+          ? `
+            <div
+              class="dashcard"
+              style="
+                margin-top:10px;
+                border-left:4px solid var(--done);
+              "
+            >
+
+              <div
+                style="
+                  font-size:11px;
+                  font-weight:900;
+                  margin-bottom:9px;
+                "
+              >
+                PRODUCCIÓN REAL AL CORTE
+              </div>
+
+              <div class="dstats">
+
+                <div class="s">
+                  <div
+                    class="v"
+                    style="color:var(--done);"
+                  >
+                    ${r.cumplidasPrograma}
+                  </div>
+
+                  <div class="k">
+                    Del programa
+                  </div>
+                </div>
+
+                <div class="s">
+                  <div
+                    class="v"
+                    style="color:var(--leche);"
+                  >
+                    ${r.trabajosAdelantados}
+                  </div>
+
+                  <div class="k">
+                    Adelantadas
+                  </div>
+                </div>
+
+                <div class="s">
+                  <div
+                    class="v"
+                    style="color:var(--steel);"
+                  >
+                    ${r.atendidasAcumuladas}
+                  </div>
+
+                  <div class="k">
+                    Vo.Bo. totales
+                  </div>
+                </div>
+
+              </div>
+
+              <div
+                style="
+                  border-top:1px solid var(--line);
+                  margin-top:8px;
+                  padding-top:8px;
+                  font-size:9.5px;
+                  line-height:1.45;
+                  color:var(--mut);
+                "
+              >
+                Los Vo.Bo. totales se integran por las
+                lecherías cumplidas dentro del programa
+                acumulado más los trabajos de semanas
+                posteriores ejecutados por adelantado.
+              </div>
+
+            </div>
+          `
+          : ''
+      }
+
+      ${
+        r.estadoSemana !== 'futura'
+          ? `
+            <div
+              class="expbtns"
+              style="
+                margin-top:10px;
+              "
+            >
+
+              <button
+                class="expbtn exp-xlsx"
+                onclick="
+                  exportReporteSemanalXLSX()
+                "
+              >
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M12 3v12M7 10l5 5 5-5M5 21h14"
+                  />
+                </svg>
+
+                Excel
+              </button>
+
+              <button
+                class="expbtn exp-pdf"
+                onclick="
+                  exportReporteSemanalPDF()
+                "
+              >
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M12 3v12M7 10l5 5 5-5M5 21h14"
+                  />
+                </svg>
+
+                PDF
+              </button>
+
+            </div>
+          `
+          : ''
+      }
+
+    </div>
+  `;
+}
+
+function exportReporteSemanalXLSX() {
+
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    toast(
+      'Este reporte es exclusivo de control interno'
+    );
+
+    return;
+  }
+
+
+  if (!REPORTE_SEMANAL.inicio) {
+    toast(
+      'Selecciona una semana'
+    );
+
+    return;
+  }
+
+
+  const r =
+    calcularReporteSemanal(
+      REPORTE_SEMANAL.inicio
+    );
+
+
+  if (
+    r.estadoSemana ===
+    'futura'
+  ) {
+    toast(
+      'La semana seleccionada aún no inicia'
+    );
+
+    return;
+  }
+
+
+  const libro =
+    XLSX.utils.book_new();
+
+
+  /*
+   * ==========================
+   * RESUMEN
+   * ==========================
+   */
+
+  const resumen = [
+    {
+      Concepto:
+        'Inicio de semana',
+
+      Valor:
+        r.inicio
+    },
+
+    {
+      Concepto:
+        'Fin de semana',
+
+      Valor:
+        r.fin
+    },
+
+    {
+      Concepto:
+        'Programadas semana',
+
+      Valor:
+        r.programadasSemana
+    },
+
+    {
+      Concepto:
+        'Vo.Bo. obtenidos semana',
+
+      Valor:
+        r.atendidasSemana
+    },
+
+    {
+      Concepto:
+        'Pendientes semana',
+
+      Valor:
+        r.faltantesSemana
+    },
+
+    {
+      Concepto:
+        'Cumplimiento semana',
+
+      Valor:
+        `${r.cumplimientoSemana}%`
+    },
+
+    {
+      Concepto:
+        'Desviación semana',
+
+      Valor:
+        `${r.desviacionSemana}%`
+    },
+
+    {
+      Concepto:
+        'Programadas acumuladas',
+
+      Valor:
+        r.programadasAcumuladas
+    },
+
+    {
+      Concepto:
+        'Cumplidas del programa',
+
+      Valor:
+        r.cumplidasPrograma
+    },
+
+    {
+      Concepto:
+        'Pendientes del programa',
+
+      Valor:
+        r.programadasPendientes
+    },
+
+    {
+      Concepto:
+        'Cumplimiento acumulado',
+
+      Valor:
+        `${r.cumplimientoAcumulado}%`
+    },
+
+    {
+      Concepto:
+        'Desviación acumulada',
+
+      Valor:
+        `${r.desviacionAcumulada}%`
+    },
+
+    {
+      Concepto:
+        'Trabajos adelantados',
+
+      Valor:
+        r.trabajosAdelantados
+    },
+
+    {
+      Concepto:
+        'Vo.Bo. totales al corte',
+
+      Valor:
+        r.atendidasAcumuladas
+    }
+  ];
+
+
+  const hojaResumen =
+    XLSX.utils.json_to_sheet(
+      resumen
+    );
+
+
+  hojaResumen['!cols'] = [
+    {
+      wch: 32
+    },
+    {
+      wch: 22
+    }
+  ];
+
+
+  XLSX.utils.book_append_sheet(
+    libro,
+    hojaResumen,
+    'Resumen semanal'
+  );
+
+
+  /*
+   * ==========================
+   * PROGRAMA DE LA SEMANA
+   * ==========================
+   */
+
+  const programaSemana =
+    LECH
+      .filter(p =>
+        p.fcomp &&
+        p.fcomp >= r.inicio &&
+        p.fcomp <= r.fin
+      )
+      .map(p => ({
+        'P.V.':
+          p.pv,
+
+        Estado:
+          p.estado || '',
+
+        Municipio:
+          p.municipio || '',
+
+        Localidad:
+          p.localidad || '',
+
+        Zona:
+          p.zona || '',
+
+        Cuadrilla:
+          p.sub || '',
+
+        'Fecha compromiso':
+          p.fcomp || '',
+
+        'Fecha real':
+          p.freal || '',
+
+        'Fecha Vo.Bo.':
+          p.fecha_vobo || '',
+
+        Resultado:
+          (
+            p.vobo === 'ok' &&
+            p.fecha_vobo &&
+            p.fecha_vobo <= r.fin
+          )
+            ? 'Cumplida'
+            : 'Pendiente'
+      }));
+
+
+  agregarHojaExcel(
+    libro,
+    'Programa semana',
+    programaSemana,
+    [
+      16,
+      20,
+      24,
+      24,
+      28,
+      15,
+      18,
+      16,
+      16,
+      16
+    ]
+  );
+
+
+  /*
+   * ==========================
+   * TRABAJOS ADELANTADOS
+   * ==========================
+   */
+
+  const adelantadas =
+    LECH
+      .filter(p =>
+        p.vobo === 'ok' &&
+        p.fecha_vobo &&
+        p.fecha_vobo <= r.fin &&
+        p.fcomp &&
+        p.fcomp > r.fin
+      )
+      .map(p => ({
+        'P.V.':
+          p.pv,
+
+        Estado:
+          p.estado || '',
+
+        Municipio:
+          p.municipio || '',
+
+        Zona:
+          p.zona || '',
+
+        Cuadrilla:
+          p.sub || '',
+
+        'Fecha compromiso':
+          p.fcomp || '',
+
+        'Fecha Vo.Bo.':
+          p.fecha_vobo || ''
+      }));
+
+
+  agregarHojaExcel(
+    libro,
+    'Adelantadas',
+    adelantadas,
+    [
+      16,
+      20,
+      24,
+      28,
+      15,
+      18,
+      16
+    ]
+  );
+
+
+  XLSX.writeFile(
+    libro,
+    `Reporte_semanal_${r.inicio}_${r.fin}.xlsx`
+  );
+
+
+  toast(
+    'Reporte semanal Excel generado'
+  );
+}
+
+function exportReporteSemanalPDF() {
+
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    toast(
+      'Este reporte es exclusivo de control interno'
+    );
+
+    return;
+  }
+
+
+  if (!REPORTE_SEMANAL.inicio) {
+    toast(
+      'Selecciona una semana'
+    );
+
+    return;
+  }
+
+
+  const r =
+    calcularReporteSemanal(
+      REPORTE_SEMANAL.inicio
+    );
+
+
+  if (
+    r.estadoSemana ===
+    'futura'
+  ) {
+    toast(
+      'La semana seleccionada aún no inicia'
+    );
+
+    return;
+  }
+
+
+  const { jsPDF } =
+    window.jspdf;
+
+
+  const doc =
+    new jsPDF({
+      orientation:
+        'portrait',
+
+      unit:
+        'mm',
+
+      format:
+        'a4'
+    });
+
+
+  /*
+   * ==========================
+   * ENCABEZADO
+   * ==========================
+   */
+
+  doc.setFillColor(
+    13,
+    27,
+    42
+  );
+
+  doc.rect(
+    0,
+    0,
+    210,
+    34,
+    'F'
+  );
+
+
+  doc.setTextColor(
+    255,
+    255,
+    255
+  );
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(15);
+
+  doc.text(
+    'Reporte semanal de avance',
+    12,
+    12
+  );
+
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(8);
+
+  doc.text(
+    'LECHERÍAS · FACHADAS',
+    12,
+    18
+  );
+
+  doc.text(
+    `Semana: ${r.inicio} al ${r.fin}`,
+    12,
+    24
+  );
+
+  doc.text(
+    'Control interno LUMEN',
+    12,
+    29
+  );
+
+
+  /*
+   * ==========================
+   * SEMANA
+   * ==========================
+   */
+
+  let y =
+    46;
+
+
+  doc.setTextColor(
+    13,
+    27,
+    42
+  );
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(11);
+
+  doc.text(
+    'AVANCE DE LA SEMANA',
+    12,
+    y
+  );
+
+
+  y += 8;
+
+
+  const cajaSemana = [
+    [
+      'Programadas',
+      String(
+        r.programadasSemana
+      )
+    ],
+
+    [
+      'Vo.Bo. obtenidos',
+      String(
+        r.atendidasSemana
+      )
+    ],
+
+    [
+      'Pendientes',
+      String(
+        r.faltantesSemana
+      )
+    ],
+
+    [
+      'Cumplimiento',
+      `${r.cumplimientoSemana}%`
+    ],
+
+    [
+      'Desviación',
+      `${r.desviacionSemana}%`
+    ]
+  ];
+
+
+  doc.setFontSize(9);
+
+
+  cajaSemana.forEach(
+    ([etiqueta, valor]) => {
+
+      doc.setFont(
+        undefined,
+        'normal'
+      );
+
+      doc.text(
+        etiqueta,
+        16,
+        y
+      );
+
+
+      doc.setFont(
+        undefined,
+        'bold'
+      );
+
+      doc.text(
+        valor,
+        92,
+        y,
+        {
+          align:
+            'right'
+        }
+      );
+
+
+      y += 7;
+    }
+  );
+
+
+  /*
+   * ==========================
+   * ACUMULADO
+   * ==========================
+   */
+
+  y += 6;
+
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(11);
+
+  doc.text(
+    'AVANCE ACUMULADO',
+    12,
+    y
+  );
+
+
+  y += 8;
+
+
+  const cajaAcumulado = [
+    [
+      'Programadas acumuladas',
+      String(
+        r.programadasAcumuladas
+      )
+    ],
+
+    [
+      'Cumplidas del programa',
+      String(
+        r.cumplidasPrograma
+      )
+    ],
+
+    [
+      'Pendientes del programa',
+      String(
+        r.programadasPendientes
+      )
+    ],
+
+    [
+      'Cumplimiento acumulado',
+      `${r.cumplimientoAcumulado}%`
+    ],
+
+    [
+      'Desviación acumulada',
+      `${r.desviacionAcumulada}%`
+    ]
+  ];
+
+
+  doc.setFontSize(9);
+
+
+  cajaAcumulado.forEach(
+    ([etiqueta, valor]) => {
+
+      doc.setFont(
+        undefined,
+        'normal'
+      );
+
+      doc.text(
+        etiqueta,
+        16,
+        y
+      );
+
+
+      doc.setFont(
+        undefined,
+        'bold'
+      );
+
+      doc.text(
+        valor,
+        92,
+        y,
+        {
+          align:
+            'right'
+        }
+      );
+
+
+      y += 7;
+    }
+  );
+
+
+  /*
+   * ==========================
+   * PRODUCCIÓN REAL
+   * ==========================
+   */
+
+  y += 6;
+
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(11);
+
+  doc.text(
+    'PRODUCCIÓN REAL AL CORTE',
+    12,
+    y
+  );
+
+
+  y += 9;
+
+
+  doc.setFontSize(16);
+
+
+  doc.text(
+    String(
+      r.cumplidasPrograma
+    ),
+    43,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+
+  doc.text(
+    String(
+      r.trabajosAdelantados
+    ),
+    105,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+
+  doc.text(
+    String(
+      r.atendidasAcumuladas
+    ),
+    167,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+
+  y += 6;
+
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(8);
+
+
+  doc.text(
+    'DEL PROGRAMA',
+    43,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+
+  doc.text(
+    'ADELANTADAS',
+    105,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+
+  doc.text(
+    'Vo.Bo. TOTALES',
+    167,
+    y,
+    {
+      align:
+        'center'
+    }
+  );
+
+
+  y += 13;
+
+
+  /*
+   * ==========================
+   * INTERPRETACIÓN
+   * ==========================
+   */
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.setFontSize(9);
+
+  doc.text(
+    'Lectura del corte',
+    12,
+    y
+  );
+
+
+  y += 6;
+
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.setFontSize(8.5);
+
+
+  const texto =
+    `Al cierre del periodo se tenían ` +
+    `${r.programadasAcumuladas} lecherías ` +
+    `programadas. ` +
+    `${r.cumplidasPrograma} corresponden ` +
+    `al programa acumulado y ` +
+    `${r.trabajosAdelantados} corresponden ` +
+    `a trabajos de semanas posteriores ` +
+    `ejecutados por adelantado. ` +
+    `El cumplimiento del programa es de ` +
+    `${r.cumplimientoAcumulado}% y quedan ` +
+    `${r.programadasPendientes} compromisos ` +
+    `programados pendientes.`;
+
+
+  const lineas =
+    doc.splitTextToSize(
+      texto,
+      182
+    );
+
+
+  doc.text(
+    lineas,
+    14,
+    y
+  );
+
+
+  /*
+   * ==========================
+   * PIE
+   * ==========================
+   */
+
+  doc.setFontSize(7.5);
+
+  doc.setTextColor(
+    107,
+    123,
+    140
+  );
+
+  doc.text(
+    `Generado ${new Date().toLocaleString('es-MX')}`,
+    105,
+    287,
+    {
+      align:
+        'center'
+    }
+  );
+
+
+  doc.save(
+    `Reporte_semanal_${r.inicio}_${r.fin}.pdf`
+  );
+
+
+  toast(
+    'Reporte semanal PDF generado'
+  );
+}
+
+function cambiarSemanaReporte(
+  inicio
+) {
+
+  REPORTE_SEMANAL.inicio =
+    inicio;
+
+  REPORTE_SEMANAL.detalleAbierto =
+    false;
+
+  pintarConcentradoActas();
+
+  setTimeout(() => {
+
+    const bloque =
+      document.getElementById(
+        'reporteSemanal'
+      );
+
+    if (bloque) {
+      bloque.scrollIntoView({
+        block: 'start'
+      });
+    }
+
+  }, 0);
+}
+
 function pintarConcentradoActas() {
   const contenedor =
     document.getElementById(
@@ -12320,34 +17810,173 @@ function pintarConcentradoActas() {
     return;
   }
 
-  const aperturas =
-    ACTAS_PERIODO.aperturas;
+  const registros =
+    ACTAS_PERIODO.actas || [];
 
-  const recepciones =
-    ACTAS_PERIODO.recepciones;
-
-  const aperturasDisponibles =
-    aperturas.filter(
+  const disponibles =
+    registros.filter(
       tieneDocumentoActa
-    ).length;
+    );
 
-  const recepcionesDisponibles =
-    recepciones.filter(
-      tieneDocumentoActa
-    ).length;
+  const pendientes =
+    registros.filter(
+      item =>
+        !tieneDocumentoActa(item)
+    );
 
-  const aperturasPendientes =
-    aperturas.length -
-    aperturasDisponibles;
 
-  const recepcionesPendientes =
-    recepciones.length -
-    recepcionesDisponibles;
+  /*Verificación de seguridad de actas*/
+    const sinActa =
+  registros.filter(
+    item =>
+      !tieneDocumentoActa(item)
+  );
+
+
+if (sinActa.length) {
+
+  toast(
+    `${sinActa.length} lecherías con Vo.Bo. no tienen acta disponible`
+  );
+
+  return;
+}
+  /*
+ * Dentro de las actas disponibles:
+ *
+ * - cargadas:
+ *   existe un documento que fue
+ *   cargado/reemplazado por el usuario.
+ *
+ * - soloGeneradas:
+ *   existe únicamente el PDF generado
+ *   por el sistema.
+ */
+
+
+const cargadas =
+  disponibles.filter(
+    item =>
+      item.acta &&
+      item.acta.documento_firmado_url
+  );
+
+const soloGeneradas =
+  disponibles.filter(
+    item =>
+      item.acta &&
+      item.acta.documento_generado_url &&
+      !item.acta.documento_firmado_url
+  );
+
+  const vistaActual =
+    VISTA_ACTAS.acta ||
+    'disponibles';
+
+  const mostrar =
+  vistaActual === 'pendientes'
+    ? pendientes
+    : disponibles;
+
+
+/*
+ * ==========================
+ * PAGINACIÓN
+ * ==========================
+ */
+
+const totalPaginas =
+  Math.max(
+    1,
+    Math.ceil(
+      mostrar.length /
+      ACTAS_POR_PAGINA
+    )
+  );
+
+
+/*
+ * Evita quedar en una página
+ * inexistente si cambia el periodo
+ * o cambia de Disponibles/Pendientes.
+ */
+
+if (
+  VISTA_ACTAS.pagina >
+  totalPaginas
+) {
+  VISTA_ACTAS.pagina =
+    totalPaginas;
+}
+
+if (
+  VISTA_ACTAS.pagina < 1
+) {
+  VISTA_ACTAS.pagina = 1;
+}
+
+
+const paginaActual =
+  VISTA_ACTAS.pagina;
+
+
+const inicioPagina =
+  (
+    paginaActual - 1
+  ) *
+  ACTAS_POR_PAGINA;
+
+
+const finPagina =
+  inicioPagina +
+  ACTAS_POR_PAGINA;
+
+
+const mostrarPagina =
+  mostrar.slice(
+    inicioPagina,
+    finPagina
+  );
+
+
+const tarjetas =
+  mostrarPagina.length
+    ? mostrarPagina
+        .map(
+          item =>
+            renderActaPeriodoItem(
+              item,
+              'apertura'
+            )
+        )
+        .join('')
+    : `
+      <div
+        style="
+          background:#fff;
+          border:1px solid var(--line);
+          border-radius:9px;
+          padding:18px 14px;
+          text-align:center;
+          color:var(--mut);
+          font-size:11px;
+        "
+      >
+        ${
+          vistaActual === 'disponibles'
+            ? 'No hay actas disponibles en este periodo.'
+            : 'No hay actas pendientes en este periodo.'
+        }
+      </div>
+    `;
 
   contenedor.innerHTML = `
 
     <div class="sect">
-      <h3>Resumen del periodo</h3>
+
+      <h3>
+        Resumen del periodo
+      </h3>
 
       <div
         class="dashcard"
@@ -12356,6 +17985,7 @@ function pintarConcentradoActas() {
             4px solid var(--leche);
         "
       >
+
         <div
           style="
             display:flex;
@@ -12364,14 +17994,17 @@ function pintarConcentradoActas() {
             gap:10px;
           "
         >
+
           <div>
+
             <div
               style="
                 font-size:12px;
                 font-weight:800;
               "
             >
-              Actas de Apertura
+              Actas de Inicio y
+              Entrega Recepción
             </div>
 
             <div
@@ -12381,8 +18014,9 @@ function pintarConcentradoActas() {
                 margin-top:2px;
               "
             >
-              Por fecha compromiso
+              Periodo determinado por Fecha Real · únicamente con Vo.Bo. aprobado
             </div>
+
           </div>
 
           <div
@@ -12391,143 +18025,455 @@ function pintarConcentradoActas() {
               font-weight:800;
             "
           >
-            ${aperturas.length}
+            ${registros.length}
           </div>
+
         </div>
 
-        <div class="dstats">
+        <div
+          class="dstats"
+          style="
+            grid-template-columns:
+              repeat(4, 1fr);
+          "
+        >
 
           <div class="s">
+
             <div
               class="v"
-              style="color:var(--done)"
+              style="
+                color:var(--done);
+              "
             >
-              ${aperturasDisponibles}
+              ${disponibles.length}
             </div>
 
             <div class="k">
               Disponibles
             </div>
+
           </div>
 
+
           <div class="s">
+
+            <div
+              class="v"
+              style="
+                color:var(--done);
+              "
+            >
+              ${cargadas.length}
+            </div>
+
+            <div class="k">
+              Cargadas
+            </div>
+
+          </div>
+
+
+          <div class="s">
+
+            <div
+              class="v"
+              style="
+                color:var(--leche);
+              "
+            >
+              ${soloGeneradas.length}
+            </div>
+
+            <div class="k">
+              Sólo generadas
+            </div>
+
+          </div>
+
+
+          <div class="s">
+
             <div
               class="v"
               style="
                 color:${
-                  aperturasPendientes
+                  pendientes.length
                     ? 'var(--wait)'
                     : 'var(--done)'
-                }
+                };
               "
             >
-              ${aperturasPendientes}
+              ${pendientes.length}
             </div>
 
             <div class="k">
               Pendientes
             </div>
+
           </div>
 
         </div>
+
       </div>
+
+    </div>
+
+
+    <div class="sect">
+
+      <h3>
+        Actas del periodo
+      </h3>
+
+      <div
+        style="
+          font-size:10.5px;
+          color:var(--mut);
+          margin-bottom:8px;
+        "
+      >
+        Periodo determinado por Fecha Real · únicamente con Vo.Bo. aprobado
+      </div>
+
+
+      <div
+        style="
+          display:flex;
+          gap:7px;
+          margin-bottom:10px;
+        "
+      >
+
+        <button
+          type="button"
+          class="chip ${
+            vistaActual ===
+              'disponibles'
+                ? 'on'
+                : ''
+          }"
+          style="flex:1"
+          onclick="
+            cambiarVistaActas(
+              'acta',
+              'disponibles'
+            )
+          "
+        >
+          Disponibles
+          (${disponibles.length})
+        </button>
+
+
+        <button
+          type="button"
+          class="chip ${
+            vistaActual ===
+              'pendientes'
+                ? 'on'
+                : ''
+          }"
+          style="flex:1"
+          onclick="
+            cambiarVistaActas(
+              'acta',
+              'pendientes'
+            )
+          "
+        >
+          Pendientes
+          (${pendientes.length})
+        </button>
+
+      </div>
+
+
+      <div
+        style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          margin-bottom:8px;
+          font-size:10px;
+          color:var(--mut);
+        "
+      >
+
+        <span>
+          Mostrando
+          ${
+            mostrar.length
+              ? inicioPagina + 1
+              : 0
+          }
+          –
+          ${
+            Math.min(
+              finPagina,
+              mostrar.length
+            )
+          }
+          de
+          ${mostrar.length}
+        </span>
+
+        <span>
+          Página
+          ${paginaActual}
+          de
+          ${totalPaginas}
+        </span>
+
+        <span>
+          Total del periodo:
+          ${registros.length}
+        </span>
+
+      </div>
+
+
+      ${tarjetas}
+
+      ${
+        totalPaginas > 1
+          ? `
+            <div
+              style="
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                gap:8px;
+                margin-top:12px;
+                margin-bottom:4px;
+              "
+            >
+
+              <button
+                type="button"
+                class="chip"
+                ${
+                  paginaActual <= 1
+                    ? 'disabled'
+                    : ''
+                }
+                onclick="
+                  cambiarPaginaActas(
+                    ${paginaActual - 1}
+                  )
+                "
+              >
+                ‹ Anterior
+              </button>
+
+
+              <div
+                style="
+                  min-width:78px;
+                  text-align:center;
+                  font-size:10.5px;
+                  color:var(--mut);
+                  font-weight:700;
+                "
+              >
+                ${paginaActual}
+                /
+                ${totalPaginas}
+              </div>
+
+
+              <button
+                type="button"
+                class="chip"
+                ${
+                  paginaActual >= totalPaginas
+                    ? 'disabled'
+                    : ''
+                }
+                onclick="
+                  cambiarPaginaActas(
+                    ${paginaActual + 1}
+                  )
+                "
+              >
+                Siguiente ›
+              </button>
+
+            </div>
+          `
+          : ''
+      }
+
+      ${
+        disponibles.length
+          ? `
+            <button
+              class="btn"
+              style="
+                margin-top:10px;
+                background:var(--steel);
+                color:#fff;
+              "
+              onclick="
+                descargarActasPeriodo(
+                  'acta'
+                )
+              "
+            >
+              📦 Descargar expedientes con vobo
+              (${disponibles.length})
+            </button>
+          `
+          : ''
+      }
+
+        </div>
+
+      ${renderReporteSemanal()}
+
+    <div class="sect">
+
+      <h3>
+        Reporte de avance interno
+      </h3>
+
+
+      <div class="note">
+
+        <b>
+          Control interno LUMEN
+        </b>
+
+        <br><br>
+
+        Concentrado nacional del avance
+        operativo, superficies ejecutadas
+        y metros cuadrados excedentes.
+
+        <br><br>
+
+        Este reporte es exclusivo para
+        los perfiles
+        <b>GEN</b> y
+        <b>ADMIN</b>.
+
+      </div>
+
 
       <div
         class="dashcard"
         style="
           border-left:
-            4px solid var(--done);
+            4px solid var(--steel);
         "
       >
+
         <div
           style="
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            gap:10px;
+            font-size:13px;
+            font-weight:800;
+            margin-bottom:4px;
           "
         >
-          <div>
-            <div
-              style="
-                font-size:12px;
-                font-weight:800;
-              "
-            >
-              Actas de Recepción
-            </div>
-
-            <div
-              style="
-                font-size:10px;
-                color:var(--mut);
-                margin-top:2px;
-              "
-            >
-              Por fecha real
-            </div>
-          </div>
-
-          <div
-            style="
-              font-size:22px;
-              font-weight:800;
-            "
-          >
-            ${recepciones.length}
-          </div>
+          Avance nacional
         </div>
 
-        <div class="dstats">
-
-          <div class="s">
-            <div
-              class="v"
-              style="color:var(--done)"
-            >
-              ${recepcionesDisponibles}
-            </div>
-
-            <div class="k">
-              Disponibles
-            </div>
-          </div>
-
-          <div class="s">
-            <div
-              class="v"
-              style="
-                color:${
-                  recepcionesPendientes
-                    ? 'var(--wait)'
-                    : 'var(--done)'
-                }
-              "
-            >
-              ${recepcionesPendientes}
-            </div>
-
-            <div class="k">
-              Pendientes
-            </div>
-          </div>
-
+        <div
+          style="
+            font-size:10.5px;
+            color:var(--mut);
+            line-height:1.5;
+          "
+        >
+          Incluye resumen nacional,
+          avance por cuadrilla y
+          detalle individual por P.V.
         </div>
+
       </div>
+
+
+      <div class="expbtns">
+
+      <button
+        class="expbtn exp-xlsx"
+        onclick="
+          exportReporteAvanceInternoXLSX()
+        "
+      >
+
+        <svg viewBox="0 0 24 24">
+          <path
+            d="M12 3v12M7 10l5 5 5-5M5 21h14"
+          />
+        </svg>
+
+        Excel
+
+      </button>
+
+
+      <button
+        class="expbtn exp-pdf"
+        onclick="
+          exportReporteAvanceInternoPDF()
+        "
+      >
+
+        <svg viewBox="0 0 24 24">
+          <path
+            d="M12 3v12M7 10l5 5 5-5M5 21h14"
+          />
+        </svg>
+
+        PDF
+
+      </button>
+
+</div>
+
     </div>
 
-    ${renderGrupoConcentradoActas(
-      'apertura',
-      'Actas de apertura',
-      aperturas
-    )}
-
-    ${renderGrupoConcentradoActas(
-      'recepcion',
-      'Actas de recepción',
-      recepciones
-    )}
   `;
+}
+
+function cambiarPaginaActas(
+  pagina
+) {
+
+  const nuevaPagina =
+    Number(pagina);
+
+  if (
+    !Number.isFinite(
+      nuevaPagina
+    ) ||
+    nuevaPagina < 1
+  ) {
+    return;
+  }
+
+  VISTA_ACTAS.pagina =
+    nuevaPagina;
+
+  pintarConcentradoActas();
+
+
+  /*
+   * Regresamos al inicio de
+   * la sección de resultados.
+   */
+  const contenedor =
+    document.getElementById(
+      'actasResultado'
+    );
+
+  if (contenedor) {
+    contenedor.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }
 }
 
 function tieneDocumentoActa(item) {
@@ -12703,7 +18649,7 @@ function renderGrupoConcentradoActas(
                 )
               "
             >
-              📦 Descargar actas disponibles
+              📦 Descargar expedientes con vobo
               (${disponibles.length})
             </button>
           `
@@ -12718,10 +18664,8 @@ function cambiarVistaActas(
   clase,
   vista
 ) {
-  if (
-    clase !== 'apertura' &&
-    clase !== 'recepcion'
-  ) {
+
+  if (clase !== 'acta') {
     return;
   }
 
@@ -12732,8 +18676,15 @@ function cambiarVistaActas(
     return;
   }
 
-  VISTA_ACTAS[clase] =
+  VISTA_ACTAS.acta =
     vista;
+
+  /*
+   * Cada vez que cambiamos entre
+   * disponibles y pendientes,
+   * regresamos a la página 1.
+   */
+  VISTA_ACTAS.pagina = 1;
 
   pintarConcentradoActas();
 }
@@ -12973,9 +18924,7 @@ async function descargarActasPeriodo(
   }
 
   const registros =
-    clase === 'apertura'
-      ? ACTAS_PERIODO.aperturas
-      : ACTAS_PERIODO.recepciones;
+  ACTAS_PERIODO.actas || [];
 
   const conDocumentos =
     registros.filter(
@@ -13012,29 +18961,72 @@ async function descargarActasPeriodo(
           item.punto.pv
         );
 
-      const acta =
+        const acta =
         item.acta;
 
-      if (
-        acta.documento_generado_url
-      ) {
-        await agregarArchivoActaZIP(
-          zip,
-          acta.documento_generado_url,
-          `${pv}_GENERADA`
-        );
-      }
+        const carpetaPv =
+        zip.folder(pv);
 
-      if (
-        acta.documento_firmado_url
-      ) {
-        await agregarArchivoActaZIP(
-          zip,
-          acta.documento_firmado_url,
-          `${pv}_FIRMADA`
-        );
-      }
+       /*
+       * ==========================
+       * 1. ACTA
+       * ==========================
+       */
+
+    const documentoFinal =
+      acta.documento_firmado_url ||
+      acta.documento_generado_url;
+
+    if (documentoFinal) {
+      await agregarArchivoActaZIP(
+        carpetaPv,
+        documentoFinal,
+        'ACTA_INICIO_ENTREGA_RECEPCION'
+      );
     }
+    /*
+   * ==========================
+   * 2. EVIDENCIA FOTOGRÁFICA
+   * ==========================
+   */
+
+  const fotos =
+    await cargarFotos(
+      pv
+    );
+
+
+  const puntoReporte = {
+    ...item.punto,
+
+    fotosPrev:
+      Array.isArray(fotos?.prev)
+        ? fotos.prev
+        : [],
+
+    fotosFin:
+      Array.isArray(fotos?.fin)
+        ? fotos.fin
+        : []
+  };
+
+
+  const reporteBlob =
+    await reportePDF(
+      puntoReporte,
+      false
+    );
+
+
+  if (reporteBlob) {
+
+    carpetaPv.file(
+    'REPORTE_ANTES_DESPUES.pdf',
+    reporteBlob
+    );
+  }
+
+  }
 
     const blob =
       await zip.generateAsync({
@@ -13042,9 +19034,9 @@ async function descargarActasPeriodo(
       });
 
     const nombre =
-      `actas_${clase}_` +
-      `${ACTAS_PERIODO.inicio}_` +
-      `${ACTAS_PERIODO.fin}.zip`;
+  `expedientes_vobo_` +
+  `${ACTAS_PERIODO.inicio}_` +
+  `${ACTAS_PERIODO.fin}.zip`;
 
     const enlace =
       document.createElement('a');
@@ -13506,10 +19498,10 @@ function reporteInicioPDF() {
 
   y =
     escribirFila(
-      'Subcontratistas comprendidos',
+      'Cuadrillas comprendidas',
       subs.length
         ? subs.join(', ')
-        : 'Sin subcontratista registrado',
+        : 'Sin cuadrilla registrada',
       y
     );
 
@@ -13758,7 +19750,7 @@ function reporteInicioPDF() {
       'y consolidar la evidencia documental y fotográfica.'
     ],
     [
-      'Subcontratistas',
+      'Cuadrillas',
       'Ejecutar los trabajos asignados, registrar evidencias completas ' +
       'y atender oportunamente las observaciones.'
     ],
@@ -13829,7 +19821,7 @@ function reporteInicioPDF() {
 
   y =
     tituloSeccion(
-      'Distribución por subcontratista',
+      'Distribución por cuadrilla',
       y
     );
 
@@ -13839,7 +19831,7 @@ function reporteInicioPDF() {
     punto => {
       const sub =
         punto.sub ||
-        'Sin subcontratista';
+        'Sin cuadrilla';
 
       if (!grupos[sub]) {
         grupos[sub] = [];
@@ -13878,7 +19870,7 @@ function reporteInicioPDF() {
   );
 
   doc.text(
-    'Subcontratista',
+    'Cuadrilla',
     15,
     y + 5.5
   );
@@ -14114,7 +20106,7 @@ function reporteInicioPDF() {
   doc.text(
     esSub
       ? `Responsable de ${CURSUB}`
-      : 'Responsable operativo / subcontratista',
+      : 'Responsable operativo / cuadrilla',
     55,
     y + 6,
     {
@@ -14200,7 +20192,7 @@ function loteCard(lote) {
 
   const referencia = lote.tipo === 'dependencia'
     ? (lote.zona || 'Nacional')
-    : (lote.sub || 'Sin subcontratista');
+    : (lote.sub || 'Sin cuadrilla');
 
   const tarjeta = document.createElement('div');
 
@@ -14338,7 +20330,7 @@ try {
   document.getElementById('shSub').textContent =
   l.tipo === 'dependencia'
     ? `Con la dependencia · ${Number(l.cantidad_lecherias || 0)} lecherías`
-    : `${l.sub || 'Subcontratista'} · ${Number(l.cantidad_lecherias || 0)} lecherías`;
+    : `${l.sub || 'Cuadrilla'} · ${Number(l.cantidad_lecherias || 0)} lecherías`;
 
   const [claseBadge, textoBadge] =
     loteStatusBadge(l.estado);
@@ -14580,7 +20572,7 @@ const listaLecherias = `
               </span>
 
               <span>
-                ${p.sub || 'Sin subcontratista'}
+                ${p.sub || 'Sin Cuadrilla'}
                 ·
                 ${p.zona || 'Sin zona'}
                 ·
@@ -14981,7 +20973,7 @@ function actaPDF() {
   const contextoDocumento =
     esDependencia
       ? 'Con la dependencia'
-      : 'Corte con subcontratista';
+      : 'Corte con cuadrilla';
 
   const numero =
     acta.numero ||

@@ -68,7 +68,8 @@ async function cargarLecherias() {
           vobo,
           motivo,
           freal,
-          fecha_vobo
+          fecha_vobo,
+          m2_protegido
         ),
         excedentes (
           m2_excedente,
@@ -153,6 +154,9 @@ async function cargarLecherias() {
       motivo: av.motivo || '',
       freal: av.freal || '',
       fecha_vobo: av.fecha_vobo || '',
+
+      m2_protegido:
+      av.m2_protegido === true,
 
       m2_excedente:
         Number(ex.m2_excedente) || 0,

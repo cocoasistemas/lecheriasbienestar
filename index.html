@@ -700,7 +700,7 @@ const METAS={"SUB-1": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino
 const MIN=1000, MAX=2000;
 // ===== PRECIOS =====
 // A LA DEPENDENCIA: unidad estándar por lechería = 21 m² a $17,769.75 + IVA (fijo, sin extraordinarios)
-const PRECIO_FACHADA=17769.75, M2_STD=21, M2_MAX = 36, IVA=0.16;
+const PRECIO_FACHADA=17769.75, M2_STD=21, M2_MAX = 28, IVA=0.16;
 // EXTRAORDINARIOS: control INTERNO hacia subcontratistas (la dependencia NO paga extra).
 // Precio por m² adicional configurable por subcontratista (default; se ajusta al cerrar cada subcontrato).
 const PRECIO_M2_EXTRA_DEFAULT=450.00;
@@ -2906,12 +2906,58 @@ CUR.actaApertura =
     ${canPintor?`<div class="ph add" onclick="addPhotoMenu()"><span class="plus">+</span>Agregar</div>`:''}</div>
     ${canPintor&&faltantesCat.length?`<div class="photo-req">Obligatorias pendientes: ${faltantesCat.map(c=>CAT_LABEL[c]).join(', ')}</div>`:''}</div>`;
 
-  let sup=`<div class="sect"><h3>Superficie</h3><div class="infogrid">
-    <div class="ib"><div class="k">Unidad estándar (a la dependencia)</div><div class="v">21 m²</div></div>
-    <div class="ib"><div class="k">Superficie real ejecutada</div><div class="v">${
-      canPintor&&p.status==='at'
-      ?`<input class="mono" type="number" min="21" max="32" value="${p.m2}" style="width:70px;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:14px;font-weight:700" onchange="setM2(this.value)">`
-      :p.m2+' m²'}</div></div></div>`;
+  let sup=`<div class="sect"><h3>Superficie</h3>
+    <div class="infogrid">
+      <div class="ib">
+        <div class="k">Unidad estándar (a la dependencia)</div>
+        <div class="v">21 m²</div>
+      </div>
+      <div class="ib">
+        <div class="k">Superficie real ejecutada</div>
+        <div class="v">${
+          canPintor &&
+            p.status === 'at' &&
+            !p.m2_protegido
+              ? `
+                <input
+                  class="mono"
+                  type="number"
+                  min="${M2_STD}"
+                  max="${M2_MAX}"
+                  value="${p.m2}"
+                  style="
+                    width:70px;
+                    border:1px solid var(--line);
+                    border-radius:6px;
+                    padding:4px 6px;
+                    font-size:14px;
+                    font-weight:700
+                  "
+                  onchange="setM2(this.value)"
+                >
+              `
+              : `
+                ${p.m2} m²
+                ${
+                  p.m2_protegido
+                    ? `
+                      <div
+                        style="
+                          font-size:9px;
+                          color:var(--wait);
+                          margin-top:3px;
+                        "
+                      >
+                        Superficie histórica protegida
+                      </div>
+                    `
+                    : ''
+                }
+              `}
+        </div>
+      </div>
+  </div>`;
+
   if(exc>0){
     //const precioSub=precioExtraSub(p.sub);
     const evOk = p.m2_excedente > 0;
@@ -5234,19 +5280,20 @@ if (!aperturaAutorizada) {
 }
 
 async function setM2(v) {
+
   if (!CUR || ROLE !== 'sub') {
     return;
   }
 
   const m2Anterior =
-    CUR.m2;
+    Number(CUR.m2);
 
   const valor =
     Number(v);
 
-  if (
-    !Number.isFinite(valor)
-  ) {
+
+  if (!Number.isFinite(valor)) {
+
     toast(
       'Ingresa una superficie válida'
     );
@@ -5255,23 +5302,46 @@ async function setM2(v) {
     return;
   }
 
-  if (valor < 21) {
+
+  /*
+   * HISTÓRICOS PROTEGIDOS
+   *
+   * Si ya tenían más de 28 m² antes
+   * del nuevo límite, no permitimos
+   * modificarlos.
+   */
+  if (CUR.m2_protegido) {
+
+  toast(
+    `Este registro conserva su superficie histórica de ${m2Anterior} m²`
+  );
+
+  await openSheet(CUR.id);
+  return;
+}
+
+
+  if (valor < M2_STD) {
+
     toast(
-      'La superficie mínima es de 21 m²'
+      `La superficie mínima es de ${M2_STD} m²`
     );
 
     await openSheet(CUR.id);
     return;
   }
 
-  if (valor > M2_MAX) {
-  toast(
-    `La superficie máxima permitida es de ${M2_MAX} m²`
-  );
 
-  await openSheet(CUR.id);
-  return;
+  if (valor > M2_MAX) {
+
+    toast(
+      `La superficie máxima permitida es de ${M2_MAX} m²`
+    );
+
+    await openSheet(CUR.id);
+    return;
   }
+
 
   CUR.m2 =
     valor;
@@ -5282,7 +5352,9 @@ async function setM2(v) {
       valor - M2_STD
     );
 
+
   try {
+
     await guardarM2(
       CUR.pv,
       CUR.m2,
@@ -5299,6 +5371,7 @@ async function setM2(v) {
     render();
 
   } catch (error) {
+
     console.error(error);
 
     CUR.m2 =
@@ -5319,7 +5392,6 @@ async function setM2(v) {
     );
   }
 }
-
 async function vobo(aprobado) {
   if (!CUR || ROLE !== 'admin') return;
 
