@@ -356,6 +356,10 @@ async function cargarActaIndividual(
       documento_generado_url,
       documento_firmado_url,
       fecha_firma,
+      version_formato,
+      documento_generado_v2_url,
+      documento_firmado_v2_url,
+      fecha_firma_v2,
       fini,
       ffin,
       admin,
@@ -599,6 +603,87 @@ async function guardarPDFGeneradoActaIndividual(
   return data;
 }
 
+async function guardarPDFGeneradoActaIndividualV2(
+  acta,
+  blob
+) {
+  const pvSeguro =
+    String(acta.pv)
+      .replace(
+        /[^a-zA-Z0-9_-]/g,
+        '_'
+      );
+
+  const claseSeguro =
+    String(
+      acta.clase || 'acta'
+    )
+      .replace(
+        /[^a-zA-Z0-9_-]/g,
+        '_'
+      );
+
+  const ruta =
+    `${pvSeguro}/actas/${claseSeguro}/v2/` +
+    `generada_${Date.now()}.pdf`;
+
+  const { error: errorStorage } =
+    await sb.storage
+      .from('evidencias')
+      .upload(
+        ruta,
+        blob,
+        {
+          contentType:
+            'application/pdf',
+
+          upsert:
+            false
+        }
+      );
+
+  if (errorStorage) {
+    throw errorStorage;
+  }
+
+  const { data: publica } =
+    sb.storage
+      .from('evidencias')
+      .getPublicUrl(ruta);
+
+  const url =
+    publica.publicUrl;
+
+  const { data, error } =
+    await sb
+      .from('actas')
+      .update({
+        documento_generado_v2_url:
+          url,
+
+        version_formato:
+          2
+      })
+      .eq(
+        'id',
+        acta.id
+      )
+      .select('*')
+      .single();
+
+  if (error) {
+    await sb.storage
+      .from('evidencias')
+      .remove([
+        ruta
+      ]);
+
+    throw error;
+  }
+
+  return data;
+}
+
 async function guardarComentariosActaIndividual(
   actaId,
   comentarios
@@ -801,6 +886,216 @@ if (
     );
   }
 }
+
+  return data;
+}
+
+async function subirActaIndividualFirmadaV2(
+  acta,
+  archivo
+) {
+  const extension =
+    archivo.name.includes('.')
+      ? archivo.name
+          .split('.')
+          .pop()
+          .toLowerCase()
+      : 'pdf';
+
+  const permitidas = [
+    'pdf',
+    'jpg',
+    'jpeg',
+    'png'
+  ];
+
+  if (
+    !permitidas.includes(
+      extension
+    )
+  ) {
+    throw new Error(
+      'Solo se permiten PDF, JPG o PNG'
+    );
+  }
+
+  const pvSeguro =
+    String(acta.pv)
+      .replace(
+        /[^a-zA-Z0-9_-]/g,
+        '_'
+      );
+
+  const claseSeguro =
+    String(
+      acta.clase || 'acta'
+    )
+      .replace(
+        /[^a-zA-Z0-9_-]/g,
+        '_'
+      );
+
+  /*
+   * IMPORTANTE:
+   * solamente consideramos como anterior
+   * otra V2.
+   *
+   * La V1 nunca se toca.
+   */
+  const urlAnteriorV2 =
+    acta.documento_firmado_v2_url ||
+    null;
+
+  const ruta =
+    `${pvSeguro}/actas/${claseSeguro}/v2/` +
+    `firmada_${Date.now()}.${extension}`;
+
+  const {
+    error: errorStorage
+  } =
+    await sb.storage
+      .from('evidencias')
+      .upload(
+        ruta,
+        archivo,
+        {
+          contentType:
+            archivo.type ||
+            undefined,
+
+          upsert:
+            false
+        }
+      );
+
+  if (errorStorage) {
+    throw errorStorage;
+  }
+
+  const { data: publica } =
+    sb.storage
+      .from('evidencias')
+      .getPublicUrl(
+        ruta
+      );
+
+  const url =
+    publica.publicUrl;
+
+  const hoy =
+    new Date()
+      .toISOString()
+      .slice(0, 10);
+
+  /*
+   * Si la acta ya estaba aprobada o
+   * en revisión, NO retrocedemos su estado.
+   *
+   * Si es una acta nueva todavía por armar
+   * o rechazada, la nueva firma sí la manda
+   * a revisión.
+   */
+  const estadoNuevo =
+    acta.estado === 'aprobada' ||
+    acta.estado === 'en_revision'
+      ? acta.estado
+      : 'en_revision';
+
+  const { data, error } =
+    await sb
+      .from('actas')
+      .update({
+        documento_firmado_v2_url:
+          url,
+
+        fecha_firma_v2:
+          hoy,
+
+        version_formato:
+          2,
+
+        /*
+         * documento_url pasa a apuntar
+         * al documento vigente.
+         *
+         * documento_firmado_url conserva
+         * intacta la V1 histórica.
+         */
+        documento_url:
+          url,
+
+        estado:
+          estadoNuevo
+      })
+      .eq(
+        'id',
+        acta.id
+      )
+      .select('*')
+      .single();
+
+  if (error) {
+    await sb.storage
+      .from('evidencias')
+      .remove([
+        ruta
+      ]);
+
+    throw error;
+  }
+
+  /*
+   * Si sustituimos una V2 previa,
+   * limpiamos únicamente esa V2.
+   *
+   * NUNCA documento_firmado_url de V1.
+   */
+  if (
+    urlAnteriorV2 &&
+    urlAnteriorV2 !== url
+  ) {
+    try {
+      const marcador =
+        '/storage/v1/object/public/evidencias/';
+
+      const posicion =
+        urlAnteriorV2.indexOf(
+          marcador
+        );
+
+      if (posicion !== -1) {
+        const rutaAnterior =
+          decodeURIComponent(
+            urlAnteriorV2.substring(
+              posicion +
+              marcador.length
+            )
+          );
+
+        const {
+          error: errorBorrado
+        } =
+          await sb.storage
+            .from('evidencias')
+            .remove([
+              rutaAnterior
+            ]);
+
+        if (errorBorrado) {
+          console.warn(
+            'La V2 fue reemplazada, pero no se pudo eliminar la V2 anterior:',
+            errorBorrado
+          );
+        }
+      }
+
+    } catch (error) {
+      console.warn(
+        'No fue posible limpiar la V2 anterior:',
+        error
+      );
+    }
+  }
 
   return data;
 }

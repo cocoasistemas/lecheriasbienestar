@@ -1933,9 +1933,21 @@ function renderActaAperturaBlock(
    * LUMEN administra este documento.
    * Los demás perfiles lo consultan.
    */
-  const puedeGestionar =
+  const esActaHistoricaV1 =
+  !!(
+    acta &&
+    (
+      acta.documento_generado_url ||
+      acta.documento_firmado_url
+    )
+  );
+
+const puedeGestionar =
   ROLE === 'gen' ||
-  ROLE === 'sub';
+  (
+    ROLE === 'sub' &&
+    !esActaHistoricaV1
+  );
 
   /*
    * Todavía no existe.
@@ -2047,10 +2059,10 @@ function renderActaAperturaBlock(
     acta.comentarios || '';
 
   const generado =
-    acta.documento_generado_url
+    acta.documento_generado_v2_url
       ? `
         <a
-          href="${acta.documento_generado_url}"
+          href="${acta.documento_generado_v2_url}"
           target="_blank"
           rel="noopener"
           class="btn"
@@ -2090,10 +2102,10 @@ function renderActaAperturaBlock(
         );
 
   const firmado =
-  acta.documento_firmado_url
+  acta.documento_firmado_v2_url
     ? `
       <a
-        href="${acta.documento_firmado_url}"
+        href="${acta.documento_firmado_v2_url}"
         target="_blank"
         rel="noopener"
         class="btn"
@@ -2158,7 +2170,7 @@ function renderActaAperturaBlock(
                 margin-bottom:8px;
               "
             >
-              Aún no se carga el documento.
+              Pendiente de carga de la nueva versión del acta.
             </div>
           `
       );
@@ -2503,6 +2515,44 @@ function renderActaRecepcionBlock(
     ] ||
     estados.por_armar;
 
+  const tieneV1 =
+    !!(
+      acta.documento_generado_url ||
+      acta.documento_firmado_url
+    );
+
+  const tieneV2Generada =
+    !!acta.documento_generado_v2_url;
+
+  const tieneV2Firmada =
+    !!acta.documento_firmado_v2_url;
+
+  let textoEstadoActa =
+    estado.texto;
+
+  if (
+    tieneV1 &&
+    !tieneV2Generada
+  ) {
+    textoEstadoActa =
+      'Nueva versión pendiente de generar';
+  }
+
+  if (
+    tieneV2Generada &&
+    !tieneV2Firmada
+  ) {
+    textoEstadoActa =
+      'Nueva versión generada · pendiente de firma y carga';
+  }
+
+  if (
+    tieneV2Firmada
+  ) {
+    textoEstadoActa =
+      'Nueva versión cargada';
+  }
+
   const comentarios =
     acta.comentarios || '';
 
@@ -2721,7 +2771,7 @@ function renderActaRecepcionBlock(
           "
         ></span>
 
-        ${estado.texto}
+        ${textoEstadoActa}
       </div>
 
       <div
@@ -3685,7 +3735,7 @@ function crearPDFActaApertura(
   doc.setFontSize(8);
 
   doc.text(
-    `Procedimiento: ${PROCEDIMIENTO}`,
+    `Contrato: ${PROCEDIMIENTO}`,
     14,
     27
   );
@@ -3717,10 +3767,17 @@ function crearPDFActaApertura(
 
   let y = 51;
 
+  const NOMBRE_SERVICIO =
+  'MANTENIMIENTO Y CONSERVACIÓN DE INMUEBLES MEDIANTE LA APLICACIÓN DE PINTURA PARA LA CONSERVACIÓN DE LA IMAGEN INSTITUCIONAL, EXCLUSIVAMENTE EN FACHADAS DE PUNTOS DE VENTA Y/O LECHERÍAS PARA EL BIENESTAR';
+
   /*
    * Datos del punto de venta.
    */
   const filas = [
+    [
+      'Nombre del servicio',
+      NOMBRE_SERVICIO
+    ],
     [
       'Punto de venta',
       p.pv
@@ -3804,7 +3861,7 @@ function crearPDFActaApertura(
    * Introducción.
    */
   const intro =
-    'Reunidos el personal de LUMEN-OAX PROYECTOS Y CONSTRUCCIÓN S.A. DE C.V. y el Administrador del Punto de Venta de LECHE PARA EL BIENESTAR, S.A. DE C.V., se hace constar el inicio, ejecución y entrega-recepción de los servicios correspondientes al inmueble antes descrito.';
+  'Reunidos el personal de LUMEN-OAX PROYECTOS Y CONSTRUCCIÓN S.A. DE C.V. y el Representante de LECHE PARA EL BIENESTAR, S.A. DE C.V., se hace constar el inicio, ejecución y entrega-recepción de los servicios correspondientes al inmueble antes descrito.';
 
   doc.setFontSize(8.3);
 
@@ -3855,12 +3912,12 @@ function crearPDFActaApertura(
         'I. Declara la Contratista, a través de su representante:',
       textos: [
         'a) Que los servicios objeto del contrato referido han sido concluidos en su totalidad en el inmueble antes descrito, conforme a las especificaciones técnicas pactadas y detalladas en el Acta de Inicio de Servicios correspondiente.',
-        'b) Que hace entrega formal de los servicios ejecutados al Administrador de la Lechería.'
+        'b) Que hace entrega formal de los servicios ejecutados al Representante de Leche para el Bienestar.'
       ]
     },
     {
-      titulo:
-        'II. Declara el Administrador:',
+        titulo:
+        'II. Declara el Representante de Leche para el Bienestar:',
       textos: [
         'a) Que, previa inspección física del inmueble, recibe de conformidad los servicios ejecutados por la Contratista.',
         'b) Que las observaciones o pendientes, en su caso, quedan asentadas en el apartado correspondiente del presente instrumento.'
@@ -3956,7 +4013,7 @@ function crearPDFActaApertura(
   doc.setFontSize(8.1);
 
   const acuerdos = [
-    '1. La firma del presente instrumento por parte del Administrador constituye la aceptación de conformidad de los servicios entregados por la Contratista en los términos aquí descritos.',
+    '1. La firma del presente instrumento por parte del Representante constituye la aceptación de conformidad de los servicios entregados por la Contratista en los términos aquí descritos.',
     '2. La garantía de los servicios ejecutados será la señalada en el apartado anterior, contada a partir de la fecha de firma de la presente Acta.'
   ];
 
@@ -4198,7 +4255,7 @@ doc.setFont(
 doc.setFontSize(8);
 
 doc.text(
-  'ADMINISTRADOR DE LA LECHERÍA',
+  'REPRESENTANTE / DEPENDENCIA',
   55,
   yCargoFirma,
   {
@@ -4708,12 +4765,24 @@ async function generarActaApertura() {
     return;
   }
 
-  if (
+  const esActaHistoricaV1 =
+  !!(
+    CUR.actaApertura &&
+    (
+      CUR.actaApertura.documento_generado_url ||
+      CUR.actaApertura.documento_firmado_url
+    )
+  );
+
+if (
   ROLE !== 'gen' &&
-  ROLE !== 'sub'
+  (
+    ROLE !== 'sub' ||
+    esActaHistoricaV1
+  )
 ) {
   toast(
-    'Tu perfil no puede generar el acta de apertura'
+    'Esta acta debe ser regenerada por el contratista general'
   );
 
   return;
@@ -4739,18 +4808,18 @@ async function generarActaApertura() {
      * simplemente lo abrimos.
      */
     if (
-      acta.documento_generado_url
-    ) {
-      window.open(
-        acta.documento_generado_url,
-        '_blank'
-      );
+        acta.documento_generado_v2_url
+      ) {
+        window.open(
+          acta.documento_generado_v2_url,
+          '_blank'
+        );
 
-      CUR.actaApertura =
-        acta;
+        CUR.actaApertura =
+          acta;
 
-      return;
-    }
+        return;
+      }
 
     const doc =
       crearPDFActaApertura(
@@ -4764,7 +4833,7 @@ async function generarActaApertura() {
       );
 
     acta =
-      await guardarPDFGeneradoActaIndividual(
+      await guardarPDFGeneradoActaIndividualV2(
         acta,
         blob
       );
@@ -5051,12 +5120,24 @@ async function cargarActaAperturaFirmada() {
     return;
   }
 
-  if (
+  const esActaHistoricaV1 =
+  !!(
+    CUR.actaApertura &&
+    (
+      CUR.actaApertura.documento_generado_url ||
+      CUR.actaApertura.documento_firmado_url
+    )
+  );
+
+if (
   ROLE !== 'gen' &&
-  ROLE !== 'sub'
+  (
+    ROLE !== 'sub' ||
+    esActaHistoricaV1
+  )
 ) {
   toast(
-    'Tu perfil no puede cargar el acta firmada'
+    'La sustitución de esta acta debe ser administrada por el contratista general'
   );
   return;
 }
@@ -5070,7 +5151,7 @@ async function cargarActaAperturaFirmada() {
 
   try {
     const actualizada =
-      await subirActaIndividualFirmada(
+      await subirActaIndividualFirmadaV2(
         CUR.actaApertura,
         archivo
       );
@@ -17824,23 +17905,6 @@ function pintarConcentradoActas() {
         !tieneDocumentoActa(item)
     );
 
-
-  /*Verificación de seguridad de actas*/
-    const sinActa =
-  registros.filter(
-    item =>
-      !tieneDocumentoActa(item)
-  );
-
-
-if (sinActa.length) {
-
-  toast(
-    `${sinActa.length} lecherías con Vo.Bo. no tienen acta disponible`
-  );
-
-  return;
-}
   /*
  * Dentro de las actas disponibles:
  *
@@ -17858,15 +17922,15 @@ const cargadas =
   disponibles.filter(
     item =>
       item.acta &&
-      item.acta.documento_firmado_url
+      item.acta.documento_firmado_v2_url
   );
 
 const soloGeneradas =
   disponibles.filter(
     item =>
       item.acta &&
-      item.acta.documento_generado_url &&
-      !item.acta.documento_firmado_url
+      item.acta.documento_generado_v2_url &&
+      !item.acta.documento_firmado_v2_url
   );
 
   const vistaActual =
@@ -18014,7 +18078,7 @@ const tarjetas =
                 margin-top:2px;
               "
             >
-              Periodo determinado por Fecha Real · únicamente con Vo.Bo. aprobado
+              Periodo determinado por Fecha de Vo.Bo · únicamente con Vo.Bo. aprobado
             </div>
 
           </div>
@@ -18119,6 +18183,46 @@ const tarjetas =
 
     </div>
 
+    ${
+      ROLE === 'gen'
+        ? `
+          <div
+            class="sect"
+          >
+            <h3>
+              Actualización documental V2
+            </h3>
+
+            <div
+              class="note"
+              style="
+                margin-bottom:10px;
+              "
+            >
+              Genera automáticamente la nueva versión
+              del Acta de Inicio y Entrega Recepción
+              para las lecherías que ya cuentan con
+              Vo.Bo. y todavía conservan únicamente
+              su documentación anterior.
+            </div>
+
+            <button
+              type="button"
+              class="btn"
+              style="
+                background:var(--leche);
+                color:#fff;
+              "
+              onclick="
+                generarActasV2PendientesVobo()
+              "
+            >
+              🔄 Generar V2 pendientes con Vo.Bo.
+            </button>
+          </div>
+        `
+        : ''
+    }
 
     <div class="sect">
 
@@ -18481,8 +18585,8 @@ function tieneDocumentoActa(item) {
     item &&
     item.acta &&
     (
-      item.acta.documento_generado_url ||
-      item.acta.documento_firmado_url
+      item.acta.documento_generado_v2_url ||
+      item.acta.documento_firmado_v2_url
     )
   );
 }
@@ -18745,10 +18849,10 @@ function renderActaPeriodoItem(
   }
 
   const generada =
-    a.documento_generado_url;
+    a.documento_generado_v2_url;
 
   const firmada =
-    a.documento_firmado_url;
+    a.documento_firmado_v2_url;
 
   let estadoTexto =
     'Por armar';
@@ -18909,6 +19013,230 @@ function renderActaPeriodoItem(
   `;
 }
 
+async function generarActasV2PendientesVobo() {
+  if (ROLE !== 'gen') {
+    toast(
+      'Solo el contratista general puede ejecutar esta migración'
+    );
+
+    return;
+  }
+
+  try {
+    /*
+     * Todas las lecherías que actualmente
+     * ya cuentan con Vo.Bo.
+     *
+     * No depende del periodo seleccionado.
+     */
+    const puntosConVobo =
+      LECH.filter(
+        p =>
+          p.status === 'at' &&
+          p.vobo === 'ok'
+      );
+
+    const todasActas =
+      await cargarActas();
+
+    /*
+     * Relacionamos cada P.V. con su acta
+     * de apertura actual.
+     */
+    const candidatas =
+      puntosConVobo
+        .map(
+          punto => ({
+            punto,
+
+            acta:
+              todasActas.find(
+                a =>
+                  String(a.pv) ===
+                    String(punto.pv) &&
+                  a.clase ===
+                    'apertura'
+              ) || null
+          })
+        );
+
+    /*
+     * Solo necesitamos migrar aquellas
+     * que:
+     *
+     * 1. ya tienen registro de acta;
+     * 2. todavía NO tienen V2 generada.
+     */
+    const pendientes =
+      candidatas.filter(
+        item =>
+          item.acta &&
+          !item.acta
+            .documento_generado_v2_url
+      );
+
+    /*
+     * Por seguridad también identificamos
+     * cualquier P.V. con Vo.Bo. que,
+     * inesperadamente, no tenga registro
+     * de acta.
+     */
+    const sinRegistroActa =
+      candidatas.filter(
+        item =>
+          !item.acta
+      );
+
+    if (!pendientes.length) {
+      toast(
+        'Todas las lecherías con Vo.Bo. ya cuentan con Acta V2'
+      );
+
+      return;
+    }
+
+    const continuar =
+      window.confirm(
+        `Se generará la nueva Acta V2 para ${pendientes.length} lecherías con Vo.Bo.\n\n` +
+        `Las actas V1 existentes NO serán modificadas ni eliminadas.\n\n` +
+        `¿Deseas continuar?`
+      );
+
+    if (!continuar) {
+      return;
+    }
+
+    let generadas = 0;
+    let errores = 0;
+
+    const detalleErrores = [];
+
+    for (
+      let i = 0;
+      i < pendientes.length;
+      i++
+    ) {
+      const item =
+        pendientes[i];
+
+      const punto =
+        item.punto;
+
+      let acta =
+        item.acta;
+
+      try {
+        toast(
+          `Generando Acta V2 ${i + 1} de ${pendientes.length} · P.V. ${punto.pv}`
+        );
+
+        /*
+         * Utilizamos exactamente el mismo
+         * generador V2 que ya probamos
+         * individualmente.
+         */
+        const doc =
+          crearPDFActaApertura(
+            punto,
+            acta
+          );
+
+        const blob =
+          doc.output(
+            'blob'
+          );
+
+        acta =
+          await guardarPDFGeneradoActaIndividualV2(
+            acta,
+            blob
+          );
+
+        generadas++;
+
+      } catch (error) {
+        errores++;
+
+        detalleErrores.push({
+          pv:
+            punto.pv,
+
+          error:
+            error?.message ||
+            String(error)
+        });
+
+        console.error(
+          `Error generando V2 para P.V. ${punto.pv}:`,
+          error
+        );
+      }
+    }
+
+    console.log(
+      'Resultado migración Actas V2:',
+      {
+        conVobo:
+          puntosConVobo.length,
+
+        pendientesIniciales:
+          pendientes.length,
+
+        generadas,
+
+        errores,
+
+        sinRegistroActa:
+          sinRegistroActa.map(
+            x => x.punto.pv
+          ),
+
+        detalleErrores
+      }
+    );
+
+    /*
+     * Actualizamos el concentrado
+     * para que las nuevas V2 aparezcan
+     * inmediatamente como disponibles.
+     */
+    if (
+      ACTAS_PERIODO.inicio &&
+      ACTAS_PERIODO.fin
+    ) {
+      await cargarConcentradoActas();
+    }
+
+    let mensaje =
+      `Migración V2 terminada: ${generadas} generadas`;
+
+    if (errores) {
+      mensaje +=
+        ` · ${errores} con error`;
+    }
+
+    if (sinRegistroActa.length) {
+      mensaje +=
+        ` · ${sinRegistroActa.length} sin registro de acta`;
+    }
+
+    toast(
+      mensaje
+    );
+
+  } catch (error) {
+    console.error(
+      'Error preparando migración V2:',
+      error
+    );
+
+    toast(
+      error.message ||
+      'No fue posible preparar la migración de actas V2'
+    );
+  }
+}
+
 async function descargarActasPeriodo(
   clase
 ) {
@@ -18923,22 +19251,39 @@ async function descargarActasPeriodo(
     return;
   }
 
+  /*
+   * ACTAS_PERIODO.actas ya contiene
+   * únicamente P.V.:
+   *
+   * - atendidas
+   * - con Vo.Bo. aprobado
+   * - cuya fecha_vobo está dentro
+   *   del periodo seleccionado
+   */
   const registros =
-  ACTAS_PERIODO.actas || [];
+    ACTAS_PERIODO.actas || [];
 
+  /*
+   * Para el nuevo concentrado únicamente
+   * consideramos actas V2.
+   *
+   * Puede existir:
+   * - V2 generada en blanco
+   * - V2 firmada/cargada
+   */
   const conDocumentos =
     registros.filter(
       x =>
         x.acta &&
         (
-          x.acta.documento_generado_url ||
-          x.acta.documento_firmado_url
+          x.acta.documento_generado_v2_url ||
+          x.acta.documento_firmado_v2_url
         )
     );
 
   if (!conDocumentos.length) {
     toast(
-      'No hay documentos disponibles en este periodo'
+      'No hay actas V2 disponibles en este periodo'
     );
 
     return;
@@ -18952,81 +19297,98 @@ async function descargarActasPeriodo(
     const zip =
       new JSZip();
 
+    let indice = 0;
+
     for (
       const item
       of conDocumentos
     ) {
+      indice++;
+
       const pv =
         String(
           item.punto.pv
         );
 
-        const acta =
+      const acta =
         item.acta;
 
-        const carpetaPv =
-        zip.folder(pv);
-
-       /*
+      /*
        * ==========================
-       * 1. ACTA
+       * 1. ACTA V2
+       * ==========================
+       *
+       * Si ya regresó firmada,
+       * usamos la firmada.
+       *
+       * Si todavía no,
+       * usamos la V2 generada
+       * para impresión y firma.
+       */
+      const documentoFinal =
+        acta.documento_firmado_v2_url ||
+        acta.documento_generado_v2_url;
+
+      await agregarArchivoActaZIP(
+        zip,
+        documentoFinal,
+        `${indice}_${pv}_ACTA_INICIO_ENTREGA_RECEPCION`
+      );
+
+      /*
+       * ==========================
+       * 2. REPORTE ANTES / DESPUÉS
        * ==========================
        */
+      const fotos =
+        await cargarFotos(
+          pv
+        );
 
-    const documentoFinal =
-      acta.documento_firmado_url ||
-      acta.documento_generado_url;
+      const puntoReporte = {
+        ...item.punto,
 
-    if (documentoFinal) {
-      await agregarArchivoActaZIP(
-        carpetaPv,
-        documentoFinal,
-        'ACTA_INICIO_ENTREGA_RECEPCION'
+        fotosPrev:
+          Array.isArray(
+            fotos?.prev
+          )
+            ? fotos.prev
+            : [],
+
+        fotosFin:
+          Array.isArray(
+            fotos?.fin
+          )
+            ? fotos.fin
+            : []
+      };
+
+      /*
+       * reportePDF() ya está preparado
+       * para devolver Blob cuando el
+       * segundo parámetro es false.
+       */
+      const reporteBlob =
+        await reportePDF(
+          puntoReporte,
+          false
+        );
+
+      if (!reporteBlob) {
+        throw new Error(
+          `No fue posible generar el reporte de la P.V. ${pv}`
+        );
+      }
+
+      /*
+       * Se agrega DIRECTAMENTE al ZIP.
+       * No existe carpeta por P.V.
+       */
+      zip.file(
+        `${indice}_${pv}_REPORTE_ANTES_DESPUES.pdf`,
+        reporteBlob
       );
     }
-    /*
-   * ==========================
-   * 2. EVIDENCIA FOTOGRÁFICA
-   * ==========================
-   */
-
-  const fotos =
-    await cargarFotos(
-      pv
-    );
-
-
-  const puntoReporte = {
-    ...item.punto,
-
-    fotosPrev:
-      Array.isArray(fotos?.prev)
-        ? fotos.prev
-        : [],
-
-    fotosFin:
-      Array.isArray(fotos?.fin)
-        ? fotos.fin
-        : []
-  };
-
-
-  const reporteBlob =
-    await reportePDF(
-      puntoReporte,
-      false
-    );
-
-
-  if (reporteBlob) {
-
-    carpetaPv.file(
-    'REPORTE_ANTES_DESPUES.pdf',
-    reporteBlob
-    );
-  }
-
-  }
 
     const blob =
       await zip.generateAsync({
@@ -19034,17 +19396,22 @@ async function descargarActasPeriodo(
       });
 
     const nombre =
-  `expedientes_vobo_` +
-  `${ACTAS_PERIODO.inicio}_` +
-  `${ACTAS_PERIODO.fin}.zip`;
+      `expedientes_vobo_` +
+      `${ACTAS_PERIODO.inicio}_` +
+      `${ACTAS_PERIODO.fin}.zip`;
 
     const enlace =
-      document.createElement('a');
+      document.createElement(
+        'a'
+      );
 
-    enlace.href =
+    const urlTemporal =
       URL.createObjectURL(
         blob
       );
+
+    enlace.href =
+      urlTemporal;
 
     enlace.download =
       nombre;
@@ -19058,11 +19425,11 @@ async function descargarActasPeriodo(
     enlace.remove();
 
     URL.revokeObjectURL(
-      enlace.href
+      urlTemporal
     );
 
     toast(
-      'Concentrado descargado'
+      `Concentrado descargado: ${conDocumentos.length} actas y ${conDocumentos.length} reportes`
     );
 
   } catch (error) {
@@ -19072,6 +19439,7 @@ async function descargarActasPeriodo(
     );
 
     toast(
+      error.message ||
       'No fue posible preparar el concentrado'
     );
   }
