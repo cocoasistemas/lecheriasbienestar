@@ -1357,6 +1357,37 @@ async function guardarIniciada(pv) {
 
 // Subir una foto al Storage y registrar en la tabla
 async function subirFoto(pv, momento, tipo, archivo, lat, lng) {
+  /*
+   * Protección adicional:
+   * una evidencia final solamente puede
+   * registrarse cuando el acta de apertura
+   * ya fue autorizada.
+   */
+  if (momento === 'fin') {
+
+    const acta =
+      await cargarActaIndividual(
+        pv,
+        'apertura'
+      );
+
+    const autorizada =
+      !!(
+        acta &&
+        (
+          acta.estado ===
+            'en_revision' ||
+          acta.estado ===
+            'aprobada'
+        )
+      );
+
+    if (!autorizada) {
+      throw new Error(
+        'La lechería aún no cuenta con autorización de inicio'
+      );
+    }
+  }
   const ruta = `${pv}/${momento}_${tipo}_${Date.now()}.jpg`;
   const { error: eUp } = await sb.storage.from('evidencias').upload(ruta, archivo);
   if (eUp) { throw eUp; }
