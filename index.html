@@ -1961,7 +1961,7 @@ function renderActaAperturaBlock(
 const puedeGestionar =
   ROLE === 'gen' ||
   ROLE === 'sub';
-  
+
   /*
    * Todavía no existe.
    */
@@ -3099,8 +3099,10 @@ CUR.actaApertura =
   // requisito de fotos (anexo): 3 previas + 3 finales, con fachada global y letrero
   const reqOk = fotosOk(p);
   const aperturaAutorizada =
-  p.actaApertura?.estado === 'en_revision' ||
-  p.actaApertura?.estado === 'aprobada';
+  !!(
+    p.actaApertura &&
+    p.actaApertura.documento_generado_v2_url
+  );
   const nP=(p.fotosPrev||[]).length, nF=(p.fotosFin||[]).length;
   const faltaCat=faltanCatFin(p);
   let reqDetalle;
@@ -3214,8 +3216,7 @@ CUR.actaApertura =
   p.status === 'ini'
   ) {
     const puedeMarcarAtendido =
-      reqOk &&
-      aperturaAutorizada;
+    reqOk;
 
     actions = `
       <button
@@ -3540,41 +3541,6 @@ async function addPhoto(
   ) {
     return;
   }
-
-  /*
-   * Las fotografías ANTES pueden cargarse
-   * antes de la autorización.
-   *
-   * Las fotografías DESPUÉS representan
-   * ejecución real del trabajo, por lo que
-   * requieren autorización previa de LUMEN.
-   */
-  if (kind === 'fin') {
-
-    const acta =
-      CUR.actaApertura;
-
-    const aperturaAutorizada =
-      !!(
-        acta &&
-        (
-          acta.estado ===
-            'en_revision' ||
-          acta.estado ===
-            'aprobada'
-        )
-      );
-
-    if (!aperturaAutorizada) {
-
-      toast(
-        'No puedes cargar fotos finales hasta que LUMEN autorice el inicio del trabajo'
-      );
-
-      return;
-    }
-  }
-
 
   const archivo =
     await seleccionarArchivo();
@@ -5383,21 +5349,6 @@ async function addExtraEvidencia() {
 
 async function markAt() {
   if (!CUR || ROLE !== 'sub') return;
-
-  const estadoApertura =
-  CUR.actaApertura?.estado;
-
-const aperturaAutorizada =
-  estadoApertura === 'en_revision' ||
-  estadoApertura === 'aprobada';
-
-if (!aperturaAutorizada) {
-  toast(
-    'Esta lechería aún no está autorizada para iniciar trabajos'
-  );
-
-  return;
-}
 
   const nP = (CUR.fotosPrev || []).length;
   const nF = (CUR.fotosFin || []).length;
