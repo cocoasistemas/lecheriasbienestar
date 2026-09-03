@@ -155,7 +155,11 @@ async function cargarLecherias() {
       r.grupo_compensacion_m2 || null,
 
       status: av.status || 'no',
-      m2: Number(av.m2) || M2_STD,
+      m2:
+        av.m2 === null ||
+        av.m2 === undefined
+          ? M2_STD
+          : Number(av.m2),
       vobo: av.vobo || '-',
       motivo: av.motivo || '',
       freal: av.freal || '',

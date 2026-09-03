@@ -701,6 +701,21 @@ const MIN=1000, MAX=2000;
 // ===== PRECIOS =====
 // A LA DEPENDENCIA: unidad estándar por lechería = 21 m² a $17,769.75 + IVA (fijo, sin extraordinarios)
 const PRECIO_FACHADA=17769.75, M2_STD=21, M2_MAX = 28, IVA=0.16;
+function m2Real(p) {
+  if (
+    p?.m2 === null ||
+    p?.m2 === undefined ||
+    p?.m2 === ''
+  ) {
+    return M2_STD;
+  }
+
+  const valor = Number(p.m2);
+
+  return Number.isFinite(valor)
+    ? valor
+    : M2_STD;
+}
 // EXTRAORDINARIOS: control INTERNO hacia subcontratistas (la dependencia NO paga extra).
 // Precio por m² adicional configurable por subcontratista (default; se ajusta al cerrar cada subcontrato).
 const PRECIO_M2_EXTRA_DEFAULT=450.00;
@@ -733,6 +748,185 @@ function addDays(iso, d) {
 
 function daysBetween(a, b) {
     return Math.round((new Date(b)-new Date(a))/86400000);
+}
+
+function creditoCompensacionM2(p) {
+  if (!p?.bloque_especial_m2) {
+    return 0;
+  }
+
+  return Math.max(
+    M2_STD - m2Real(p),
+    0
+  );
+}
+
+function consumoCompensacionM2(p) {
+  if (!p?.bloque_especial_m2) {
+    return 0;
+  }
+
+  return Math.max(
+    m2Real(p) - M2_STD,
+    0
+  );
+}
+
+function resumenCompensacionM2(
+  grupo = 'BLOQUE_212'
+) {
+
+  const puntos =
+    (LECH || []).filter(p =>
+      p.bloque_especial_m2 &&
+      p.grupo_compensacion_m2 === grupo &&
+      p.status === 'at'
+    );
+
+  const credito =
+    puntos.reduce(
+      (total, p) =>
+        total +
+        creditoCompensacionM2(p),
+      0
+    );
+
+  const consumo =
+    puntos.reduce(
+      (total, p) =>
+        total +
+        consumoCompensacionM2(p),
+      0
+    );
+
+  return {
+    atendidas: puntos.length,
+    credito,
+    consumo,
+    saldo: credito - consumo
+  };
+}
+
+function obtenerReporteCompensacionM2(
+  grupo = 'BLOQUE_212'
+) {
+
+  const todos =
+  (window.LECH || []).filter(p =>
+      p.bloque_especial_m2 === true &&
+      p.grupo_compensacion_m2 === grupo
+    );
+
+  const atendidos =
+    todos.filter(p =>
+      p.status === 'at'
+    );
+
+  const detalle =
+    todos.map(p => {
+
+      const real =
+        m2Real(p);
+
+      const esAtendida =
+        p.status === 'at';
+
+      const credito =
+        esAtendida
+          ? creditoCompensacionM2(p)
+          : 0;
+
+      const consumo =
+        esAtendida
+          ? consumoCompensacionM2(p)
+          : 0;
+
+      return {
+        pv: p.pv,
+        cuadrilla: p.sub || '',
+        zona: p.zona || '',
+        estado: p.estado || '',
+        status: p.status,
+        fecha_real: p.freal || '',
+
+        contractual_m2:
+          M2_STD,
+
+        real_m2:
+          real,
+
+        credito_m2:
+          credito,
+
+        consumo_m2:
+          consumo,
+
+        balance_m2:
+          credito - consumo
+      };
+    });
+
+  const creditoTotal =
+    detalle.reduce(
+      (total, p) =>
+        total + p.credito_m2,
+      0
+    );
+
+  const consumoTotal =
+    detalle.reduce(
+      (total, p) =>
+        total + p.consumo_m2,
+      0
+    );
+
+  const m2Contractuales =
+    atendidos.length *
+    M2_STD;
+
+  const m2Reales =
+    detalle
+      .filter(p =>
+        p.status === 'at'
+      )
+      .reduce(
+        (total, p) =>
+          total + p.real_m2,
+        0
+      );
+
+  return {
+
+    grupo,
+
+    total_lecherias:
+      todos.length,
+
+    atendidas:
+      atendidos.length,
+
+    pendientes:
+      todos.length -
+      atendidos.length,
+
+    m2_contractuales:
+      m2Contractuales,
+
+    m2_reales:
+      m2Reales,
+
+    credito_generado:
+      creditoTotal,
+
+    credito_consumido:
+      consumoTotal,
+
+    saldo_m2:
+      creditoTotal -
+      consumoTotal,
+
+    detalle
+  };
 }
 
 let LOTES=[];
@@ -2819,7 +3013,7 @@ function renderActaRecepcionBlock(
           </div>
 
           <div class="v">
-            ${p.m2 || M2_STD} m²
+            ${m2Real(p)} m²
           </div>
         </div>
 
@@ -2979,13 +3173,20 @@ CUR.actaApertura =
         <div class="k">Superficie real ejecutada</div>
         <div class="v">${
           canPintor &&
-            p.status === 'at' &&
+            (
+              p.status === 'at' ||
+              p.bloque_especial_m2
+            ) &&
             !p.m2_protegido
               ? `
                 <input
                   class="mono"
                   type="number"
-                  min="${M2_STD}"
+                  min="${
+                    p.bloque_especial_m2
+                      ? 0
+                      : M2_STD
+                    }"
                   max="${M2_MAX}"
                   value="${p.m2}"
                   style="
@@ -4480,7 +4681,7 @@ function crearPDFActaRecepcion(
 
   const excedente =
     Math.max(
-      Number(p.m2 || M2_STD) -
+      m2Real(p) -
       M2_STD,
       0
     );
@@ -4533,7 +4734,7 @@ function crearPDFActaRecepcion(
 
     [
       'Superficie real ejecutada',
-      `${p.m2 || M2_STD} m²`
+      `${m2Real(p)} m²`
     ],
 
     [
@@ -5432,10 +5633,16 @@ async function setM2(v) {
 }
 
 
-  if (valor < M2_STD) {
+  const minimoPermitido =
+  CUR.bloque_especial_m2
+    ? 0
+    : M2_STD;
 
+  if (valor < minimoPermitido) {
     toast(
-      `La superficie mínima es de ${M2_STD} m²`
+      CUR.bloque_especial_m2
+        ? 'La superficie mínima permitida para este bloque es 0 m²'
+        : `La superficie mínima es de ${M2_STD} m²`
     );
 
     await openSheet(CUR.id);
@@ -7101,7 +7308,7 @@ async function reporteSemanal() {
     ) {
       const superficie =
         Number(
-          punto.m2 || M2_STD
+          m2Real(punto)
         );
 
       return Number.isFinite(
@@ -9472,18 +9679,13 @@ async function reporteMensual() {
 
     const conExcedenteMes =
       atendidasMes.filter(punto =>
-        Number(
-          punto.m2 || M2_STD
-        ) > M2_STD
+        m2Real(punto) > M2_STD
       );
 
     const m2EjecutadosMes =
       atendidasMes.reduce(
         (total, punto) =>
-          total +
-          Number(
-            punto.m2 || M2_STD
-          ),
+          total + m2Real(punto),
         0
       );
 
@@ -9492,10 +9694,7 @@ async function reporteMensual() {
         (total, punto) =>
           total +
           Math.max(
-            Number(
-              punto.m2 || M2_STD
-            ) -
-            M2_STD,
+            m2Real(punto) - M2_STD,
             0
           ),
         0
@@ -10748,9 +10947,7 @@ function calcularResumenAvanceInterno(puntos) {
 
         const extra =
           Math.max(
-            Number(
-              p.m2 || M2_STD
-            ) - M2_STD,
+            m2Real(p) - M2_STD,
             0
           );
 
@@ -11027,10 +11224,7 @@ function exportReporteAvanceInternoXLSX() {
         const extra =
           atendida
             ? Math.max(
-                Number(
-                  p.m2 || M2_STD
-                ) -
-                M2_STD,
+                m2Real(p) - M2_STD,
                 0
               )
             : 0;
@@ -11042,11 +11236,8 @@ function exportReporteAvanceInternoXLSX() {
 
         const total =
           atendida
-            ? Number(
-                p.m2 || M2_STD
-              )
+            ? m2Real(p)
             : 0;
-
 
         return {
 
@@ -12705,7 +12896,7 @@ async function exportReporteInterno() {
               extra?.m2_excedente ||
               punto.m2_excedente ||
               Math.max(
-                Number(punto.m2 || M2_STD) -
+                m2Real(punto) -
                 M2_STD,
                 0
               )
@@ -12770,9 +12961,7 @@ async function exportReporteInterno() {
               M2_STD,
 
             'm² real':
-              Number(
-                punto.m2 || M2_STD
-              ),
+              m2Real(punto),
 
             'm² excedente':
               m2Extra,
@@ -13922,7 +14111,7 @@ function exportXLSX() {
         p.sub || '',
 
       'm²':
-        Number(p.m2 || M2_STD),
+        m2Real(p),
 
       'Fecha real':
         p.freal || '',
@@ -15017,7 +15206,7 @@ async function reportePDF(
         : 'Sin coordenadas';
 
     const superficie =
-      Number(p.m2 || M2_STD);
+      m2Real(p);
 
     const excedente =
       Math.max(
@@ -20709,7 +20898,7 @@ const listaLecherias = `
                 ·
                 ${p.zona || 'Sin zona'}
                 ·
-                ${Number(p.m2 || M2_STD)} m²
+                ${m2Real(p)} m²
               </span>
             </div>
 
