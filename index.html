@@ -716,6 +716,14 @@ function m2Real(p) {
     ? valor
     : M2_STD;
 }
+
+function m2VisiblePorRol(p) {
+  if (ROLE === 'dep') {
+    return M2_STD;
+  }
+
+  return m2Real(p);
+}
 // EXTRAORDINARIOS: control INTERNO hacia subcontratistas (la dependencia NO paga extra).
 // Precio por m² adicional configurable por subcontratista (default; se ajusta al cerrar cada subcontrato).
 const PRECIO_M2_EXTRA_DEFAULT=450.00;
@@ -3091,11 +3099,14 @@ async function openSheet(id){
   )
 ]);
 
+CUR.fotosStreet =
+  fotos.street || [];
+
 CUR.fotosPrev =
-  fotos.prev;
+  fotos.prev || [];
 
 CUR.fotosFin =
-  fotos.fin;
+  fotos.fin || [];
 
 CUR.adjuntos =
   adjuntos;
@@ -3143,6 +3154,13 @@ CUR.actaApertura =
   const canPintor = ROLE==='sub';
   const isAdmin = ROLE==='admin';
 
+  let streetImgs = '';
+
+  (p.fotosStreet || [])
+    .forEach(f => {
+      streetImgs += photoCard(f);
+  });
+
   let prevImgs='';
   (p.fotosPrev||[]).forEach(f=>{
     prevImgs += photoCard(f);
@@ -3155,74 +3173,415 @@ CUR.actaApertura =
 
   const nPrev=(p.fotosPrev||[]).length, nFin=(p.fotosFin||[]).length;
   const faltantesCat=faltanCatFin(p);
-  const prevLane=`<div class="phlane"><div class="lbl">Fotos previas <span class="tag tag-prev">Antes · ${nPrev}/${MIN_FOTOS_PREV} mín</span></div>
-    <div class="phscroll">${prevImgs||'<div style="font-size:11px;color:var(--mut);padding:12px">Sin fotos previas</div>'}
-    ${canPintor?`<div class="ph add" onclick="addPhoto('prev','general')"><span class="plus">+</span>Agregar</div>`:''}</div></div>`;
-  const finLane=`<div class="phlane"><div class="lbl">Fotos finales <span class="tag tag-fin">Después · ${nFin}/${MIN_FOTOS_FIN} mín</span></div>
-    <div class="phscroll">${finImgs||'<div style="font-size:11px;color:var(--mut);padding:12px">Aún sin fotos finales</div>'}
-    ${canPintor?`<div class="ph add" onclick="addPhotoMenu()"><span class="plus">+</span>Agregar</div>`:''}</div>
-    ${canPintor&&faltantesCat.length?`<div class="photo-req">Obligatorias pendientes: ${faltantesCat.map(c=>CAT_LABEL[c]).join(', ')}</div>`:''}</div>`;
+  const nStreet =
+  (p.fotosStreet || []).length;
 
-  let sup=`<div class="sect"><h3>Superficie</h3>
-    <div class="infogrid">
-      <div class="ib">
-        <div class="k">Unidad estándar (a la dependencia)</div>
-        <div class="v">21 m²</div>
-      </div>
-      <div class="ib">
-        <div class="k">Superficie real ejecutada</div>
-        <div class="v">${
-          canPintor &&
-            (
-              p.status === 'at' ||
-              p.bloque_especial_m2
-            ) &&
-            !p.m2_protegido
+  const esBloqueEspecial =
+  p.bloque_especial_m2 === true;
+
+  const streetLane =
+  esBloqueEspecial &&
+  ROLE !== 'dep'
+    ? `
+      <div class="phlane">
+        <div class="lbl">
+          Referencia histórica
+
+          <span class="tag tag-prev">
+            Street View · ${nStreet}
+          </span>
+        </div>
+
+        <div class="phscroll">
+          ${
+            streetImgs ||
+            `
+              <div
+                style="
+                  font-size:11px;
+                  color:var(--mut);
+                  padding:12px
+                "
+              >
+                Sin imágenes de referencia histórica
+              </div>
+            `
+          }
+
+          ${
+            canPintor
               ? `
-                <input
-                  class="mono"
-                  type="number"
-                  min="${
-                    p.bloque_especial_m2
-                      ? 0
-                      : M2_STD
-                    }"
-                  max="${M2_MAX}"
-                  value="${p.m2}"
-                  style="
-                    width:70px;
-                    border:1px solid var(--line);
-                    border-radius:6px;
-                    padding:4px 6px;
-                    font-size:14px;
-                    font-weight:700
-                  "
-                  onchange="setM2(this.value)"
+                <div
+                  class="ph add"
+                  onclick="addPhoto(
+                    'street',
+                    'general'
+                  )"
                 >
+                  <span class="plus">+</span>
+                  Agregar
+                </div>
               `
-              : `
-                ${p.m2} m²
-                ${
-                  p.m2_protegido
-                    ? `
-                      <div
-                        style="
-                          font-size:9px;
-                          color:var(--wait);
-                          margin-top:3px;
-                        "
-                      >
-                        Superficie histórica protegida
-                      </div>
-                    `
-                    : ''
-                }
-              `}
+              : ''
+          }
         </div>
       </div>
-  </div>`;
+    `
+    : '';
 
-  if(exc>0){
+  const prevLaneBase = `
+  <div class="phlane">
+
+    <div class="lbl">
+      Estado actual antes de intervenir
+
+      <span class="tag tag-prev">
+        Antes · ${nPrev}/${MIN_FOTOS_PREV} mín
+      </span>
+    </div>
+
+    <div class="phscroll">
+
+      ${
+        prevImgs ||
+        `
+          <div
+            style="
+              font-size:11px;
+              color:var(--mut);
+              padding:12px
+            "
+          >
+            Sin fotos previas
+          </div>
+        `
+      }
+
+      ${
+        canPintor
+          ? `
+            <div
+              class="ph add"
+              onclick="addPhoto(
+                'prev',
+                'general'
+              )"
+            >
+              <span class="plus">
+                +
+              </span>
+
+              Agregar
+            </div>
+          `
+          : ''
+      }
+
+    </div>
+
+  </div>
+`;
+
+const prevLaneInterno = `
+  <div class="phlane">
+
+    <div class="lbl">
+      Estado actual antes de intervenir
+
+      <span class="tag tag-prev">
+        Antes · ${nPrev}/${MIN_FOTOS_PREV} mín
+      </span>
+    </div>
+
+    <div class="phscroll">
+      ${
+        prevImgs ||
+        `
+          <div
+            style="
+              font-size:11px;
+              color:var(--mut);
+              padding:12px
+            "
+          >
+            Sin fotos previas
+          </div>
+        `
+      }
+
+      ${
+        canPintor
+          ? `
+            <div
+              class="ph add"
+              onclick="addPhoto(
+                'prev',
+                'general'
+              )"
+            >
+              <span class="plus">+</span>
+              Agregar
+            </div>
+          `
+          : ''
+      }
+    </div>
+
+  </div>
+`;
+
+const prevLaneDependencia = `
+  <div class="phlane">
+
+    <div class="lbl">
+      Fotos previas
+
+      <span class="tag tag-prev">
+        Antes · ${nStreet}/${MIN_FOTOS_PREV} mín
+      </span>
+    </div>
+
+    <div class="phscroll">
+      ${
+        streetImgs ||
+        `
+          <div
+            style="
+              font-size:11px;
+              color:var(--mut);
+              padding:12px
+            "
+          >
+            Sin fotos previas
+          </div>
+        `
+      }
+    </div>
+
+  </div>
+`;
+
+const prevLane =
+  esBloqueEspecial
+    ? (
+        ROLE === 'dep'
+          ? prevLaneDependencia
+          : prevLaneInterno
+      )
+    : `
+      <div class="phlane">
+
+        <div class="lbl">
+          Fotos previas
+
+          <span class="tag tag-prev">
+            Antes · ${nPrev}/${MIN_FOTOS_PREV} mín
+          </span>
+        </div>
+
+        <div class="phscroll">
+          ${
+            prevImgs ||
+            `
+              <div
+                style="
+                  font-size:11px;
+                  color:var(--mut);
+                  padding:12px
+                "
+              >
+                Sin fotos previas
+              </div>
+            `
+          }
+
+          ${
+            canPintor
+              ? `
+                <div
+                  class="ph add"
+                  onclick="addPhoto(
+                    'prev',
+                    'general'
+                  )"
+                >
+                  <span class="plus">+</span>
+                  Agregar
+                </div>
+              `
+              : ''
+          }
+        </div>
+
+      </div>
+    `;
+
+  const finLane = `
+  <div class="phlane">
+
+    <div class="lbl">
+      Resultado final
+
+      <span class="tag tag-fin">
+        Después · ${nFin}/${MIN_FOTOS_FIN} mín
+      </span>
+    </div>
+
+    <div class="phscroll">
+      ${
+        finImgs ||
+        `
+          <div
+            style="
+              font-size:11px;
+              color:var(--mut);
+              padding:12px
+            "
+          >
+            Aún sin fotos finales
+          </div>
+        `
+      }
+
+      ${
+        canPintor
+          ? `
+            <div
+              class="ph add"
+              onclick="addPhotoMenu()"
+            >
+              <span class="plus">
+                +
+              </span>
+
+              Agregar
+            </div>
+          `
+          : ''
+      }
+
+    </div>
+
+    ${
+      canPintor &&
+      faltantesCat.length
+        ? `
+          <div class="photo-req">
+            Obligatorias pendientes:
+            ${
+              faltantesCat
+                .map(
+                  c =>
+                    CAT_LABEL[c]
+                )
+                .join(', ')
+            }
+          </div>
+        `
+        : ''
+    }
+
+  </div>
+`;
+
+  const ocultarM2Interno =
+  ROLE === 'dep';
+
+let sup=`
+  <div class="sect">
+    <h3>Superficie</h3>
+
+    <div class="infogrid">
+
+      <div class="ib ${
+        ocultarM2Interno
+          ? 'full'
+          : ''
+      }">
+        <div class="k">
+          ${
+            ROLE === 'dep'
+              ? 'Superficie considerada'
+              : 'Unidad estándar (a la dependencia)'
+          }
+        </div>
+
+        <div class="v">
+          21 m²
+        </div>
+      </div>
+
+      ${
+        !ocultarM2Interno
+          ? `
+            <div class="ib">
+              <div class="k">
+                Superficie real ejecutada
+              </div>
+
+              <div class="v">
+                ${
+                  canPintor &&
+                  (
+                    p.status === 'at' ||
+                    p.bloque_especial_m2
+                  ) &&
+                  !p.m2_protegido
+                    ? `
+                      <input
+                        class="mono"
+                        type="number"
+                        min="${
+                          p.bloque_especial_m2
+                            ? 0
+                            : M2_STD
+                        }"
+                        max="${M2_MAX}"
+                        value="${p.m2}"
+                        style="
+                          width:70px;
+                          border:1px solid var(--line);
+                          border-radius:6px;
+                          padding:4px 6px;
+                          font-size:14px;
+                          font-weight:700
+                        "
+                        onchange="setM2(this.value)"
+                      >
+                    `
+                    : `
+                      ${m2Real(p)} m²
+
+                      ${
+                        p.m2_protegido
+                          ? `
+                            <div
+                              style="
+                                font-size:9px;
+                                color:var(--wait);
+                                margin-top:3px;
+                              "
+                            >
+                              Superficie histórica protegida
+                            </div>
+                          `
+                          : ''
+                      }
+                    `
+                }
+              </div>
+            </div>
+          `
+          : ''
+      }
+
+    </div>
+`;
+
+  if (
+      exc > 0 &&
+      ROLE !== 'dep'
+    ) {
     //const precioSub=precioExtraSub(p.sub);
     const evOk = p.m2_excedente > 0;
     sup+=`<div style="height:8px"></div>
@@ -3657,7 +4016,8 @@ const autorizacionBlock =
     : '';
 
   document.getElementById('sbody').innerHTML=
-    info+fechasBlock+autorizacionBlock+actaAperturaBlock+`<div class="sect"><h3>Evidencia fotográfica</h3>${prevLane}${finLane}</div>`+adjBlock+sup+tl+`<div class="actions">${actions}${repBtn}</div>`;
+    info+fechasBlock+autorizacionBlock+actaAperturaBlock+`<div class="sect"><h3>Evidencia fotográfica</h3>${streetLane}${prevLane}
+  ${finLane}</div>`+adjBlock+sup+tl+`<div class="actions">${actions}${repBtn}</div>`;
   document.getElementById('sheet').classList.add('show');
 }
 

@@ -183,6 +183,7 @@ async function cargarLecherias() {
           ? [ex.evidencia_url]
           : [],
 
+      fotosStreet: [],
       fotosPrev: [],
       fotosFin: [],
       adjuntos: []
@@ -194,34 +195,58 @@ async function cargarLecherias() {
 async function cargarFotos(pv) {
   const { data, error } = await sb
     .from('fotos')
-    .select('id, momento, tipo, archivo_url, lat, lng, fecha_hora')
+    .select(
+      'id, momento, tipo, archivo_url, lat, lng, fecha_hora'
+    )
     .eq('pv', pv)
-    .order('fecha_hora', { ascending: true });
+    .order('fecha_hora', {
+      ascending: true
+    });
 
   if (error) {
     throw error;
   }
 
-    const convertirFoto = foto => ({
-    id: foto.id,
-    tipo: foto.tipo,
-    url: foto.archivo_url,
-    lat: foto.lat,
-    lng: foto.lng,
-    fecha: foto.fecha_hora
-  });
+  const convertirFoto =
+    foto => ({
+      id: foto.id,
+      tipo: foto.tipo,
+      url: foto.archivo_url,
+      lat: foto.lat,
+      lng: foto.lng,
+      fecha: foto.fecha_hora
+    });
 
-  const prev = (data || [])
-    .filter(foto => foto.momento === 'prev')
-    .map(convertirFoto);
+  const street =
+    (data || [])
+      .filter(
+        foto =>
+          foto.momento === 'street'
+      )
+      .map(convertirFoto);
 
-  const fin = (data || [])
-    .filter(foto => foto.momento === 'fin')
-    .map(convertirFoto);
+  const prev =
+    (data || [])
+      .filter(
+        foto =>
+          foto.momento === 'prev'
+      )
+      .map(convertirFoto);
 
-  return { prev, fin };
+  const fin =
+    (data || [])
+      .filter(
+        foto =>
+          foto.momento === 'fin'
+      )
+      .map(convertirFoto);
+
+  return {
+    street,
+    prev,
+    fin
+  };
 }
-
   async function cargarAdjuntos(pv) {
   const { data, error } = await sb
     .from('adjuntos')
