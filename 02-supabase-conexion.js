@@ -1163,6 +1163,115 @@ async function obtenerEstimacion() {
   return data;
 }
 
+// ============================================================
+// ESTIMACIONES INTERNAS LUMEN
+// Estas operaciones usan RPC aisladas; no escriben en las tablas
+// operativas de lecherías, avances, actas o evidencias.
+// ============================================================
+
+async function obtenerEstimacionLumen(
+  numero = null
+) {
+  const { data, error } = await sb.rpc(
+    'obtener_estimacion_lumen',
+    {
+      p_numero:
+        numero === null
+          ? null
+          : Number(numero)
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+async function cerrarEstimacionLumen(
+  estimacionId
+) {
+  const { data, error } = await sb.rpc(
+    'cerrar_estimacion_lumen',
+    {
+      p_estimacion_id:
+        Number(estimacionId)
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+async function actualizarConfiguracionEstimacionLumen(
+  estimacionId,
+  fechaInicio,
+  fechaFin,
+  metaPv = null
+) {
+  const metaNormalizada =
+    metaPv === null ||
+    metaPv === ''
+      ? null
+      : Number(metaPv);
+
+  const { data, error } = await sb.rpc(
+    'actualizar_configuracion_estimacion_lumen',
+    {
+      p_estimacion_id:
+        Number(estimacionId),
+      p_fecha_inicio:
+        fechaInicio,
+      p_fecha_fin:
+        fechaFin,
+      p_meta_pv:
+        metaNormalizada
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+async function gestionarAdelantadasLumen(
+  estimacionId,
+  pvs,
+  accion
+) {
+  const claves = [
+    ...new Set(
+      (Array.isArray(pvs) ? pvs : [])
+        .map(pv => String(pv || '').trim())
+        .filter(Boolean)
+    )
+  ];
+
+  const { data, error } = await sb.rpc(
+    'gestionar_adelantadas_lumen',
+    {
+      p_estimacion_id:
+        Number(estimacionId),
+      p_pvs:
+        claves,
+      p_accion:
+        accion
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
 async function generarActaSub(
   sub,
   fechaInicio,

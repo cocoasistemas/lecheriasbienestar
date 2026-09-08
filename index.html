@@ -423,6 +423,195 @@
   .photo-req{font-size:11px;color:var(--mut);text-align:center;padding:4px}
   .photo-req.ok{color:var(--done)}
 
+  /* ===== BLOQUE ESPECIAL ===== */
+
+.especial-hero{
+  background:var(--navy);
+  color:#fff;
+  border-radius:12px;
+  padding:15px 16px;
+  margin-bottom:12px;
+}
+
+.especial-hero .lbl{
+  font-size:10px;
+  letter-spacing:1.2px;
+  text-transform:uppercase;
+  color:#8aa0b6;
+}
+
+.especial-hero .valor{
+  font-size:28px;
+  font-weight:800;
+  margin-top:3px;
+}
+
+.especial-hero .sub{
+  font-size:11px;
+  color:#aebccb;
+  margin-top:3px;
+}
+
+.especial-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.especial-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:11px 12px;
+}
+
+.especial-card .k{
+  font-size:8.5px;
+  text-transform:uppercase;
+  letter-spacing:.7px;
+  color:var(--mut);
+}
+
+.especial-card .v{
+  font-size:20px;
+  font-weight:800;
+  margin-top:3px;
+}
+
+.especial-card.full{
+  grid-column:1/-1;
+}
+
+.especial-saldo-pos{
+  color:var(--done);
+}
+
+.especial-saldo-neg{
+  color:var(--rej);
+}
+
+.especial-saldo-cero{
+  color:var(--steel);
+}
+
+.especial-sub{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:11px 12px;
+  margin-bottom:8px;
+}
+
+.especial-sub-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:7px;
+}
+
+.especial-sub-head b{
+  font-size:13px;
+}
+
+.especial-sub-head span{
+  font-size:11px;
+  color:var(--mut);
+}
+
+.especial-sub-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  border-top:1px solid var(--line);
+  padding-top:7px;
+}
+
+.especial-sub-grid div{
+  text-align:center;
+  border-left:1px solid var(--line);
+}
+
+.especial-sub-grid div:first-child{
+  border-left:none;
+}
+
+.especial-sub-grid b{
+  display:block;
+  font-size:13px;
+}
+
+.especial-sub-grid span{
+  font-size:8px;
+  color:var(--mut);
+  text-transform:uppercase;
+}
+
+.especial-item{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:10px;
+  margin-bottom:8px;
+  overflow:hidden;
+}
+
+.especial-item-head{
+  padding:9px 11px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.especial-item-head .pv{
+  flex:0 0 auto;
+}
+
+.especial-item-head .info{
+  flex:1;
+  min-width:0;
+}
+
+.especial-item-head .info b{
+  display:block;
+  font-size:12px;
+}
+
+.especial-item-head .info span{
+  display:block;
+  color:var(--mut);
+  font-size:9.5px;
+}
+
+.especial-item-data{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  border-top:1px solid var(--line);
+}
+
+.especial-item-data div{
+  text-align:center;
+  padding:7px 3px;
+  border-left:1px solid var(--line);
+}
+
+.especial-item-data div:first-child{
+  border-left:none;
+}
+
+.especial-item-data b{
+  display:block;
+  font-size:12px;
+}
+
+.especial-item-data span{
+  font-size:7.5px;
+  color:var(--mut);
+  text-transform:uppercase;
+}
+
+.especial-pendiente{
+  color:var(--mut);
+}
+
   .logout-btn{
   display:flex;
   align-items:center;
@@ -584,6 +773,8 @@
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>Actas</button>
     <button class="navbtn" data-tab="estim" onclick="setTab('estim')">
       <svg viewBox="0 0 24 24"><path d="M9 7h6M9 11h6M9 15h4"/><rect x="4" y="3" width="16" height="18" rx="2"/></svg>Estim.</button>
+    <button class="navbtn" data-tab="especial" onclick="setTab('especial')">
+      <svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M6 16l4-5 3 3 5-7"/><path d="M18 7h-4"/><path d="M18 7v4"/></svg>Especial</button>
   </nav>
 </div>
 
@@ -937,12 +1128,530 @@ function obtenerReporteCompensacionM2(
   };
 }
 
+function renderEspecial() {
+
+  const sc =
+    document.getElementById('scroll');
+
+  document
+    .getElementById('crumbs')
+    .style.display = 'none';
+
+  document
+    .getElementById('filters')
+    .style.display = 'none';
+
+
+  /*
+   * Protección lógica adicional.
+   */
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    sc.innerHTML = `
+      <div class="note">
+        Este módulo es exclusivamente
+        de control interno.
+      </div>
+    `;
+
+    return;
+  }
+
+
+  const reporte =
+    obtenerReporteCompensacionM2(
+      'BLOQUE_212'
+    );
+
+
+  /*
+   * Color / interpretación del saldo.
+   */
+  let claseSaldo =
+    'especial-saldo-cero';
+
+  let textoSaldo =
+    'Compensado';
+
+  if (reporte.saldo_m2 > 0) {
+    claseSaldo =
+      'especial-saldo-pos';
+
+    textoSaldo =
+      'Crédito disponible';
+  }
+
+  if (reporte.saldo_m2 < 0) {
+    claseSaldo =
+      'especial-saldo-neg';
+
+    textoSaldo =
+      'Excedente sin compensar';
+  }
+
+
+  /*
+   * Resumen por cuadrilla.
+   */
+  const cuadrillas =
+    [
+      'CUA12C',
+      'CUA13C',
+      'CUA14C'
+    ];
+
+  const bloquesCuadrilla =
+    cuadrillas
+      .map(sub => {
+
+        const puntos =
+          reporte.detalle.filter(
+            p =>
+              p.cuadrilla === sub
+          );
+
+        const atendidas =
+          puntos.filter(
+            p =>
+              p.status === 'at'
+          );
+
+        const credito =
+          atendidas.reduce(
+            (total, p) =>
+              total +
+              p.credito_m2,
+            0
+          );
+
+        const consumo =
+          atendidas.reduce(
+            (total, p) =>
+              total +
+              p.consumo_m2,
+            0
+          );
+
+        const saldo =
+          credito -
+          consumo;
+
+        return `
+          <div class="especial-sub">
+
+            <div class="especial-sub-head">
+              <b>${sub}</b>
+
+              <span>
+                ${atendidas.length}
+                / ${puntos.length}
+                atendidas
+              </span>
+            </div>
+
+            <div class="especial-sub-grid">
+
+              <div>
+                <b>
+                  +${credito}
+                </b>
+                <span>
+                  Crédito
+                </span>
+              </div>
+
+              <div>
+                <b>
+                  ${consumo}
+                </b>
+                <span>
+                  Consumo
+                </span>
+              </div>
+
+              <div>
+                <b
+                  class="${
+                    saldo > 0
+                      ? 'especial-saldo-pos'
+                      : saldo < 0
+                        ? 'especial-saldo-neg'
+                        : 'especial-saldo-cero'
+                  }"
+                >
+                  ${
+                    saldo > 0
+                      ? '+'
+                      : ''
+                  }${saldo}
+                </b>
+
+                <span>
+                  Saldo
+                </span>
+              </div>
+
+            </div>
+
+          </div>
+        `;
+      })
+      .join('');
+
+
+  sc.innerHTML = `
+
+    <div class="especial-hero">
+
+      <div class="lbl">
+        Control interno
+        · BLOQUE 212
+      </div>
+
+      <div class="valor">
+        ${reporte.total_lecherias}
+        lecherías
+      </div>
+
+      <div class="sub">
+        Compensación de superficie
+        · CUA12C / CUA13C / CUA14C
+      </div>
+
+    </div>
+
+
+    <div class="especial-grid">
+
+      <div class="especial-card">
+        <div class="k">
+          Atendidas
+        </div>
+
+        <div class="v">
+          ${reporte.atendidas}
+        </div>
+      </div>
+
+      <div class="especial-card">
+        <div class="k">
+          Pendientes
+        </div>
+
+        <div class="v">
+          ${reporte.pendientes}
+        </div>
+      </div>
+
+      <div class="especial-card">
+        <div class="k">
+          M² contractuales
+        </div>
+
+        <div class="v">
+          ${reporte.m2_contractuales}
+        </div>
+      </div>
+
+      <div class="especial-card">
+        <div class="k">
+          M² reales
+        </div>
+
+        <div class="v">
+          ${reporte.m2_reales}
+        </div>
+      </div>
+
+      <div class="especial-card">
+        <div class="k">
+          Crédito generado
+        </div>
+
+        <div class="v especial-saldo-pos">
+          +${reporte.credito_generado}
+        </div>
+      </div>
+
+      <div class="especial-card">
+        <div class="k">
+          Crédito consumido
+        </div>
+
+        <div class="v especial-saldo-neg">
+          ${reporte.credito_consumido}
+        </div>
+      </div>
+
+      <div class="especial-card full">
+
+        <div class="k">
+          Saldo del bloque
+        </div>
+
+        <div
+          class="v ${claseSaldo}"
+          style="font-size:27px"
+        >
+          ${
+            reporte.saldo_m2 > 0
+              ? '+'
+              : ''
+          }${reporte.saldo_m2} m²
+        </div>
+
+        <div
+          style="
+            font-size:10px;
+            color:var(--mut);
+            margin-top:2px
+          "
+        >
+          ${textoSaldo}
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="note">
+      <b>Regla de compensación:</b>
+      una lechería comienza a afectar el
+      saldo cuando se marca como
+      <b>Atendida</b>.
+
+      <br><br>
+
+      Menos de 21 m² genera crédito;
+      más de 21 m² consume crédito.
+      El Vo.Bo. no modifica este saldo.
+    </div>
+
+
+    <div class="sectlabel">
+      Resumen por cuadrilla
+    </div>
+
+    ${bloquesCuadrilla}
+
+
+    <div class="sectlabel">
+      Reportes del bloque
+    </div>
+
+    <div
+      style="
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:8px;
+        margin-bottom:20px;
+      "
+    >
+      <button
+        class="btn btn-done"
+        onclick="exportEspecialExcel()"
+        style="
+          padding:12px 8px;
+          font-size:11px;
+        "
+      >
+        📊 Descargar Excel
+      </button>
+
+      <button
+        class="btn btn-leche"
+        onclick="exportEspecialPDF()"
+        style="
+          padding:12px 8px;
+          font-size:11px;
+        "
+      >
+        📄 Descargar PDF
+      </button>
+    </div>
+
+    <div
+      style="
+        font-size:10px;
+        color:var(--mut);
+        text-align:center;
+        padding-bottom:12px;
+      "
+    >
+      Los reportes incluyen el detalle completo
+      de las 212 lecherías del bloque.
+    </div>
+
+    <div
+      style="
+        border-top:1px solid var(--line);
+        margin:10px 0 18px;
+      "
+    ></div>
+
+    <div id="estimacionLumenEspecial">
+      <div
+        style="
+          text-align:center;
+          color:var(--mut);
+          padding:24px 15px;
+        "
+      >
+        Consultando la estimación interna LUMEN…
+      </div>
+    </div>
+
+  `;
+
+  renderEstimacionLumenEspecial();
+}
+
+function estadoEspecialTexto(status) {
+
+  if (status === 'at') {
+    return 'Atendida';
+  }
+
+  if (status === 'ini') {
+    return 'Iniciada';
+  }
+
+  return 'Pendiente';
+}
+
+function datosReporteEspecial() {
+
+  const reporte =
+    obtenerReporteCompensacionM2(
+      'BLOQUE_212'
+    );
+
+
+  const ordenCuadrilla = {
+    CUA12C: 1,
+    CUA13C: 2,
+    CUA14C: 3
+  };
+
+
+  const detalle =
+    [...reporte.detalle]
+      .sort((a, b) => {
+
+        const ca =
+          ordenCuadrilla[
+            a.cuadrilla
+          ] || 99;
+
+        const cb =
+          ordenCuadrilla[
+            b.cuadrilla
+          ] || 99;
+
+        if (ca !== cb) {
+          return ca - cb;
+        }
+
+        return String(a.pv)
+          .localeCompare(
+            String(b.pv)
+          );
+      });
+
+
+  const cuadrillas =
+    [
+      'CUA12C',
+      'CUA13C',
+      'CUA14C'
+    ]
+      .map(sub => {
+
+        const puntos =
+          detalle.filter(
+            p =>
+              p.cuadrilla === sub
+          );
+
+        const atendidas =
+          puntos.filter(
+            p =>
+              p.status === 'at'
+          );
+
+        const credito =
+          atendidas.reduce(
+            (total, p) =>
+              total +
+              Number(
+                p.credito_m2 || 0
+              ),
+            0
+          );
+
+        const consumo =
+          atendidas.reduce(
+            (total, p) =>
+              total +
+              Number(
+                p.consumo_m2 || 0
+              ),
+            0
+          );
+
+
+        return {
+          cuadrilla: sub,
+          asignadas:
+            puntos.length,
+
+          atendidas:
+            atendidas.length,
+
+          pendientes:
+            puntos.length -
+            atendidas.length,
+
+          credito,
+
+          consumo,
+
+          saldo:
+            credito -
+            consumo
+        };
+      });
+
+
+  return {
+    reporte,
+    cuadrillas,
+    detalle
+  };
+}
+
 let LOTES=[];
 let ACTAS_PERIODO = {
   inicio: '',
   fin: '',
   actas: []
 };
+
+/*
+ * Descarga masiva por listado de P.V.
+ * Aislada del concentrado por periodo y de la estimación LUMEN.
+ */
+let DESCARGA_LISTADO_PV = {
+  archivo: '',
+  pvs: [],
+  encontrados: [],
+  noEncontrados: [],
+  actasPorPv: new Map()
+};
+
 const VISTA_ACTAS = {
   acta: 'disponibles',
   pagina: 1
@@ -1049,6 +1758,7 @@ function reconstruirConfiguracionDinamica() {
 }
 
 function tabsPermitidasPorRol() {
+
   if (ROLE === 'sub') {
     return [
       'lista',
@@ -1074,7 +1784,8 @@ function tabsPermitidasPorRol() {
     'programa',
     'tablero',
     'actas',
-    'estim'
+    'estim',
+    'especial'
   ];
 }
 
@@ -1803,14 +2514,45 @@ function setTab(t) {
 
 /* ---- render router ---- */
 function render(){
-  renderMinMax(); renderKPI();
-  if(TAB==='mapa'){ if(MAP_READY) drawMarkers(); return; }
-  if(TAB==='programa'){ renderPrograma(); return; }
-  if(TAB==='tablero'){ renderTablero(); return; }
-  if(TAB==='actas'){ renderActas(); return; }
-  if(TAB==='estim'){ renderEstim(); return; }
-  if(VIEW==='estados') renderEstados();
-  else renderPuntos();
+
+  renderMinMax();
+  renderKPI();
+
+  if(TAB==='mapa'){
+    if(MAP_READY) drawMarkers();
+    return;
+  }
+
+  if(TAB==='programa'){
+    renderPrograma();
+    return;
+  }
+
+  if(TAB==='tablero'){
+    renderTablero();
+    return;
+  }
+
+  if(TAB==='actas'){
+    renderActas();
+    return;
+  }
+
+  if(TAB==='estim'){
+    renderEstim();
+    return;
+  }
+
+  if(TAB==='especial'){
+    renderEspecial();
+    return;
+  }
+
+  if(VIEW==='estados'){
+    renderEstados();
+  } else {
+    renderPuntos();
+  }
 }
 
 function renderCrumbs(){
@@ -3330,6 +4072,28 @@ const prevLaneInterno = `
   </div>
 `;
 
+const fotosPrevDependencia =
+  esBloqueEspecial
+    ? (
+        nStreet > 0
+          ? (p.fotosStreet || [])
+          : (
+              m2Real(p) >= M2_STD
+                ? (p.fotosPrev || [])
+                : []
+            )
+      )
+    : (p.fotosPrev || []);
+
+let prevImgsDependencia = '';
+
+fotosPrevDependencia.forEach(f => {
+  prevImgsDependencia += photoCard(f);
+});
+
+const nPrevDependencia =
+  fotosPrevDependencia.length;
+
 const prevLaneDependencia = `
   <div class="phlane">
 
@@ -3337,13 +4101,13 @@ const prevLaneDependencia = `
       Fotos previas
 
       <span class="tag tag-prev">
-        Antes · ${nStreet}/${MIN_FOTOS_PREV} mín
+        Antes · ${nPrevDependencia}/${MIN_FOTOS_PREV} mín
       </span>
     </div>
 
     <div class="phscroll">
       ${
-        streetImgs ||
+        prevImgsDependencia ||
         `
           <div
             style="
@@ -5913,6 +6677,24 @@ async function markAt() {
 
   const nP = (CUR.fotosPrev || []).length;
   const nF = (CUR.fotosFin || []).length;
+
+  const requiereStreet =
+  CUR.bloque_especial_m2 === true &&
+  m2Real(CUR) < M2_STD;
+
+  const nStreet =
+    (CUR.fotosStreet || []).length;
+
+  if (
+    requiereStreet &&
+    nStreet < 1
+  ) {
+    toast(
+      'Esta lechería tiene menos de 21 m² reales. Debes cargar al menos una imagen en Referencia histórica antes de marcarla como atendida.'
+    );
+
+    return;
+  }
 
   if (nP < MIN_FOTOS_PREV) {
     toast(`Faltan fotos previas (${nP}/${MIN_FOTOS_PREV})`);
@@ -15859,6 +16641,907 @@ async function reportePDF(
   }
 }
 
+function exportEspecialExcel() {
+
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    toast(
+      'No tienes acceso a este reporte'
+    );
+
+    return;
+  }
+
+
+  const {
+    reporte,
+    cuadrillas,
+    detalle
+  } =
+    datosReporteEspecial();
+
+
+  const wb =
+    XLSX.utils.book_new();
+
+
+  /*
+   * HOJA 1
+   * Resumen general
+   */
+  const resumen = [
+    {
+      Concepto:
+        'Bloque especial',
+      Valor:
+        'BLOQUE_212'
+    },
+    {
+      Concepto:
+        'Lecherías asignadas',
+      Valor:
+        reporte.total_lecherias
+    },
+    {
+      Concepto:
+        'Atendidas',
+      Valor:
+        reporte.atendidas
+    },
+    {
+      Concepto:
+        'Pendientes',
+      Valor:
+        reporte.pendientes
+    },
+    {
+      Concepto:
+        'm² contractuales atendidos',
+      Valor:
+        reporte.m2_contractuales
+    },
+    {
+      Concepto:
+        'm² reales ejecutados',
+      Valor:
+        reporte.m2_reales
+    },
+    {
+      Concepto:
+        'Crédito generado m²',
+      Valor:
+        reporte.credito_generado
+    },
+    {
+      Concepto:
+        'Crédito consumido m²',
+      Valor:
+        reporte.credito_consumido
+    },
+    {
+      Concepto:
+        'Saldo disponible m²',
+      Valor:
+        reporte.saldo_m2
+    }
+  ];
+
+
+  const wsResumen =
+    XLSX.utils.json_to_sheet(
+      resumen
+    );
+
+  wsResumen['!cols'] = [
+    {
+      wch: 32
+    },
+    {
+      wch: 22
+    }
+  ];
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    wsResumen,
+    'Resumen'
+  );
+
+
+  /*
+   * HOJA 2
+   * Resumen por cuadrilla
+   */
+  const filasCuadrilla =
+    cuadrillas.map(c => ({
+      Cuadrilla:
+        c.cuadrilla,
+
+      Asignadas:
+        c.asignadas,
+
+      Atendidas:
+        c.atendidas,
+
+      Pendientes:
+        c.pendientes,
+
+      'Crédito generado m²':
+        c.credito,
+
+      'Crédito consumido m²':
+        c.consumo,
+
+      'Saldo m²':
+        c.saldo
+    }));
+
+
+  const wsCuadrillas =
+    XLSX.utils.json_to_sheet(
+      filasCuadrilla
+    );
+
+  wsCuadrillas['!cols'] = [
+    { wch: 14 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 22 },
+    { wch: 22 },
+    { wch: 14 }
+  ];
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    wsCuadrillas,
+    'Cuadrillas'
+  );
+
+
+  /*
+   * HOJA 3
+   * Detalle completo
+   */
+  const filasDetalle =
+    detalle.map(p => {
+
+      const afectaSaldo =
+        p.status === 'at';
+
+      return {
+        'Clave P.V.':
+          String(p.pv),
+
+        Cuadrilla:
+          p.cuadrilla,
+
+        Zona:
+          p.zona,
+
+        Estado:
+          p.estado,
+
+        Estatus:
+          estadoEspecialTexto(
+            p.status
+          ),
+
+        'Fecha real':
+          p.fecha_real || '',
+
+        'm² contractual':
+          M2_STD,
+
+        'm² real':
+          p.real_m2,
+
+        'Afecta saldo':
+          afectaSaldo
+            ? 'Sí'
+            : 'No',
+
+        'Crédito m²':
+          afectaSaldo
+            ? p.credito_m2
+            : 0,
+
+        'Consumo m²':
+          afectaSaldo
+            ? p.consumo_m2
+            : 0,
+
+        'Balance m²':
+          afectaSaldo
+            ? p.balance_m2
+            : 0
+      };
+    });
+
+
+  const wsDetalle =
+    XLSX.utils.json_to_sheet(
+      filasDetalle
+    );
+
+  wsDetalle['!cols'] = [
+    { wch: 16 },
+    { wch: 13 },
+    { wch: 35 },
+    { wch: 22 },
+    { wch: 13 },
+    { wch: 14 },
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 14 }
+  ];
+
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    wsDetalle,
+    'Detalle BLOQUE 212'
+  );
+
+
+  const fecha =
+    new Date()
+      .toISOString()
+      .slice(0, 10);
+
+
+  XLSX.writeFile(
+    wb,
+    `Reporte_BLOQUE_212_${fecha}.xlsx`
+  );
+
+
+  toast(
+    'Reporte especial Excel generado'
+  );
+}
+
+function exportEspecialPDF() {
+
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    toast(
+      'No tienes acceso a este reporte'
+    );
+
+    return;
+  }
+
+
+  const {
+    reporte,
+    cuadrillas,
+    detalle
+  } =
+    datosReporteEspecial();
+
+
+  const { jsPDF } =
+    window.jspdf;
+
+
+  /*
+   * Landscape para que el detalle
+   * tenga suficiente espacio.
+   */
+  const doc =
+    new jsPDF({
+      orientation:
+        'landscape',
+
+      unit:
+        'mm',
+
+      format:
+        'a4'
+    });
+
+
+  const anchoPagina =
+    297;
+
+  const altoPagina =
+    210;
+
+  const margen =
+    10;
+
+  const limiteInferior =
+    198;
+
+  let y =
+    12;
+
+
+  function encabezadoPagina(
+    tituloDetalle = false
+  ) {
+
+    doc.setFont(
+      undefined,
+      'bold'
+    );
+
+    doc.setFontSize(14);
+
+    doc.text(
+      tituloDetalle
+        ? 'BLOQUE ESPECIAL 212 · DETALLE'
+        : 'REPORTE DE COMPENSACIÓN · BLOQUE 212',
+      margen,
+      12
+    );
+
+
+    doc.setFont(
+      undefined,
+      'normal'
+    );
+
+    doc.setFontSize(8);
+
+    doc.text(
+      'LUMEN-OAX PROYECTOS Y CONSTRUCCIÓN S.A. DE C.V.',
+      margen,
+      18
+    );
+
+
+    doc.text(
+      'Control interno de superficie ejecutada',
+      margen,
+      22
+    );
+
+
+    y =
+      29;
+  }
+
+
+  function nuevaPaginaDetalle() {
+
+    doc.addPage();
+
+    encabezadoPagina(true);
+
+    dibujarCabeceraTabla();
+  }
+
+
+  /*
+   * Página 1:
+   * resumen ejecutivo
+   */
+  encabezadoPagina(false);
+
+
+  doc.setFontSize(10);
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.text(
+    `Lecherías del bloque: ${reporte.total_lecherias}`,
+    margen,
+    y
+  );
+
+  doc.text(
+    `Atendidas: ${reporte.atendidas}`,
+    85,
+    y
+  );
+
+  doc.text(
+    `Pendientes: ${reporte.pendientes}`,
+    145,
+    y
+  );
+
+  y +=
+    8;
+
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+  doc.text(
+    `m² contractuales: ${reporte.m2_contractuales}`,
+    margen,
+    y
+  );
+
+  doc.text(
+    `m² reales: ${reporte.m2_reales}`,
+    85,
+    y
+  );
+
+  y +=
+    8;
+
+
+  doc.setFont(
+    undefined,
+    'bold'
+  );
+
+  doc.text(
+    `Crédito generado: +${reporte.credito_generado} m²`,
+    margen,
+    y
+  );
+
+  doc.text(
+    `Crédito consumido: ${reporte.credito_consumido} m²`,
+    85,
+    y
+  );
+
+  doc.text(
+    `Saldo: ${
+      reporte.saldo_m2 > 0
+        ? '+'
+        : ''
+    }${reporte.saldo_m2} m²`,
+    170,
+    y
+  );
+
+  y +=
+    12;
+
+
+  doc.setFontSize(10);
+
+  doc.text(
+    'RESUMEN POR CUADRILLA',
+    margen,
+    y
+  );
+
+  y +=
+    6;
+
+
+  cuadrillas.forEach(c => {
+
+    doc.setFont(
+      undefined,
+      'bold'
+    );
+
+    doc.text(
+      c.cuadrilla,
+      margen,
+      y
+    );
+
+
+    doc.setFont(
+      undefined,
+      'normal'
+    );
+
+    doc.text(
+      `Asignadas: ${c.asignadas}`,
+      45,
+      y
+    );
+
+    doc.text(
+      `Atendidas: ${c.atendidas}`,
+      85,
+      y
+    );
+
+    doc.text(
+      `Crédito: +${c.credito}`,
+      125,
+      y
+    );
+
+    doc.text(
+      `Consumo: ${c.consumo}`,
+      170,
+      y
+    );
+
+    doc.text(
+      `Saldo: ${
+        c.saldo > 0
+          ? '+'
+          : ''
+      }${c.saldo} m²`,
+      215,
+      y
+    );
+
+
+    y +=
+      7;
+  });
+
+
+  y +=
+    5;
+
+
+  doc.setFontSize(8);
+
+  doc.setFont(
+    undefined,
+    'normal'
+  );
+
+
+  const nota =
+    'Regla: únicamente las lecherías marcadas como Atendidas afectan el saldo. ' +
+    'Una ejecución menor a 21 m² genera crédito y una ejecución mayor a 21 m² consume crédito. ' +
+    'El Vo.Bo. no modifica el saldo de compensación.';
+
+
+  const lineasNota =
+    doc.splitTextToSize(
+      nota,
+      anchoPagina -
+      margen * 2
+    );
+
+  doc.text(
+    lineasNota,
+    margen,
+    y
+  );
+
+
+  /*
+   * DETALLE
+   */
+  doc.addPage();
+
+  encabezadoPagina(true);
+
+
+  /*
+   * Posiciones horizontales.
+   */
+  const cols = {
+    pv: 10,
+    sub: 39,
+    estado: 58,
+    estatus: 99,
+    fecha: 121,
+    contractual: 146,
+    real: 169,
+    credito: 190,
+    consumo: 216,
+    balance: 244,
+    afecta: 270
+  };
+
+
+  function dibujarCabeceraTabla() {
+
+    doc.setFont(
+      undefined,
+      'bold'
+    );
+
+    doc.setFontSize(7);
+
+    doc.text(
+      'P.V.',
+      cols.pv,
+      y
+    );
+
+    doc.text(
+      'Cuadrilla',
+      cols.sub,
+      y
+    );
+
+    doc.text(
+      'Estado',
+      cols.estado,
+      y
+    );
+
+    doc.text(
+      'Estatus',
+      cols.estatus,
+      y
+    );
+
+    doc.text(
+      'Fecha real',
+      cols.fecha,
+      y
+    );
+
+    doc.text(
+      'Contract.',
+      cols.contractual,
+      y
+    );
+
+    doc.text(
+      'Real',
+      cols.real,
+      y
+    );
+
+    doc.text(
+      'Crédito',
+      cols.credito,
+      y
+    );
+
+    doc.text(
+      'Consumo',
+      cols.consumo,
+      y
+    );
+
+    doc.text(
+      'Balance',
+      cols.balance,
+      y
+    );
+
+    doc.text(
+      'Saldo',
+      cols.afecta,
+      y
+    );
+
+
+    y +=
+      3;
+
+
+    doc.line(
+      margen,
+      y,
+      anchoPagina -
+      margen,
+      y
+    );
+
+
+    y +=
+      4;
+  }
+
+
+  dibujarCabeceraTabla();
+
+
+  detalle.forEach(p => {
+
+    if (
+      y >
+      limiteInferior
+    ) {
+      nuevaPaginaDetalle();
+    }
+
+
+    const afecta =
+      p.status === 'at';
+
+
+    doc.setFont(
+      undefined,
+      'normal'
+    );
+
+    doc.setFontSize(6.5);
+
+
+    doc.text(
+      String(p.pv),
+      cols.pv,
+      y
+    );
+
+
+    doc.text(
+      String(
+        p.cuadrilla || ''
+      ),
+      cols.sub,
+      y
+    );
+
+
+    const estadoCorto =
+      doc.splitTextToSize(
+        String(
+          p.estado || ''
+        ),
+        37
+      )[0] || '';
+
+
+    doc.text(
+      estadoCorto,
+      cols.estado,
+      y
+    );
+
+
+    doc.text(
+      estadoEspecialTexto(
+        p.status
+      ),
+      cols.estatus,
+      y
+    );
+
+
+    doc.text(
+      String(
+        p.fecha_real || '—'
+      ),
+      cols.fecha,
+      y
+    );
+
+
+    doc.text(
+      String(M2_STD),
+      cols.contractual,
+      y
+    );
+
+
+    doc.text(
+      String(
+        p.real_m2
+      ),
+      cols.real,
+      y
+    );
+
+
+    doc.text(
+      afecta
+        ? String(
+            p.credito_m2
+          )
+        : '—',
+      cols.credito,
+      y
+    );
+
+
+    doc.text(
+      afecta
+        ? String(
+            p.consumo_m2
+          )
+        : '—',
+      cols.consumo,
+      y
+    );
+
+
+    doc.text(
+      afecta
+        ? (
+            p.balance_m2 > 0
+              ? `+${p.balance_m2}`
+              : String(
+                  p.balance_m2
+                )
+          )
+        : '—',
+      cols.balance,
+      y
+    );
+
+
+    doc.text(
+      afecta
+        ? 'Sí'
+        : 'No',
+      cols.afecta,
+      y
+    );
+
+
+    y +=
+      5;
+
+
+    doc.setDrawColor(
+      225
+    );
+
+    doc.line(
+      margen,
+      y - 2,
+      anchoPagina -
+      margen,
+      y - 2
+    );
+  });
+
+
+  /*
+   * Pie de página.
+   */
+  const paginas =
+    doc.getNumberOfPages();
+
+
+  for (
+    let i = 1;
+    i <= paginas;
+    i++
+  ) {
+
+    doc.setPage(i);
+
+    doc.setFontSize(6.5);
+
+    doc.setTextColor(
+      100
+    );
+
+    doc.text(
+      `Página ${i} de ${paginas}`,
+      anchoPagina -
+      margen,
+      altoPagina - 5,
+      {
+        align: 'right'
+      }
+    );
+
+    doc.text(
+      'Documento de control interno',
+      margen,
+      altoPagina - 5
+    );
+  }
+
+
+  const fecha =
+    new Date()
+      .toISOString()
+      .slice(0, 10);
+
+
+  doc.save(
+    `Reporte_BLOQUE_212_${fecha}.pdf`
+  );
+
+
+  toast(
+    'Reporte especial PDF generado'
+  );
+}
+
 /* ============ PROGRAMA DE OBRA (fechas, desviaciones, curva) ============ */
 function desvio(p){
   // devuelve {clase, txt, dias}
@@ -16313,6 +17996,22 @@ async function renderActas() {
       </div>
     </div>
 
+    <div class="sect">
+      <h3>Descarga por listado de P.V.</h3>
+      <div class="note" style="margin-bottom:9px">
+        Carga un archivo <b>Excel o CSV</b>. El sistema localizará la columna de P.V.,
+        comparará las claves contra el padrón actual y permitirá descargar en ZIP
+        las <b>actas V2</b>, los <b>reportes antes/después</b> o ambos.
+        <br><br>
+        Esta herramienta no modifica lecherías, avances, actas ni estimaciones.
+      </div>
+      <input id="archivoListadoPv" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="analizarArchivoListadoPV(this.files?.[0])">
+      <button class="btn" style="background:var(--steel);color:#fff" onclick="document.getElementById('archivoListadoPv').click()">
+        Seleccionar archivo de P.V.
+      </button>
+      <div id="resultadoListadoPv" style="margin-top:9px"></div>
+    </div>
+
     <div
       id="actasResultado"
       style="
@@ -16328,6 +18027,371 @@ async function renderActas() {
 
   await cargarConcentradoActas();
 }
+
+/* ============================================================
+ * DESCARGA MASIVA POR LISTADO DE P.V.
+ * ============================================================ */
+
+function normalizarPVListado(valor) {
+  if (valor === null || valor === undefined) return '';
+  return String(valor)
+    .trim()
+    .replace(/^[\'\"]+/, '')
+    .replace(/\.0+$/, '')
+    .replace(/\s+/g, '');
+}
+
+function normalizarEncabezadoListado(valor) {
+  return String(valor || '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function esEncabezadoPVListado(valor) {
+  const h = normalizarEncabezadoListado(valor);
+  return [
+    'PV','P V','PUNTO DE VENTA','PUNTO VENTA',
+    'CLAVE PV','CLAVE P V','CLAVE PUNTO DE VENTA','CLAVE PUNTO VENTA'
+  ].includes(h);
+}
+
+function descargarBlobListadoPV(blob, nombre) {
+  const enlace = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  enlace.href = url;
+  enlace.download = nombre;
+  document.body.appendChild(enlace);
+  enlace.click();
+  enlace.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+async function analizarArchivoListadoPV(archivo) {
+  if (!archivo) return;
+
+  if (ROLE !== 'gen' && ROLE !== 'admin') {
+    toast('Tu perfil no puede usar esta herramienta');
+    return;
+  }
+
+  const contenedor = document.getElementById('resultadoListadoPv');
+  if (contenedor) {
+    contenedor.innerHTML = `
+      <div class="note">
+        Analizando <b>${textoSeguroLumen(archivo.name)}</b>…
+      </div>`;
+  }
+
+  try {
+    const buffer = await archivo.arrayBuffer();
+    const libro = XLSX.read(buffer, { type:'array', cellDates:false });
+    const catalogo = new Map((LECH || []).map(p => [String(p.pv), p]));
+    let mejor = null;
+
+    for (const nombreHoja of libro.SheetNames) {
+      const hoja = libro.Sheets[nombreHoja];
+      const filas = XLSX.utils.sheet_to_json(hoja, {
+        header:1,
+        raw:false,
+        defval:''
+      });
+      if (!filas.length) continue;
+
+      let encabezado = null;
+      for (let f=0; f<Math.min(filas.length,25) && !encabezado; f++) {
+        for (let c=0; c<(filas[f] || []).length; c++) {
+          if (esEncabezadoPVListado(filas[f][c])) {
+            encabezado = { fila:f, columna:c, explicito:true };
+            break;
+          }
+        }
+      }
+
+      if (!encabezado) {
+        const columnas = Math.max(...filas.map(f => (f || []).length), 0);
+        let mejorColumna = null;
+        for (let c=0; c<columnas; c++) {
+          let coincidencias = 0;
+          let candidatos = 0;
+          for (let f=0; f<filas.length; f++) {
+            const pv = normalizarPVListado(filas[f]?.[c]);
+            if (!pv) continue;
+            if (/^[0-9]{5,20}$/.test(pv)) candidatos++;
+            if (catalogo.has(pv)) coincidencias++;
+          }
+          if (
+            !mejorColumna ||
+            coincidencias > mejorColumna.coincidencias ||
+            (coincidencias === mejorColumna.coincidencias && candidatos > mejorColumna.candidatos)
+          ) {
+            mejorColumna = { columna:c, coincidencias, candidatos };
+          }
+        }
+        if (mejorColumna && (mejorColumna.coincidencias > 0 || mejorColumna.candidatos > 0)) {
+          encabezado = { fila:-1, columna:mejorColumna.columna, explicito:false };
+        }
+      }
+
+      if (!encabezado) continue;
+
+      const valores = [];
+      const desde = encabezado.fila >= 0 ? encabezado.fila + 1 : 0;
+      for (let f=desde; f<filas.length; f++) {
+        const pv = normalizarPVListado(filas[f]?.[encabezado.columna]);
+        if (!pv) continue;
+        if (!encabezado.explicito && !/^[0-9]{5,20}$/.test(pv)) continue;
+        valores.push(pv);
+      }
+
+      const unicos = [...new Set(valores)];
+      const coincidencias = unicos.filter(pv => catalogo.has(pv)).length;
+      const candidato = {
+        hoja:nombreHoja,
+        columna:encabezado.columna,
+        explicito:encabezado.explicito,
+        valores:unicos,
+        coincidencias
+      };
+
+      if (
+        !mejor ||
+        candidato.coincidencias > mejor.coincidencias ||
+        (candidato.coincidencias === mejor.coincidencias && candidato.valores.length > mejor.valores.length)
+      ) {
+        mejor = candidato;
+      }
+    }
+
+    if (!mejor || !mejor.valores.length) {
+      throw new Error('No fue posible localizar una columna con P.V. en el archivo');
+    }
+
+    const todasActas = await cargarActas();
+    const actasPorPv = new Map();
+    const puntaje = a => a?.documento_firmado_v2_url ? 3 : a?.documento_generado_v2_url ? 2 : a?.documento_url ? 1 : 0;
+
+    for (const acta of todasActas || []) {
+      if (acta.clase !== 'apertura' || !acta.pv) continue;
+      const pv = String(acta.pv);
+      const previa = actasPorPv.get(pv);
+      if (!previa || puntaje(acta) > puntaje(previa)) actasPorPv.set(pv, acta);
+    }
+
+    const encontrados = [];
+    const noEncontrados = [];
+    mejor.valores.forEach(pv => {
+      const punto = catalogo.get(pv);
+      if (punto) {
+        encontrados.push({ pv, punto, acta:actasPorPv.get(pv) || null });
+      } else {
+        noEncontrados.push(pv);
+      }
+    });
+
+    DESCARGA_LISTADO_PV = {
+      archivo:archivo.name,
+      hoja:mejor.hoja,
+      pvs:mejor.valores,
+      encontrados,
+      noEncontrados,
+      actasPorPv
+    };
+
+    pintarResultadoListadoPV();
+  } catch (error) {
+    console.error('No fue posible analizar el listado de P.V.:', error);
+    DESCARGA_LISTADO_PV = {
+      archivo:'', pvs:[], encontrados:[], noEncontrados:[], actasPorPv:new Map()
+    };
+    if (contenedor) {
+      contenedor.innerHTML = `
+        <div class="note" style="border-left:4px solid var(--rej)">
+          ${textoSeguroLumen(error.message || 'No fue posible analizar el archivo')}
+        </div>`;
+    }
+  }
+}
+
+function pintarResultadoListadoPV() {
+  const contenedor = document.getElementById('resultadoListadoPv');
+  if (!contenedor) return;
+
+  const datos = DESCARGA_LISTADO_PV || {};
+  const encontrados = Array.isArray(datos.encontrados) ? datos.encontrados : [];
+  const noEncontrados = Array.isArray(datos.noEncontrados) ? datos.noEncontrados : [];
+  if (!datos.archivo) {
+    contenedor.innerHTML = '';
+    return;
+  }
+
+  const conActa = encontrados.filter(item => item.acta && (
+    item.acta.documento_firmado_v2_url || item.acta.documento_generado_v2_url
+  )).length;
+  const atendidas = encontrados.filter(item => item.punto?.status === 'at').length;
+  const muestraNoEncontrados = noEncontrados.slice(0,15).map(pv => `
+    <span class="pv" style="display:inline-block;margin:2px">${textoSeguroLumen(pv)}</span>
+  `).join('');
+
+  contenedor.innerHTML = `
+    <div class="dashcard" style="margin:0;border-left:4px solid var(--leche)">
+      <div style="font-size:11px;font-weight:900;margin-bottom:8px">
+        ${textoSeguroLumen(datos.archivo)}
+      </div>
+      <div class="dstats">
+        <div class="s"><div class="v">${datos.pvs.length}</div><div class="k">P.V. archivo</div></div>
+        <div class="s"><div class="v" style="color:var(--done)">${encontrados.length}</div><div class="k">Encontradas</div></div>
+        <div class="s"><div class="v" style="color:${noEncontrados.length ? 'var(--rej)' : 'var(--done)'}">${noEncontrados.length}</div><div class="k">No encontradas</div></div>
+      </div>
+      <div class="dstats" style="margin-top:8px">
+        <div class="s"><div class="v" style="color:var(--leche)">${conActa}</div><div class="k">Con acta V2</div></div>
+        <div class="s"><div class="v" style="color:var(--steel)">${encontrados.length-conActa}</div><div class="k">Sin acta V2</div></div>
+        <div class="s"><div class="v" style="color:var(--done)">${atendidas}</div><div class="k">Reportables</div></div>
+      </div>
+      ${noEncontrados.length ? `
+        <div style="border-top:1px solid var(--line);margin-top:9px;padding-top:8px;font-size:10px;color:var(--mut)">
+          <b style="color:var(--rej)">P.V. no encontradas:</b><br>
+          ${muestraNoEncontrados}
+          ${noEncontrados.length > 15 ? `<div style="margin-top:4px">+ ${noEncontrados.length-15} adicionales</div>` : ''}
+        </div>` : ''}
+    </div>
+    <div class="expbtns" style="margin-top:9px">
+      <button class="expbtn" style="background:var(--steel);color:#fff" onclick="descargarListadoPV('actas')" ${conActa ? '' : 'disabled'}>Descargar actas</button>
+      <button class="expbtn exp-pdf" onclick="descargarListadoPV('reportes')" ${atendidas ? '' : 'disabled'}>Descargar reportes</button>
+      <button class="expbtn exp-xlsx" onclick="descargarListadoPV('todo')" ${encontrados.length ? '' : 'disabled'}>Descargar todo</button>
+    </div>`;
+}
+
+function crearResumenDescargaListadoPV(filas) {
+  const hoja = XLSX.utils.json_to_sheet(filas);
+  hoja['!cols'] = [
+    {wch:16},{wch:22},{wch:16},{wch:16},{wch:18},{wch:18},{wch:48}
+  ];
+  const libro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(libro, hoja, 'Resultado');
+  return XLSX.write(libro, { bookType:'xlsx', type:'array' });
+}
+
+async function descargarListadoPV(tipo='todo') {
+  if (ROLE !== 'gen' && ROLE !== 'admin') {
+    toast('Tu perfil no puede realizar esta descarga');
+    return;
+  }
+
+  const encontrados = Array.isArray(DESCARGA_LISTADO_PV?.encontrados)
+    ? DESCARGA_LISTADO_PV.encontrados : [];
+  const noEncontrados = Array.isArray(DESCARGA_LISTADO_PV?.noEncontrados)
+    ? DESCARGA_LISTADO_PV.noEncontrados : [];
+  if (!encontrados.length) {
+    toast('Primero carga un archivo con P.V. válidas');
+    return;
+  }
+
+  const incluirActas = tipo === 'actas' || tipo === 'todo';
+  const incluirReportes = tipo === 'reportes' || tipo === 'todo';
+
+  try {
+    toast('Preparando descarga por listado…');
+    const zip = new JSZip();
+    const carpetaActas = incluirActas ? zip.folder('Actas') : null;
+    const carpetaReportes = incluirReportes ? zip.folder('Reportes') : null;
+    const resultado = [];
+    let actasAgregadas = 0;
+    let reportesAgregados = 0;
+
+    for (let i=0; i<encontrados.length; i++) {
+      const item = encontrados[i];
+      const pv = String(item.pv);
+      const punto = item.punto;
+      const acta = item.acta;
+      let estadoActa = incluirActas ? 'Sin acta V2' : 'No solicitada';
+      let estadoReporte = incluirReportes ? 'No generado' : 'No solicitado';
+      const observaciones = [];
+
+      if (incluirActas) {
+        const urlActa = acta?.documento_firmado_v2_url || acta?.documento_generado_v2_url || null;
+        if (urlActa) {
+          try {
+            await agregarArchivoActaZIP(
+              carpetaActas,
+              urlActa,
+              `${String(i+1).padStart(3,'0')}_${pv}_ACTA_INICIO_ENTREGA_RECEPCION`
+            );
+            estadoActa = acta?.documento_firmado_v2_url ? 'Acta V2 firmada' : 'Acta V2 generada';
+            actasAgregadas++;
+          } catch (error) {
+            estadoActa = 'Error al descargar';
+            observaciones.push(`Acta: ${error.message || 'error de descarga'}`);
+          }
+        }
+      }
+
+      if (incluirReportes) {
+        if (punto?.status !== 'at') {
+          estadoReporte = 'No atendida';
+          observaciones.push('Reporte omitido: la P.V. no está atendida');
+        } else {
+          try {
+            const fotos = await cargarFotos(pv);
+            const puntoReporte = {
+              ...punto,
+              fotosStreet:Array.isArray(fotos?.street) ? fotos.street : [],
+              fotosPrev:Array.isArray(fotos?.prev) ? fotos.prev : [],
+              fotosFin:Array.isArray(fotos?.fin) ? fotos.fin : []
+            };
+            const blob = await reportePDF(puntoReporte, false);
+            if (!blob) throw new Error('el generador no devolvió un PDF');
+            carpetaReportes.file(
+              `${String(i+1).padStart(3,'0')}_${pv}_REPORTE_ANTES_DESPUES.pdf`,
+              blob
+            );
+            estadoReporte = 'Generado';
+            reportesAgregados++;
+          } catch (error) {
+            estadoReporte = 'Error al generar';
+            observaciones.push(`Reporte: ${error.message || 'error de generación'}`);
+          }
+        }
+      }
+
+      resultado.push({
+        'P.V.':pv,
+        Estado:punto?.estado || '',
+        Cuadrilla:punto?.sub || '',
+        'Estado avance':punto?.status || '',
+        Acta:estadoActa,
+        Reporte:estadoReporte,
+        Observaciones:observaciones.join(' | ')
+      });
+    }
+
+    noEncontrados.forEach(pv => {
+      resultado.push({
+        'P.V.':pv,
+        Estado:'',
+        Cuadrilla:'',
+        'Estado avance':'',
+        Acta:'No existe en padrón',
+        Reporte:'No existe en padrón',
+        Observaciones:'P.V. no encontrada en el catálogo activo cargado por la Bitácora'
+      });
+    });
+
+    zip.file('resultado_listado_PV.xlsx', crearResumenDescargaListadoPV(resultado));
+    const blobZip = await zip.generateAsync({ type:'blob' });
+    const fecha = fechaISOlocal(new Date());
+    descargarBlobListadoPV(blobZip, `descarga_listado_PV_${fecha}.zip`);
+    toast(`Descarga lista: ${actasAgregadas} actas, ${reportesAgregados} reportes`);
+  } catch (error) {
+    console.error('No fue posible preparar la descarga por listado:', error);
+    toast(error.message || 'No fue posible preparar la descarga');
+  }
+}
+
 
 function fechaISOlocal(fecha) {
   const y =
@@ -16735,11 +18799,36 @@ function calcularReporteSemanal(
 
 
   /*
-   * Vo.Bo. otorgados
-   * durante la semana.
+   * ==========================
+   * CUMPLIMIENTO DE LA SEMANA
+   * ==========================
+   *
+   * Importante: para medir la semana
+   * comparamos el MISMO universo:
+   * P.V. programadas entre inicio y fin
+   * que ya tenían Vo.Bo. al cierre.
+   *
+   * Un Vo.Bo. otorgado esta semana a una
+   * P.V. de otra semana NO compensa un
+   * compromiso semanal pendiente.
    */
 
   const atendidasSemana =
+    programadasSemana.filter(p =>
+      p.vobo === 'ok' &&
+      p.fecha_vobo &&
+      p.fecha_vobo <= fin
+    );
+
+
+  /*
+   * Flujo administrativo independiente:
+   * todos los Vo.Bo. que se otorgaron
+   * durante la semana, sin importar la
+   * fecha compromiso de esas P.V.
+   */
+
+  const voboOtorgadosSemana =
     LECH.filter(p =>
       p.vobo === 'ok' &&
       p.fecha_vobo &&
@@ -16914,6 +19003,9 @@ function calcularReporteSemanal(
 
     atendidasSemana:
       atendidasSemana.length,
+
+    voboOtorgadosSemana:
+      voboOtorgadosSemana.length,
 
     faltantesSemana,
 
@@ -17229,7 +19321,7 @@ function renderReporteSemanal() {
                 }
               </div>
               <div class="k">
-                Con Vo.Bo.
+                Cumplidas
               </div>
             </div>
 
@@ -17253,6 +19345,30 @@ function renderReporteSemanal() {
             </div>
 
           </div>
+
+          ${
+            r.estadoSemana !== 'futura'
+              ? `
+                <div
+                  style="
+                    margin-top:8px;
+                    padding:7px 8px;
+                    border-radius:7px;
+                    background:var(--milk);
+                    color:var(--steel);
+                    font-size:9px;
+                    line-height:1.4;
+                  "
+                >
+                  Vo.Bo. otorgados durante la semana:
+                  <b>${r.voboOtorgadosSemana}</b>.
+                  Este dato es flujo administrativo y no se usa
+                  para calcular el cumplimiento de las
+                  ${r.programadasSemana} P.V. programadas.
+                </div>
+              `
+              : ''
+          }
 
           <div
             style="
@@ -17644,7 +19760,7 @@ function exportReporteSemanalXLSX() {
 
     {
       Concepto:
-        'Vo.Bo. obtenidos semana',
+        'Cumplidas de la programación semanal',
 
       Valor:
         r.atendidasSemana
@@ -17652,10 +19768,18 @@ function exportReporteSemanalXLSX() {
 
     {
       Concepto:
-        'Pendientes semana',
+        'Pendientes de la programación semanal',
 
       Valor:
         r.faltantesSemana
+    },
+
+    {
+      Concepto:
+        'Vo.Bo. otorgados durante la semana',
+
+      Valor:
+        r.voboOtorgadosSemana
     },
 
     {
@@ -18059,16 +20183,23 @@ function exportReporteSemanalPDF() {
     ],
 
     [
-      'Vo.Bo. obtenidos',
+      'Cumplidas de la programación',
       String(
         r.atendidasSemana
       )
     ],
 
     [
-      'Pendientes',
+      'Pendientes de la programación',
       String(
         r.faltantesSemana
+      )
+    ],
+
+    [
+      'Vo.Bo. otorgados en la semana',
+      String(
+        r.voboOtorgadosSemana
       )
     ],
 
@@ -21859,6 +23990,2779 @@ function actaPDF() {
       : 'Carátula del acta generada'
   );
 }
+
+// ESTIMACIÓN INTERNA LUMEN · HISTÓRICA Y SIN DUPLICIDADES
+// Esta definición sustituye la vista provisional anterior.
+// ExcelJS se carga únicamente al solicitar el archivo.
+// ============================================================
+
+let ESTIMACION_LUMEN = null;
+let EXCELJS_LUMEN_PROMESA = null;
+let ESTIMACION_LUMEN_ADELANTADAS_ABIERTO = false;
+let ESTIMACION_LUMEN_PENDIENTES_ABIERTO = false;
+let ESTIMACION_LUMEN_ADELANTADAS_PAGINA = 1;
+let ESTIMACION_LUMEN_INCLUIDAS_PAGINA = 1;
+const ESTIMACION_LUMEN_ADELANTADAS_SEL = new Set();
+
+const LUMEN_XLS_LOGO =
+  'data:image/png;base64,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ED788ENYrVY8//zz0ZV1Uf42Dpmu+46sWLECr776Kq688krcddddOPnkky35+fkZjLFMu92u1dTUhGJiYopM0yxNT083Nm3aRMcffzxUVcVZZ5110Ov74YcfYu7cuejevTt+/fVXZGdnW30+X4qu64mcc+7xeExd10vsdnvtE088ISZOnEj9+vVDQUEBpkyZ0tqXO8ohziEr9OYQER566CHU1tZi+vTp/Prrr3e2bds2fv369Z0tFosaExNTwDmvHDNmTO20adPMAQMGYMKECa1W3/vuuw91dXUwDAP9+/dX5s+fb8/MzIxbv3595zZt2viEEGVWq7XuvPPOa3jiiSdk586d8cADD7T2ZY5yCHPICH3BggX4/vvvwRjDiBEjcOyxx+5yuxdffBEbN27EU089hQsuuEA566yznPPnz89hjLliYmK8xcXF3oEDB2758ccfvf3790f//v3x448/4vbbb0dSUtJBP6/JkyejuLgYr776Ks4880x14MCBtry8vM42mw0Wi8VTXFxsdOvWrWjVqlVG165dUVtbC4fDgdNPPz0aKSfKPnMoCZ19/fXXysMPPyzGjRtHQ4cOxYUXXrhXC/u8efPw9NNPIzc311JfX58VDAaTichaV1cX6N69e14oFKp54IEHzMsuu4y6deuG2267rVWnv5599ll89dVX6N+/v+Z2u5O9Xm88Y0w1DCPYrl27crfb7X766afFZZddRn369MGwYcPQu3fvVqtvlEODQ0nojhkzZvSor683hRDFTz31VMXYsWPlbbfdhh49euxx308++QSrVq1CdXU1OnfurKxcuTImISEhze/3d3C5XCG/31+u63rZ448/XnXhhRfKadOmITs7u9XO9ZNPPsGiRYvg8/mgqiqvqqqyJyYmxvp8vqy4uDi/aZpuKWXtvffeWzd+/Hh5ySWXtIrdIcqhw6EkdLZ27dqEBQsWHOl0OpX6+npD07Syxx57bP2tt94a6t+/P9auXYtOnTrh6quv3mWrTES46667UFRUhHfffZeNGzdO6devX/zy5cv7WCwW4Xa7haZptc8888yGG2+8MdirVy8sX74cubm5uOGGG1qlpb/qqqvg9/vx7rvvsrFjx/L+/ftbV61alasoCgkhgvX19eZll12W/9FHH4WysrJQXl6OhIQEPPLII1HHnChNHFJPwnvvvYfPPvsMo0eP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15OTkpLab9lSe2xKSnqJz1/5cVyss6qkqNDI6doZZ5xxBnJzc/d43NWrVuO7r75AQXEhstt3ti1cuKDNsQMHJ27dtiXH4bDVqBotq3P765996mnPxIkTceKJJ2L06NFgjGHo0KFYu3YtunTpgrlz5x40IxkR4ZZbbkF9fT169eqlL1y4MDk3N9daVlbWVlVVERcXt2nlypXuL774wjtu3Djk5OREc9X9TRxWV3DWrFkIhUIIBoN/azDFlStXIjs7GzExMbt8KK+++mpN1/WxRPRVMBisrK2tR/fu3awNbjqKyDyxsCC/sn377LXuhvqijp3al9966621d9x5J04YPhwnnnjiXo8/adIkrF69Gi++/D6f9sh9rqwOGUkb1q7vZUippKelb6gqr6y58cYbK5544gmja9euuOWWW1r7VuDBBx/Exo0bce+997KpU6fa2rVr59i0aVNXwzBcHTp0WFNVVRU84ogjajZs2BBSVRVPPPFEVPD/A9ErdxA4/fTT1aysrMsYY189++yzlatXz8fnn89CIKT1jouJ6UUU/L68vDSTpNnOZtN5IBCs1S2W/C5dupS+++67on379hg9ejROP/303R6DiPDFF99h1syfEAoGcfKpo5TvvvsqwWK1dXQ5YxIURRHBYLAyIyMjb9WqVQ3btm2jQYMG4fzzz0fPnj1b7dq88sorWLZsGYQQGDZsGFu4cKErEAikaZqWoOu6ME2zgXNeNnjw4IYPP/yQHA4Hrrjiit3G9Y+yaw4LX/fWJjU1lQGgRr/wHj0GYNKk+6EoCohIsdliAwBW3XbnjT94PO5FMTExNW63u//8+fNPGThwYE5qampSv379lD35lzPGcPbZp+Gll5/HG2+9hpiYGAGgcsbMGX+lpqb+HgqFNickJLjWr19/ekJCwpBjjjkmy+l0Onr27ImJEydi7dq1reK3Pm7cOLz44ot45ZVXcNJJJxFjrGHr1q0b27VrtywQCGyLj4+XFRUVx/z6669HxsXFpTmdTufAgQPZRRddhIceeqh1b+whRFToBwGr1QrOOThvebkVRjAMQ/X5fOyppx7HzzNnC8Z5yQNTpqw2DGNGt27d/mxoaGjv8XjO+vzzzwcQURe73e46//zz8eSTT+5RmCNGnIi33noXs3/5DaFQyF1WVpbXsWPHP4PB4FcpKSllBQUFI/x+//C77rqrDxFl5ubmsssuuwxffvllqy1USUhIwJNPPokffvgBPp8vyBiruOWWWzYbhjGXc74pFArlhkKhY6ZNm9aeiDJdLpd2xRVXYPr06dHFNXvhX+8w80/AZrOxQCCw08PImEKmaXDTDDIAuPTSsQDCtoTPPvvMv3LlSv+tt946a9asWTEVFRWdnU5nj3Xr1vWIj4+vFEJsnDlzZuXxxx8vcnJyMGLEiF3aHdq3bw8AqKiowIcffmgqiuIuLi5ef84552xevXp1ms/n68IYazd+/Hi30+ks9/v9W37++WffmWeeSYMGDYKu6wfduaX5WLxXr17EOfcLIfznn3/+nN9++81ZXl6e7nA40vLy8toA8AkhCt96662GQYMGyZycHIwZM2anoCGHO1GhHwRsNhsCgcBOfzelGZ67ly1fAM0NcDfccIMEULds2bJFF1100apff/01xWq1pq9evfrU6urq6sGDB68PBALlZ511Vs2ECRNw2WWX4eijj97pWCkpKS1+Hz58uAmg6Omnny669tpr41VVTVJVNfv333/Padu27fq2bdtWOxyOuq+++ip46aWX4q233mq1BBaNnHLKKRJAQ3FxccOAAQP0jRs3xjscjqT169cPrK6urh40aFApgLrBgwe7zznnHDr33HNx3nnnHfQ6/xOJdt0PAqZpQkrJpGzpeEYqp5Aw4Q8Gdrtvnz59cOONN+K7775DVVVVgHNe0KtXr4Ver/fDrl27rqqurh4YCoXOve+++44jopyjjjpKv+GGG/DZZ5/tsU5nn302Jk+ejGXLlgFA7YIFCzZpmjbHZrPNDAaDIbfbPaCurq6PzWbrAiCJMYb7778f33//fatdx5EjR2Lq1KmNIa5DjLHy4447bm0wGJzduXPn/Nra2s5+v3/gfffdl0tEHbKysrRrr70WL7zwwmHftY+26AcBIQQAsB1bRFXXhM/rRcAM7rWM5vvGxsaSqqre0tLSzRMmTNjyww8/JJaWlvbSdf2IO++8MxdARSAQWHfeeec1lJeXy+HDhyM9PR21tbW47bbbWpTbmNxi3bp1eO211wyfz2fExcVtHjly5Nbly5cnWSyWTpzz5JtuuslNRA319fUld999d+jPP/+kkSNHYsCAARg6dOhBvZ7Nr0VSUhJxzv1lZWX+F1544deXX37ZtWzZsnYul6v9559/ngzAb5pmwS233NJw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';
+
+const LUMEN_XLS_FIRMA =
+  'data:image/png;base64,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';
+
+const FIRMANTES_ESTIMACION = {
+  requirente: {
+    area:
+      'LECHE PARA EL BIENESTAR S.A. DE C.V.',
+    nombre:
+      'LIC. MARCO VINICIO RODRÍGUEZ QUINTERO',
+    cargo:
+      'GERENTE DE ABASTOS'
+  },
+  administrativa: {
+    area:
+      'LECHE PARA EL BIENESTAR S.A. DE C.V.',
+    nombre:
+      'LCP. RAMÓN ORTEGA MAGAÑA',
+    cargo:
+      'GERENTE DE RECURSOS MATERIALES Y SERVICIOS GENERALES'
+  },
+  proveedor: {
+    area:
+      'LUMEN-OAX PROYECTOS Y CONSTRUCCIÓN S.A. DE C.V.',
+    nombre:
+      'C. JUDITH VÁSQUEZ AQUINO',
+    cargo:
+      'ADMINISTRADORA ÚNICA'
+  }
+};
+
+const SERVICIO_ESTIMACION =
+  '“MANTENIMIENTO Y CONSERVACIÓN DE INMUEBLES MEDIANTE LA APLICACIÓN DE PINTURA PARA LA CONSERVACIÓN DE LA IMAGEN INSTITUCIONAL, EXCLUSIVAMENTE EN FACHADAS DE PUNTOS DE VENTA Y/O LECHERÍAS PARA EL BIENESTAR”';
+
+function claveEntidadEstimacion(valor) {
+  return String(valor || 'Sin entidad')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+}
+
+function nombreEntregaEstimacion(numero) {
+  const nombres = {
+    1: 'UNO',
+    2: 'DOS',
+    3: 'TRES',
+    4: 'CUATRO',
+    5: 'CINCO'
+  };
+
+  return nombres[Number(numero)] ||
+    String(numero);
+}
+
+function fechaEstimadaMX(valor) {
+  if (!valor) {
+    return '—';
+  }
+
+  const partes =
+    String(valor).slice(0, 10).split('-');
+
+  if (partes.length !== 3) {
+    return valor;
+  }
+
+  return `${partes[2]}/${partes[1]}/${partes[0]}`;
+}
+
+function textoSeguroLumen(valor) {
+  return String(valor ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function claveAtributoLumen(valor) {
+  return encodeURIComponent(
+    String(valor ?? '')
+  ).replace(/'/g, '%27');
+}
+
+function resumenEstadosEstimacion(datos) {
+  const estimacion =
+    datos.estimacion || {};
+
+  const numeroActual =
+    Number(estimacion.numero || 1);
+
+  const catalogo =
+    Array.isArray(datos.catalogo)
+      ? datos.catalogo
+      : [];
+
+  const lecherias =
+    Array.isArray(datos.lecherias)
+      ? datos.lecherias
+      : [];
+
+  const entregas =
+    Array.isArray(datos.entregas)
+      ? datos.entregas
+      : [];
+
+  const porClave = new Map();
+
+  function asegurar(estado) {
+    const clave =
+      claveEntidadEstimacion(estado);
+
+    if (!porClave.has(clave)) {
+      porClave.set(clave, {
+        clave,
+        estado:
+          estado || 'Sin entidad',
+        catalogo: 0,
+        puntosActuales: [],
+        entregas: new Map()
+      });
+    }
+
+    return porClave.get(clave);
+  }
+
+  catalogo.forEach(item => {
+    const grupo =
+      asegurar(item.estado);
+
+    grupo.estado =
+      item.estado || grupo.estado;
+
+    grupo.catalogo =
+      Number(item.cantidad || 0);
+  });
+
+  entregas.forEach(item => {
+    const grupo =
+      asegurar(item.estado);
+
+    const numero =
+      Number(item.numero || 0);
+
+    grupo.entregas.set(numero, {
+      cantidad:
+        Number(item.cantidad || 0),
+      importe:
+        Number(item.importe || 0)
+    });
+  });
+
+  lecherias.forEach(punto => {
+    const grupo =
+      asegurar(punto.estado);
+
+    grupo.puntosActuales.push(punto);
+  });
+
+  /*
+   * Mientras la estimación está en borrador,
+   * la entrega actual todavía no existe en el
+   * histórico cerrado; se incorpora solo para
+   * la vista y el archivo preliminar.
+   */
+  if (estimacion.estado !== 'cerrada') {
+    porClave.forEach(grupo => {
+      const cantidad =
+        grupo.puntosActuales.length;
+
+      if (cantidad) {
+        grupo.entregas.set(numeroActual, {
+          cantidad,
+          importe:
+            cantidad *
+            Number(
+              estimacion.precio_unitario ||
+              PRECIO_FACHADA
+            )
+        });
+      }
+    });
+  }
+
+  return [...porClave.values()]
+    .map(grupo => {
+      let anteriores = 0;
+      let acumuladas = 0;
+
+      grupo.entregas.forEach(
+        (entrega, numero) => {
+          if (numero < numeroActual) {
+            anteriores +=
+              entrega.cantidad;
+          }
+
+          if (numero <= numeroActual) {
+            acumuladas +=
+              entrega.cantidad;
+          }
+        }
+      );
+
+      const actual =
+        grupo.puntosActuales.length;
+
+      return {
+        ...grupo,
+        anteriores,
+        actual,
+        acumuladas,
+        pendientes:
+          Math.max(
+            grupo.catalogo - acumuladas,
+            0
+          )
+      };
+    })
+    .sort((a, b) =>
+      a.estado.localeCompare(
+        b.estado,
+        'es',
+        {
+          sensitivity: 'base'
+        }
+      )
+    );
+}
+
+function renderEstimacionLumenEspecial() {
+  const sc =
+    document.getElementById(
+      'estimacionLumenEspecial'
+    );
+
+  if (!sc) {
+    return;
+  }
+
+  if (
+    ROLE !== 'gen' &&
+    ROLE !== 'admin'
+  ) {
+    sc.innerHTML = '';
+    return;
+  }
+
+  sc.innerHTML = `
+    <div class="sect">
+      <div style="text-align:center;padding:30px 15px;color:var(--mut)">
+        Consultando la estimación interna…
+      </div>
+    </div>
+  `;
+
+  cargarVistaEstimacionLumen();
+}
+
+async function cargarVistaEstimacionLumen(
+  numero = null
+) {
+  const sc =
+    document.getElementById(
+      'estimacionLumenEspecial'
+    );
+
+  if (!sc) {
+    return;
+  }
+
+  try {
+    ESTIMACION_LUMEN =
+      await obtenerEstimacionLumen(numero);
+
+    ESTIMACION_LUMEN_ADELANTADAS_SEL.clear();
+
+    pintarVistaEstimacionLumen();
+
+  } catch (error) {
+    console.error(
+      'No fue posible consultar la estimación LUMEN:',
+      error
+    );
+
+    sc.innerHTML = `
+      <div class="sect">
+        <div class="note" style="border-left:4px solid var(--rej)">
+          <b>No fue posible cargar la estimación interna.</b>
+          <br><br>
+          ${error.message || 'Revisa que el script SQL de estimaciones haya sido ejecutado.'}
+        </div>
+      </div>
+    `;
+  }
+}
+
+function candidatasAdelantadasLumen() {
+  return Array.isArray(
+    ESTIMACION_LUMEN?.candidatas_adelantadas
+  )
+    ? ESTIMACION_LUMEN.candidatas_adelantadas
+    : [];
+}
+
+function adelantadasIncluidasLumen() {
+  return Array.isArray(
+    ESTIMACION_LUMEN?.lecherias
+  )
+    ? ESTIMACION_LUMEN.lecherias.filter(
+        punto =>
+          punto.origen === 'adelantada'
+      )
+    : [];
+}
+
+function alternarAdelantadasLumen() {
+  ESTIMACION_LUMEN_ADELANTADAS_ABIERTO =
+    !ESTIMACION_LUMEN_ADELANTADAS_ABIERTO;
+
+  pintarVistaEstimacionLumen();
+}
+
+function alternarPendientesVoboLumen() {
+  ESTIMACION_LUMEN_PENDIENTES_ABIERTO =
+    !ESTIMACION_LUMEN_PENDIENTES_ABIERTO;
+
+  pintarVistaEstimacionLumen();
+}
+
+function cambiarPaginaAdelantadasLumen(
+  pagina
+) {
+  ESTIMACION_LUMEN_ADELANTADAS_PAGINA =
+    Number(pagina || 1);
+
+  pintarVistaEstimacionLumen();
+}
+
+function cambiarPaginaIncluidasLumen(
+  pagina
+) {
+  ESTIMACION_LUMEN_INCLUIDAS_PAGINA =
+    Number(pagina || 1);
+
+  pintarVistaEstimacionLumen();
+}
+
+function marcarAdelantadaLumen(
+  pvCodificada,
+  marcada
+) {
+  const pv =
+    decodeURIComponent(pvCodificada);
+
+  if (marcada) {
+    ESTIMACION_LUMEN_ADELANTADAS_SEL.add(pv);
+  } else {
+    ESTIMACION_LUMEN_ADELANTADAS_SEL.delete(pv);
+  }
+
+  const contador =
+    document.getElementById(
+      'contadorAdelantadasLumen'
+    );
+
+  const boton =
+    document.getElementById(
+      'btnAgregarAdelantadasLumen'
+    );
+
+  if (contador) {
+    contador.textContent =
+      `${ESTIMACION_LUMEN_ADELANTADAS_SEL.size} seleccionadas`;
+  }
+
+  if (boton) {
+    boton.disabled =
+      ESTIMACION_LUMEN_ADELANTADAS_SEL.size === 0;
+  }
+}
+
+function seleccionarPaginaAdelantadasLumen() {
+  const candidatas =
+    candidatasAdelantadasLumen();
+
+  const inicio =
+    (ESTIMACION_LUMEN_ADELANTADAS_PAGINA - 1) * 10;
+
+  candidatas
+    .slice(inicio, inicio + 10)
+    .forEach(punto =>
+      ESTIMACION_LUMEN_ADELANTADAS_SEL.add(
+        String(punto.pv)
+      )
+    );
+
+  pintarVistaEstimacionLumen();
+}
+
+async function guardarConfiguracionEstimacionLumen() {
+  const estimacion =
+    ESTIMACION_LUMEN?.estimacion;
+
+  if (!estimacion) {
+    return;
+  }
+
+  const fechaInicio =
+    document.getElementById(
+      'estimacionLumenFechaInicio'
+    )?.value;
+
+  const fechaFin =
+    document.getElementById(
+      'estimacionLumenFechaFin'
+    )?.value;
+
+  const meta =
+    document.getElementById(
+      'estimacionLumenMeta'
+    )?.value ?? '';
+
+  if (!fechaInicio || !fechaFin) {
+    toast('Indica las dos fechas del periodo');
+    return;
+  }
+
+  if (fechaInicio > fechaFin) {
+    toast('La fecha inicial no puede ser posterior a la final');
+    return;
+  }
+
+  if (
+    meta !== '' &&
+    Number(meta) <= 0
+  ) {
+    toast('La meta debe ser mayor que cero');
+    return;
+  }
+
+  const confirmado = window.confirm(
+    '¿Guardar el periodo y la meta?\n\nEl borrador se recalculará con las fechas indicadas.'
+  );
+
+  if (!confirmado) {
+    return;
+  }
+
+  try {
+    toast('Guardando configuración…');
+
+    ESTIMACION_LUMEN =
+      await actualizarConfiguracionEstimacionLumen(
+        estimacion.id,
+        fechaInicio,
+        fechaFin,
+        meta
+      );
+
+    ESTIMACION_LUMEN_ADELANTADAS_SEL.clear();
+    pintarVistaEstimacionLumen();
+    toast('Periodo y meta actualizados');
+  } catch (error) {
+    console.error(error);
+    toast(
+      error.message ||
+      'No fue posible guardar la configuración'
+    );
+  }
+}
+
+async function agregarAdelantadasSeleccionadasLumen() {
+  const estimacion =
+    ESTIMACION_LUMEN?.estimacion;
+
+  const pvs = [
+    ...ESTIMACION_LUMEN_ADELANTADAS_SEL
+  ];
+
+  if (!estimacion || !pvs.length) {
+    toast('Selecciona al menos una P.V.');
+    return;
+  }
+
+  try {
+    toast('Agregando P.V. adelantadas…');
+
+    ESTIMACION_LUMEN =
+      await gestionarAdelantadasLumen(
+        estimacion.id,
+        pvs,
+        'agregar'
+      );
+
+    ESTIMACION_LUMEN_ADELANTADAS_SEL.clear();
+    pintarVistaEstimacionLumen();
+    toast('P.V. adelantadas agregadas');
+  } catch (error) {
+    console.error(error);
+    toast(
+      error.message ||
+      'No fue posible agregar las P.V.'
+    );
+  }
+}
+
+async function quitarAdelantadaLumen(
+  pvCodificada
+) {
+  const estimacion =
+    ESTIMACION_LUMEN?.estimacion;
+
+  const pv =
+    decodeURIComponent(pvCodificada);
+
+  if (!estimacion) {
+    return;
+  }
+
+  if (
+    !window.confirm(
+      `¿Quitar la P.V. ${pv} de las adelantadas?`
+    )
+  ) {
+    return;
+  }
+
+  try {
+    ESTIMACION_LUMEN =
+      await gestionarAdelantadasLumen(
+        estimacion.id,
+        [pv],
+        'quitar'
+      );
+
+    pintarVistaEstimacionLumen();
+    toast('P.V. retirada de adelantadas');
+  } catch (error) {
+    console.error(error);
+    toast(
+      error.message ||
+      'No fue posible retirar la P.V.'
+    );
+  }
+}
+
+function pintarVistaEstimacionLumen() {
+  const sc =
+    document.getElementById(
+      'estimacionLumenEspecial'
+    );
+
+  if (!sc) {
+    return;
+  }
+
+  const datos =
+    ESTIMACION_LUMEN || {};
+
+  const estimacion =
+    datos.estimacion;
+
+  if (!estimacion) {
+    sc.innerHTML = `
+      <div class="sect">
+        <div class="note">
+          No existe una estimación configurada.
+          Ejecuta primero el script SQL entregado.
+        </div>
+      </div>
+    `;
+
+    return;
+  }
+
+  const resumen =
+    datos.resumen || {};
+
+  const historial =
+    Array.isArray(datos.historial)
+      ? datos.historial
+      : [];
+
+  const grupos =
+    resumenEstadosEstimacion(datos)
+      .filter(grupo =>
+        grupo.actual > 0 ||
+        grupo.acumuladas > 0
+      );
+
+  const cantidadPeriodo =
+    Number(resumen.cantidad_periodo || 0);
+
+  const cantidadAdelantadas =
+    Number(resumen.cantidad_adelantadas || 0);
+
+  const cantidad =
+    Number(resumen.cantidad || 0);
+
+  const pendientesVobo =
+    Number(resumen.pendientes_vobo_total || 0);
+
+  const meta =
+    estimacion.meta_pv === null
+      ? null
+      : Number(estimacion.meta_pv || 0);
+
+  const faltantesMeta =
+    meta
+      ? Math.max(meta - cantidad, 0)
+      : 0;
+
+  const porcentaje =
+    meta
+      ? Math.min(
+          Math.round(
+            cantidad / meta * 100
+          ),
+          100
+        )
+      : 100;
+
+  const cerrado =
+    estimacion.estado === 'cerrada';
+
+  const opciones =
+    historial
+      .map(item => `
+        <option
+          value="${Number(item.numero)}"
+          ${
+            Number(item.numero) ===
+            Number(estimacion.numero)
+              ? 'selected'
+              : ''
+          }
+        >
+          Estimación ${Number(item.numero)} · ${
+            item.estado === 'cerrada'
+              ? 'cerrada'
+              : 'borrador'
+          }
+        </option>
+      `)
+      .join('');
+
+  const filasEstados =
+    grupos.length
+      ? grupos.map(grupo => `
+          <div
+            class="estim-row"
+            style="align-items:center"
+          >
+            <div class="l" style="min-width:0">
+              <b>${textoSeguroLumen(grupo.estado)}</b>
+              <div style="font-size:10px;color:var(--mut);margin-top:2px">
+                ${grupo.catalogo} en catálogo ·
+                ${grupo.acumuladas} acumuladas
+              </div>
+            </div>
+
+            <div style="text-align:right;margin-left:10px">
+              <div style="font-weight:800;color:var(--done)">
+                ${grupo.actual}
+              </div>
+              <div style="font-size:9.5px;color:var(--mut)">
+                en esta estimación
+              </div>
+            </div>
+          </div>
+        `).join('')
+      : `
+          <div class="note">
+            Aún no hay P.V. incluidas en esta estimación.
+          </div>
+        `;
+
+  const candidatas =
+    candidatasAdelantadasLumen();
+
+  const incluidas =
+    adelantadasIncluidasLumen();
+
+  const paginasCandidatas =
+    Math.max(
+      Math.ceil(candidatas.length / 10),
+      1
+    );
+
+  ESTIMACION_LUMEN_ADELANTADAS_PAGINA =
+    Math.min(
+      Math.max(
+        ESTIMACION_LUMEN_ADELANTADAS_PAGINA,
+        1
+      ),
+      paginasCandidatas
+    );
+
+  const inicioCandidatas =
+    (ESTIMACION_LUMEN_ADELANTADAS_PAGINA - 1) * 10;
+
+  const candidatasPagina =
+    candidatas.slice(
+      inicioCandidatas,
+      inicioCandidatas + 10
+    );
+
+  const paginasIncluidas =
+    Math.max(
+      Math.ceil(incluidas.length / 10),
+      1
+    );
+
+  ESTIMACION_LUMEN_INCLUIDAS_PAGINA =
+    Math.min(
+      Math.max(
+        ESTIMACION_LUMEN_INCLUIDAS_PAGINA,
+        1
+      ),
+      paginasIncluidas
+    );
+
+  const inicioIncluidas =
+    (ESTIMACION_LUMEN_INCLUIDAS_PAGINA - 1) * 10;
+
+  const incluidasPagina =
+    incluidas.slice(
+      inicioIncluidas,
+      inicioIncluidas + 10
+    );
+
+  const filasCandidatas =
+    candidatasPagina.length
+      ? candidatasPagina.map(punto => {
+          const pv = String(punto.pv || '');
+          const clave = claveAtributoLumen(pv);
+          const marcada =
+            ESTIMACION_LUMEN_ADELANTADAS_SEL.has(pv);
+
+          return `
+            <label
+              class="estim-row"
+              style="cursor:pointer;align-items:center"
+            >
+              <input
+                type="checkbox"
+                ${marcada ? 'checked' : ''}
+                onchange="marcarAdelantadaLumen('${clave}', this.checked)"
+                style="width:18px;height:18px;margin-right:9px"
+              >
+              <span class="l" style="min-width:0">
+                <b>P.V. ${textoSeguroLumen(pv)}</b>
+                <span style="display:block;font-size:9.5px;color:var(--mut);margin-top:2px">
+                  ${textoSeguroLumen(punto.estado || 'Sin estado')} ·
+                  ${textoSeguroLumen(punto.sub || 'Sin cuadrilla')}
+                </span>
+              </span>
+              <span class="v" style="font-size:10px">
+                ${fechaEstimadaMX(punto.fecha_vobo)}
+              </span>
+            </label>
+          `;
+        }).join('')
+      : `
+          <div class="note">
+            No hay P.V. con Vo.Bo. posterior al periodo disponibles.
+          </div>
+        `;
+
+  const filasIncluidas =
+    incluidasPagina.length
+      ? incluidasPagina.map(punto => {
+          const pv = String(punto.pv || '');
+          const clave = claveAtributoLumen(pv);
+
+          return `
+            <div class="estim-row" style="align-items:center">
+              <span class="l" style="min-width:0">
+                <b>P.V. ${textoSeguroLumen(pv)}</b>
+                <span style="display:block;font-size:9.5px;color:var(--mut);margin-top:2px">
+                  ${textoSeguroLumen(punto.estado || 'Sin estado')} ·
+                  ${textoSeguroLumen(punto.sub || 'Sin cuadrilla')}
+                </span>
+              </span>
+              <button
+                type="button"
+                onclick="quitarAdelantadaLumen('${clave}')"
+                style="border:1px solid var(--rej);background:#fff;color:var(--rej);border-radius:8px;padding:7px 9px;font-weight:800"
+              >
+                Quitar
+              </button>
+            </div>
+          `;
+        }).join('')
+      : '';
+
+  sc.innerHTML = `
+    <div class="note">
+      <b>Estimación interna LUMEN.</b>
+      <br><br>
+      Las P.V. con Vo.Bo. dentro del periodo se
+      incorporan automáticamente. Las P.V. con
+      Vo.Bo. posterior al periodo sólo se incorporan
+      cuando GEN o ADMIN las seleccionan como
+      adelantadas. Al cerrar, el periodo, las
+      claves y los montos quedan congelados.
+    </div>
+
+    <div class="sect">
+      <h3>Estimación consultada</h3>
+
+      <select
+        onchange="cargarVistaEstimacionLumen(this.value)"
+        style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px;background:#fff;color:var(--ink);font:inherit;font-weight:700"
+      >
+        ${opciones}
+      </select>
+    </div>
+
+    <div class="sect">
+      <h3>Configuración</h3>
+
+      ${
+        cerrado
+          ? `
+            <div class="estim-row">
+              <span class="l">Periodo congelado</span>
+              <span class="v">
+                ${fechaEstimadaMX(estimacion.fecha_inicio)} al
+                ${fechaEstimadaMX(estimacion.fecha_fin)}
+              </span>
+            </div>
+            <div class="estim-row">
+              <span class="l">Meta de referencia</span>
+              <span class="v">${meta || 'Sin meta'}</span>
+            </div>
+          `
+          : `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <label style="font-size:10px;color:var(--mut)">
+                Fecha inicial
+                <input
+                  id="estimacionLumenFechaInicio"
+                  type="date"
+                  value="${textoSeguroLumen(estimacion.fecha_inicio)}"
+                  style="width:100%;box-sizing:border-box;margin-top:4px;border:1px solid var(--line);border-radius:9px;padding:9px;font:inherit"
+                >
+              </label>
+
+              <label style="font-size:10px;color:var(--mut)">
+                Fecha final
+                <input
+                  id="estimacionLumenFechaFin"
+                  type="date"
+                  value="${textoSeguroLumen(estimacion.fecha_fin)}"
+                  style="width:100%;box-sizing:border-box;margin-top:4px;border:1px solid var(--line);border-radius:9px;padding:9px;font:inherit"
+                >
+              </label>
+            </div>
+
+            <label style="display:block;font-size:10px;color:var(--mut);margin-top:9px">
+              Meta de referencia de esta estimación
+              <input
+                id="estimacionLumenMeta"
+                type="number"
+                min="1"
+                step="1"
+                value="${meta || ''}"
+                placeholder="Sin meta"
+                style="width:100%;box-sizing:border-box;margin-top:4px;border:1px solid var(--line);border-radius:9px;padding:9px;font:inherit"
+              >
+            </label>
+
+            <button
+              type="button"
+              class="btn btn-done"
+              onclick="guardarConfiguracionEstimacionLumen()"
+              style="width:100%;margin-top:10px"
+            >
+              Guardar periodo y meta
+            </button>
+          `
+      }
+    </div>
+
+    <div class="sect">
+      <div class="estim-hero">
+        <div class="lbl">
+          Estimación ${Number(estimacion.numero)} · ${cerrado ? 'cerrada' : 'borrador dinámico'}
+        </div>
+
+        <div class="amt">
+          ${money(resumen.total || 0)}
+        </div>
+
+        <div class="sub">
+          ${cantidad} P.V. ×
+          ${money(estimacion.precio_unitario)}
+          + IVA
+        </div>
+      </div>
+
+      <div class="estim-row">
+        <span class="l">P.V. con Vo.Bo. dentro del periodo</span>
+        <span class="v">${cantidadPeriodo}</span>
+      </div>
+
+      <div class="estim-row">
+        <span class="l">P.V. adelantadas incluidas</span>
+        <span class="v">${cantidadAdelantadas}</span>
+      </div>
+
+      <div class="estim-row tot">
+        <span class="l">Total actual de la estimación</span>
+        <span class="v">${cantidad}</span>
+      </div>
+
+      <div class="estim-row">
+        <span class="l">Meta de referencia</span>
+        <span class="v">${meta || 'Sin meta'}</span>
+      </div>
+
+      ${
+        meta
+          ? `
+            <div style="height:8px;background:var(--line);border-radius:20px;overflow:hidden;margin:8px 2px">
+              <div style="width:${porcentaje}%;height:100%;background:var(--done)"></div>
+            </div>
+
+            <div style="font-size:10px;color:var(--mut);margin-bottom:8px">
+              ${
+                faltantesMeta
+                  ? `Faltan ${faltantesMeta} P.V. por integrar para alcanzar la meta. Esta diferencia no supone que estén atendidas o pendientes de Vo.Bo.`
+                  : `La meta de ${meta} P.V. fue alcanzada.`
+              }
+            </div>
+          `
+          : ''
+      }
+
+      ${
+        !cerrado
+          ? `
+            <button
+              type="button"
+              class="estim-row"
+              onclick="alternarPendientesVoboLumen()"
+              style="width:100%;font:inherit;text-align:left;cursor:pointer"
+              aria-expanded="${ESTIMACION_LUMEN_PENDIENTES_ABIERTO}"
+            >
+              <span class="l">P.V. atendidas pendientes de Vo.Bo.</span>
+              <span class="v">
+                ${pendientesVobo}
+                ${ESTIMACION_LUMEN_PENDIENTES_ABIERTO ? '▲' : '▼'}
+              </span>
+            </button>
+
+            ${
+              ESTIMACION_LUMEN_PENDIENTES_ABIERTO
+                ? `
+                  <div class="note" style="margin-top:8px">
+                    Incluye todas las P.V. activas y atendidas
+                    que todavía no tienen Vo.Bo., sin filtrar
+                    por periodo.
+
+                    <button
+                      type="button"
+                      class="btn btn-done"
+                      onclick="descargarPendientesVoboLumenXLSX()"
+                      ${pendientesVobo ? '' : 'disabled'}
+                      style="width:100%;margin-top:10px"
+                    >
+                      Descargar pendientes de Vo.Bo.
+                    </button>
+                  </div>
+                `
+                : ''
+            }
+          `
+          : ''
+      }
+
+      <div class="estim-row">
+        <span class="l">Catálogo activo actual</span>
+        <span class="v">${Number(resumen.catalogo_total || 0)}</span>
+      </div>
+
+      <div class="estim-row">
+        <span class="l">Subtotal</span>
+        <span class="v">${money(resumen.subtotal || 0)}</span>
+      </div>
+
+      <div class="estim-row">
+        <span class="l">IVA 16%</span>
+        <span class="v">${money(resumen.iva || 0)}</span>
+      </div>
+
+      <div class="estim-row tot">
+        <span class="l">Total</span>
+        <span class="v">${money(resumen.total || 0)}</span>
+      </div>
+    </div>
+
+    ${
+      !cerrado
+        ? `
+          <div class="sect">
+            <button
+              type="button"
+              onclick="alternarAdelantadasLumen()"
+              style="width:100%;border:0;background:transparent;padding:0;display:flex;justify-content:space-between;align-items:center;font:inherit;font-weight:800;cursor:pointer;text-align:left"
+              aria-expanded="${ESTIMACION_LUMEN_ADELANTADAS_ABIERTO}"
+            >
+              <span>P.V. adelantadas</span>
+              <span style="color:var(--blue)">
+                ${candidatas.length} disponibles ·
+                ${cantidadAdelantadas} incluidas
+                ${ESTIMACION_LUMEN_ADELANTADAS_ABIERTO ? '▲' : '▼'}
+              </span>
+            </button>
+
+            ${
+              ESTIMACION_LUMEN_ADELANTADAS_ABIERTO
+                ? `
+                  <div class="note" style="margin-top:10px">
+                    Sólo se muestran P.V. activas, atendidas,
+                    con Vo.Bo. y fecha de Vo.Bo. posterior al periodo.
+                  </div>
+
+                  <div class="sectlabel">Disponibles para agregar</div>
+                  ${filasCandidatas}
+
+                  ${
+                    candidatas.length
+                      ? `
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:7px;margin-top:9px">
+                          <button
+                            type="button"
+                            class="expbtn"
+                            onclick="cambiarPaginaAdelantadasLumen(${ESTIMACION_LUMEN_ADELANTADAS_PAGINA - 1})"
+                            ${ESTIMACION_LUMEN_ADELANTADAS_PAGINA <= 1 ? 'disabled' : ''}
+                          >Anterior</button>
+
+                          <span style="font-size:10px;color:var(--mut)">
+                            Página ${ESTIMACION_LUMEN_ADELANTADAS_PAGINA} de ${paginasCandidatas}
+                          </span>
+
+                          <button
+                            type="button"
+                            class="expbtn"
+                            onclick="cambiarPaginaAdelantadasLumen(${ESTIMACION_LUMEN_ADELANTADAS_PAGINA + 1})"
+                            ${ESTIMACION_LUMEN_ADELANTADAS_PAGINA >= paginasCandidatas ? 'disabled' : ''}
+                          >Siguiente</button>
+                        </div>
+
+                        <button
+                          type="button"
+                          class="expbtn"
+                          onclick="seleccionarPaginaAdelantadasLumen()"
+                          style="width:100%;margin-top:8px"
+                        >Seleccionar las 10 visibles</button>
+
+                        <button
+                          id="btnAgregarAdelantadasLumen"
+                          type="button"
+                          class="btn btn-done"
+                          onclick="agregarAdelantadasSeleccionadasLumen()"
+                          ${ESTIMACION_LUMEN_ADELANTADAS_SEL.size ? '' : 'disabled'}
+                          style="width:100%;margin-top:8px"
+                        >
+                          Agregar seleccionadas
+                          (<span id="contadorAdelantadasLumen">${ESTIMACION_LUMEN_ADELANTADAS_SEL.size} seleccionadas</span>)
+                        </button>
+                      `
+                      : ''
+                  }
+
+                  ${
+                    incluidas.length
+                      ? `
+                        <div class="sectlabel" style="margin-top:18px">
+                          Adelantadas incluidas
+                        </div>
+                        ${filasIncluidas}
+
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:7px;margin-top:9px">
+                          <button
+                            type="button"
+                            class="expbtn"
+                            onclick="cambiarPaginaIncluidasLumen(${ESTIMACION_LUMEN_INCLUIDAS_PAGINA - 1})"
+                            ${ESTIMACION_LUMEN_INCLUIDAS_PAGINA <= 1 ? 'disabled' : ''}
+                          >Anterior</button>
+
+                          <span style="font-size:10px;color:var(--mut)">
+                            Página ${ESTIMACION_LUMEN_INCLUIDAS_PAGINA} de ${paginasIncluidas}
+                          </span>
+
+                          <button
+                            type="button"
+                            class="expbtn"
+                            onclick="cambiarPaginaIncluidasLumen(${ESTIMACION_LUMEN_INCLUIDAS_PAGINA + 1})"
+                            ${ESTIMACION_LUMEN_INCLUIDAS_PAGINA >= paginasIncluidas ? 'disabled' : ''}
+                          >Siguiente</button>
+                        </div>
+                      `
+                      : ''
+                  }
+                `
+                : ''
+            }
+          </div>
+        `
+        : ''
+    }
+
+    <div class="sect">
+      <h3>Distribución por estado</h3>
+      ${filasEstados}
+    </div>
+
+    <div class="sect">
+      <h3>Acciones</h3>
+
+      <div class="expbtns">
+        <button
+          class="expbtn"
+          style="background:var(--steel);color:#fff"
+          onclick="cargarVistaEstimacionLumen(${Number(estimacion.numero)})"
+        >
+          Actualizar datos
+        </button>
+
+        ${
+          cantidad
+            ? `
+              <button
+                class="expbtn exp-xlsx"
+                onclick="descargarEstimacionLumenXLSX()"
+              >
+                Excel oficial
+              </button>
+            `
+            : ''
+        }
+      </div>
+
+      ${
+        !cerrado && cantidad
+          ? `
+            <button
+              class="btn btn-admin"
+              style="width:100%;margin-top:10px"
+              onclick="confirmarCierreEstimacionLumen()"
+            >
+              Cerrar y congelar estimación
+            </button>
+          `
+          : ''
+      }
+
+      ${
+        cerrado
+          ? `
+            <div class="note" style="margin-top:10px;border-left:4px solid var(--done)">
+              Esta estimación está cerrada. Su periodo,
+              sus ${cantidad} claves y sus montos son históricos.
+            </div>
+          `
+          : ''
+      }
+    </div>
+  `;
+}
+
+async function confirmarCierreEstimacionLumen() {
+  const datos =
+    ESTIMACION_LUMEN || {};
+
+  const estimacion =
+    datos.estimacion || {};
+
+  const cantidad =
+    Number(
+      datos.resumen?.cantidad || 0
+    );
+
+  const meta =
+    Number(estimacion.meta_pv || 0);
+
+  const advertencia =
+    meta && cantidad < meta
+      ? `\n\nADVERTENCIA: se cerrará con ${cantidad} de ${meta} P.V. Después del cierre no podrán añadirse más P.V. a esta estimación.`
+      : '';
+
+  const aceptado = window.confirm(
+    `¿Cerrar definitivamente la estimación ${estimacion.numero}?\n\nLas ${cantidad} claves quedarán congeladas y no podrán incluirse en otra estimación.${advertencia}`
+  );
+
+  if (!aceptado) {
+    return;
+  }
+
+  try {
+    toast('Cerrando estimación…');
+
+    ESTIMACION_LUMEN =
+      await cerrarEstimacionLumen(
+        estimacion.id
+      );
+
+    pintarVistaEstimacionLumen();
+
+    toast('Estimación cerrada correctamente');
+
+  } catch (error) {
+    console.error(
+      'No fue posible cerrar la estimación:',
+      error
+    );
+
+    toast(
+      error.message ||
+      'No fue posible cerrar la estimación'
+    );
+  }
+}
+
+function cargarExcelJSLumen() {
+  if (window.ExcelJS) {
+    return Promise.resolve(window.ExcelJS);
+  }
+
+  if (EXCELJS_LUMEN_PROMESA) {
+    return EXCELJS_LUMEN_PROMESA;
+  }
+
+  EXCELJS_LUMEN_PROMESA =
+    new Promise((resolve, reject) => {
+      const script =
+        document.createElement('script');
+
+      script.src =
+        'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+
+      script.onload = () =>
+        resolve(window.ExcelJS);
+
+      script.onerror = () =>
+        reject(
+          new Error(
+            'No fue posible cargar el generador de Excel'
+          )
+        );
+
+      document.head.appendChild(script);
+    });
+
+  return EXCELJS_LUMEN_PROMESA;
+}
+
+function aplicarBordesEstimacion(
+  hoja,
+  rango,
+  color = '808080'
+) {
+  const [inicio, fin] =
+    rango.split(':');
+
+  const celdaInicio =
+    hoja.getCell(inicio);
+
+  const celdaFin =
+    hoja.getCell(fin);
+
+  for (
+    let fila = celdaInicio.row;
+    fila <= celdaFin.row;
+    fila++
+  ) {
+    for (
+      let columna = celdaInicio.col;
+      columna <= celdaFin.col;
+      columna++
+    ) {
+      hoja.getCell(fila, columna).border = {
+        top: {
+          style: 'thin',
+          color: { argb: color }
+        },
+        left: {
+          style: 'thin',
+          color: { argb: color }
+        },
+        bottom: {
+          style: 'thin',
+          color: { argb: color }
+        },
+        right: {
+          style: 'thin',
+          color: { argb: color }
+        }
+      };
+    }
+  }
+}
+
+function prepararHojaPaqueteEstimacion(
+  libro,
+  datos,
+  logoId,
+  firmaId
+) {
+  const estimacion =
+    datos.estimacion;
+
+  const todosGrupos =
+    resumenEstadosEstimacion(datos);
+
+  const grupos =
+    todosGrupos.filter(grupo =>
+      grupo.actual > 0
+    );
+
+  const hoja =
+    libro.addWorksheet(
+      '1PAQUETE SERVICIOS',
+      {
+        pageSetup: {
+          paperSize: 9,
+          orientation: 'landscape',
+          fitToPage: false,
+          scale: 52,
+          horizontalCentered: true,
+          margins: {
+            left: 0.2,
+            right: 0.2,
+            top: 0.35,
+            bottom: 0.35,
+            header: 0.1,
+            footer: 0.1
+          }
+        }
+      }
+    );
+
+  hoja.properties.defaultRowHeight = 13;
+  hoja.views = [
+    {
+      state: 'frozen',
+      ySplit: 13,
+      showGridLines: false
+    }
+  ];
+
+  const anchos = [
+    2, 17, 19, 23, 28,
+    12, 12, 15, 15, 15,
+    15, 15, 15, 15, 21
+  ];
+
+  anchos.forEach((ancho, indice) => {
+    hoja.getColumn(indice + 1).width = ancho;
+  });
+
+  hoja.addImage(
+    logoId,
+    {
+      tl: { col: 6.05, row: 0.1 },
+      ext: { width: 82, height: 64 }
+    }
+  );
+
+  hoja.mergeCells('B2:F2');
+  hoja.getCell('B2').value = EMPRESA;
+  hoja.mergeCells('H2:I2');
+  hoja.getCell('H2').value = 'N° DE ENTREGA';
+  hoja.mergeCells('J2:K2');
+  hoja.getCell('J2').value =
+    nombreEntregaEstimacion(
+      estimacion.numero
+    );
+
+  hoja.mergeCells('B3:C3');
+  hoja.getCell('B3').value = 'No. DE CONTRATO';
+  hoja.mergeCells('D3:G3');
+  hoja.getCell('D3').value = PROCEDIMIENTO;
+  hoja.mergeCells('H3:I3');
+  hoja.getCell('H3').value =
+    `PERIODO DE ${estimacion.numero}A ENTREGA`;
+  hoja.mergeCells('J3:K3');
+  hoja.getCell('J3').value =
+    fechaEstimadaMX(
+      estimacion.fecha_inicio
+    );
+  hoja.getCell('L3').value = 'AL';
+  hoja.mergeCells('M3:O3');
+  hoja.getCell('M3').value =
+    fechaEstimadaMX(
+      estimacion.fecha_fin
+    );
+
+  hoja.getCell('B4').value = 'SERVICIO';
+  hoja.mergeCells('C4:G5');
+  hoja.getCell('C4').value =
+    SERVICIO_ESTIMACION;
+  hoja.mergeCells('H4:I4');
+  hoja.getCell('H4').value = 'PROVEEDOR';
+  hoja.mergeCells('J4:O4');
+  hoja.getCell('J4').value = EMPRESA;
+  hoja.mergeCells('H5:J5');
+  hoja.getCell('H5').value =
+    'LOCALIZAC. DE LA OBRA:';
+  hoja.mergeCells('K5:O5');
+  hoja.getCell('K5').value =
+    'DIFERENTES ESTADOS DE LA REPÚBLICA MEXICANA';
+
+  hoja.mergeCells('B9:O10');
+  hoja.getCell('B9').value = 'OBSERVACIONES';
+
+  hoja.mergeCells('B12:B13');
+  hoja.getCell('B12').value = 'CLAVE:';
+  hoja.mergeCells('C12:C13');
+  hoja.getCell('C12').value = 'Estado';
+  hoja.mergeCells('D12:D13');
+  hoja.getCell('D12').value = 'Municipio';
+  hoja.mergeCells('E12:E13');
+  hoja.getCell('E12').value = 'Localidad';
+  hoja.mergeCells('F12:F13');
+  hoja.getCell('F12').value = 'UNIDAD';
+  hoja.mergeCells('G12:G13');
+  hoja.getCell('G12').value =
+    'Puntos de Venta';
+  hoja.getCell('H12').value = 'PRECIO';
+  hoja.getCell('H13').value = 'UNITARIO';
+  hoja.mergeCells('I12:I13');
+  hoja.getCell('I12').value = 'IMPORTE';
+  hoja.mergeCells('J12:N12');
+  hoja.getCell('J12').value =
+    'V O L Ú M E N E S   D E   S E R V I C I O S';
+  hoja.getCell('J13').value =
+    'SEGÚN CATÁLOGO';
+  hoja.getCell('K13').value =
+    'SERVICIOS ANTERIORES';
+  hoja.getCell('L13').value =
+    'DE ESTE SERVICIO';
+  hoja.getCell('M13').value =
+    'TOTAL A LA FECHA';
+  hoja.getCell('N13').value =
+    'POR EJECUTAR';
+  hoja.mergeCells('O12:O13');
+  hoja.getCell('O12').value =
+    'IMPORTE DE LOS SERVICIOS';
+
+  ['B2:O5', 'B9:O10', 'B12:O13']
+    .forEach(rango =>
+      aplicarBordesEstimacion(
+        hoja,
+        rango
+      )
+    );
+
+  for (let fila = 1; fila <= 13; fila++) {
+    hoja.getRow(fila).eachCell(
+      { includeEmpty: true },
+      celda => {
+        celda.font = {
+          name: 'Arial',
+          size: fila >= 12 ? 7 : 8,
+          bold:
+            fila === 2 ||
+            fila === 3 ||
+            fila === 12 ||
+            fila === 13
+        };
+
+        celda.alignment = {
+          horizontal: 'center',
+          vertical: 'middle',
+          wrapText: true
+        };
+      }
+    );
+  }
+
+  hoja.getRow(4).height = 30;
+  hoja.getRow(5).height = 22;
+  hoja.getRow(9).height = 20;
+  hoja.getRow(10).height = 20;
+  hoja.getRow(12).height = 23;
+  hoja.getRow(13).height = 32;
+
+  ['B12:O13'].forEach(rango => {
+    const [inicio, fin] = rango.split(':');
+    const ci = hoja.getCell(inicio);
+    const cf = hoja.getCell(fin);
+
+    for (let r = ci.row; r <= cf.row; r++) {
+      for (let c = ci.col; c <= cf.col; c++) {
+        hoja.getCell(r, c).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'D9EAF7' }
+        };
+      }
+    }
+  });
+
+  const filasEstado = [];
+  let filaActual = 14;
+  let filasPagina = 0;
+
+  function agregarFirmas(intermedia = true) {
+    const inicio = filaActual + 1;
+
+    hoja.mergeCells(`B${inicio}:D${inicio}`);
+    hoja.getCell(`B${inicio}`).value =
+      'ÁREA REQUIRENTE';
+    hoja.mergeCells(`F${inicio}:J${inicio}`);
+    hoja.getCell(`F${inicio}`).value =
+      'ÁREA ADMINISTRATIVA';
+    hoja.mergeCells(`L${inicio}:O${inicio}`);
+    hoja.getCell(`L${inicio}`).value =
+      'PROVEEDOR';
+
+    hoja.mergeCells(`B${inicio + 1}:D${inicio + 1}`);
+    hoja.getCell(`B${inicio + 1}`).value =
+      FIRMANTES_ESTIMACION.requirente.area;
+    hoja.mergeCells(`F${inicio + 1}:J${inicio + 1}`);
+    hoja.getCell(`F${inicio + 1}`).value =
+      FIRMANTES_ESTIMACION.administrativa.area;
+    hoja.mergeCells(`L${inicio + 1}:O${inicio + 1}`);
+    hoja.getCell(`L${inicio + 1}`).value =
+      FIRMANTES_ESTIMACION.proveedor.area;
+
+    hoja.mergeCells(`B${inicio + 5}:D${inicio + 5}`);
+    hoja.getCell(`B${inicio + 5}`).value =
+      FIRMANTES_ESTIMACION.requirente.nombre;
+    hoja.mergeCells(`F${inicio + 5}:J${inicio + 5}`);
+    hoja.getCell(`F${inicio + 5}`).value =
+      FIRMANTES_ESTIMACION.administrativa.nombre;
+    hoja.mergeCells(`L${inicio + 5}:O${inicio + 5}`);
+    hoja.getCell(`L${inicio + 5}`).value =
+      FIRMANTES_ESTIMACION.proveedor.nombre;
+
+    hoja.mergeCells(`B${inicio + 6}:D${inicio + 6}`);
+    hoja.getCell(`B${inicio + 6}`).value =
+      FIRMANTES_ESTIMACION.requirente.cargo;
+    hoja.mergeCells(`F${inicio + 6}:J${inicio + 6}`);
+    hoja.getCell(`F${inicio + 6}`).value =
+      FIRMANTES_ESTIMACION.administrativa.cargo;
+    hoja.mergeCells(`L${inicio + 6}:O${inicio + 6}`);
+    hoja.getCell(`L${inicio + 6}`).value =
+      FIRMANTES_ESTIMACION.proveedor.cargo;
+
+    hoja.addImage(
+      firmaId,
+      {
+        tl: {
+          col: 11.6,
+          row: inicio + 0.6
+        },
+        ext: {
+          width: 128,
+          height: 58
+        }
+      }
+    );
+
+    for (
+      let fila = inicio;
+      fila <= inicio + 6;
+      fila++
+    ) {
+      hoja.getRow(fila).eachCell(
+        { includeEmpty: true },
+        celda => {
+          celda.font = {
+            name: 'Arial',
+            size: 7,
+            bold:
+              fila === inicio ||
+              fila >= inicio + 5
+          };
+          celda.alignment = {
+            horizontal: 'center',
+            vertical: 'middle',
+            wrapText: true
+          };
+        }
+      );
+    }
+
+    hoja.getRow(inicio + 2).height = 15;
+    hoja.getRow(inicio + 3).height = 15;
+    hoja.getRow(inicio + 4).height = 15;
+
+    filaActual = inicio + 8;
+
+    if (intermedia) {
+      hoja.getRow(filaActual - 1)
+        .addPageBreak();
+      filasPagina = 0;
+    }
+  }
+
+  grupos.forEach((grupo, indiceGrupo) => {
+    if (filasPagina >= 35) {
+      agregarFirmas(true);
+    }
+
+    const filaEstado = filaActual++;
+    filasEstado.push(filaEstado);
+    filasPagina++;
+
+    hoja.getCell(`B${filaEstado}`).value =
+      String(grupo.estado).toUpperCase();
+    hoja.getCell(`F${filaEstado}`).value =
+      'SERVICIOS';
+    hoja.getCell(`G${filaEstado}`).value =
+      grupo.catalogo;
+    hoja.getCell(`J${filaEstado}`).value = {
+      formula: `G${filaEstado}`,
+      result: grupo.catalogo
+    };
+    hoja.getCell(`K${filaEstado}`).value =
+      grupo.anteriores;
+    hoja.getCell(`L${filaEstado}`).value =
+      grupo.actual;
+    hoja.getCell(`M${filaEstado}`).value = {
+      formula:
+        `K${filaEstado}+L${filaEstado}`,
+      result: grupo.acumuladas
+    };
+    hoja.getCell(`N${filaEstado}`).value = {
+      formula:
+        `MAX(J${filaEstado}-M${filaEstado},0)`,
+      result: grupo.pendientes
+    };
+
+    for (let c = 2; c <= 15; c++) {
+      const celda =
+        hoja.getCell(filaEstado, c);
+
+      celda.font = {
+        name: 'Arial',
+        size: 7.5,
+        bold: true
+      };
+      celda.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'EAF3F8' }
+      };
+      celda.alignment = {
+        horizontal:
+          c === 2 ? 'left' : 'center',
+        vertical: 'middle',
+        wrapText: true
+      };
+    }
+
+    aplicarBordesEstimacion(
+      hoja,
+      `B${filaEstado}:O${filaEstado}`,
+      'A6A6A6'
+    );
+
+    grupo.puntosActuales.forEach(punto => {
+      if (filasPagina >= 38) {
+        agregarFirmas(true);
+      }
+
+      const fila = filaActual++;
+      filasPagina++;
+
+      hoja.getCell(`B${fila}`).value =
+        String(punto.pv || '');
+      hoja.getCell(`C${fila}`).value =
+        punto.estado || '';
+      hoja.getCell(`D${fila}`).value =
+        punto.municipio || '';
+      hoja.getCell(`E${fila}`).value =
+        punto.localidad || '';
+      hoja.getCell(`F${fila}`).value =
+        'Servicio';
+      hoja.getCell(`G${fila}`).value = 1;
+      hoja.getCell(`H${fila}`).value =
+        Number(
+          punto.precio_unitario ||
+          estimacion.precio_unitario
+        );
+      hoja.getCell(`I${fila}`).value = {
+        formula: `G${fila}*H${fila}`,
+        result:
+          Number(
+            punto.precio_unitario ||
+            estimacion.precio_unitario
+          )
+      };
+      hoja.getCell(`J${fila}`).value = 1;
+      hoja.getCell(`K${fila}`).value = 0;
+      hoja.getCell(`L${fila}`).value = 1;
+      hoja.getCell(`M${fila}`).value = {
+        formula: `K${fila}+L${fila}`,
+        result: 1
+      };
+      hoja.getCell(`N${fila}`).value = {
+        formula: `MAX(J${fila}-M${fila},0)`,
+        result: 0
+      };
+      hoja.getCell(`O${fila}`).value = {
+        formula: `L${fila}*H${fila}`,
+        result:
+          Number(
+            punto.precio_unitario ||
+            estimacion.precio_unitario
+          )
+      };
+
+      for (let c = 2; c <= 15; c++) {
+        const celda =
+          hoja.getCell(fila, c);
+
+        celda.font = {
+          name: 'Arial',
+          size: 7
+        };
+        celda.alignment = {
+          horizontal:
+            c >= 7 ? 'center' : 'left',
+          vertical: 'middle',
+          wrapText: true
+        };
+      }
+
+      hoja.getCell(`B${fila}`).numFmt = '@';
+      hoja.getCell(`H${fila}`).numFmt =
+        '$#,##0.00';
+      hoja.getCell(`I${fila}`).numFmt =
+        '$#,##0.00';
+      hoja.getCell(`O${fila}`).numFmt =
+        '$#,##0.00';
+
+      aplicarBordesEstimacion(
+        hoja,
+        `B${fila}:O${fila}`,
+        'BFBFBF'
+      );
+    });
+  });
+
+  if (filasPagina > 28) {
+    agregarFirmas(true);
+  }
+
+  const filaTotales =
+    filaActual + 1;
+
+  hoja.getCell(`B${filaTotales}`).value =
+    'TOTALES';
+  hoja.getCell(`F${filaTotales}`).value =
+    'SERVICIO';
+  hoja.getCell(`G${filaTotales}`).value =
+    Number(datos.resumen.catalogo_total || 0);
+  hoja.getCell(`H${filaTotales}`).value =
+    Number(estimacion.precio_unitario);
+  hoja.getCell(`I${filaTotales}`).value = {
+    formula:
+      `G${filaTotales}*H${filaTotales}`,
+    result:
+      Number(datos.resumen.catalogo_total || 0) *
+      Number(estimacion.precio_unitario)
+  };
+  hoja.getCell(`J${filaTotales}`).value = {
+    formula: `G${filaTotales}`,
+    result:
+      Number(datos.resumen.catalogo_total || 0)
+  };
+  hoja.getCell(`K${filaTotales}`).value = {
+    formula:
+      todosGrupos.length
+        ? String(
+            todosGrupos.reduce(
+              (suma, grupo) =>
+                suma + grupo.anteriores,
+              0
+            )
+          )
+        : '0',
+    result:
+      todosGrupos.reduce(
+        (suma, grupo) =>
+          suma + grupo.anteriores,
+        0
+      )
+  };
+  hoja.getCell(`L${filaTotales}`).value =
+    Number(datos.resumen.cantidad || 0);
+  hoja.getCell(`M${filaTotales}`).value = {
+    formula:
+      `K${filaTotales}+L${filaTotales}`,
+    result:
+      todosGrupos.reduce(
+        (suma, grupo) =>
+          suma + grupo.acumuladas,
+        0
+      )
+  };
+  hoja.getCell(`N${filaTotales}`).value = {
+    formula:
+      `MAX(J${filaTotales}-M${filaTotales},0)`,
+    result: Math.max(
+      Number(datos.resumen.catalogo_total || 0) -
+      todosGrupos.reduce(
+        (suma, grupo) =>
+          suma + grupo.acumuladas,
+        0
+      ),
+      0
+    )
+  };
+  hoja.getCell(`O${filaTotales}`).value = {
+    formula:
+      `L${filaTotales}*H${filaTotales}`,
+    result:
+      Number(datos.resumen.subtotal || 0)
+  };
+
+  for (let c = 2; c <= 15; c++) {
+    const celda =
+      hoja.getCell(filaTotales, c);
+
+    celda.font = {
+      name: 'Arial',
+      size: 8,
+      bold: true
+    };
+    celda.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'D9EAF7' }
+    };
+    celda.alignment = {
+      horizontal: 'center',
+      vertical: 'middle'
+    };
+  }
+
+  aplicarBordesEstimacion(
+    hoja,
+    `B${filaTotales}:O${filaTotales}`
+  );
+
+  hoja.getCell(`H${filaTotales}`).numFmt =
+    '$#,##0.00';
+  hoja.getCell(`I${filaTotales}`).numFmt =
+    '$#,##0.00';
+  hoja.getCell(`O${filaTotales}`).numFmt =
+    '$#,##0.00';
+
+  const filaSubtotal =
+    filaTotales + 3;
+
+  hoja.getCell(`N${filaSubtotal}`).value =
+    'SUBTOTAL';
+  hoja.getCell(`O${filaSubtotal}`).value = {
+    formula: `O${filaTotales}`,
+    result:
+      Number(datos.resumen.subtotal || 0)
+  };
+  hoja.getCell(`N${filaSubtotal + 1}`).value =
+    'IVA';
+  hoja.getCell(`O${filaSubtotal + 1}`).value = {
+    formula: `O${filaSubtotal}*16%`,
+    result:
+      Number(datos.resumen.iva || 0)
+  };
+  hoja.getCell(`N${filaSubtotal + 2}`).value =
+    'TOTAL';
+  hoja.getCell(`O${filaSubtotal + 2}`).value = {
+    formula:
+      `O${filaSubtotal}+O${filaSubtotal + 1}`,
+    result:
+      Number(datos.resumen.total || 0)
+  };
+
+  for (
+    let fila = filaSubtotal;
+    fila <= filaSubtotal + 2;
+    fila++
+  ) {
+    hoja.getCell(`N${fila}`).font = {
+      name: 'Arial',
+      size: 8,
+      bold: true
+    };
+    hoja.getCell(`O${fila}`).font = {
+      name: 'Arial',
+      size: 8,
+      bold: true
+    };
+    hoja.getCell(`O${fila}`).numFmt =
+      '$#,##0.00';
+
+    aplicarBordesEstimacion(
+      hoja,
+      `N${fila}:O${fila}`
+    );
+  }
+
+  filaActual = filaSubtotal + 3;
+  agregarFirmas(false);
+
+  hoja.pageSetup.printTitlesRow = '1:13';
+  hoja.pageSetup.printArea =
+    `B1:O${filaActual}`;
+  hoja.headerFooter.oddFooter =
+    `&CEstimación ${estimacion.numero} · Página &P de &N`;
+
+  return hoja;
+}
+
+function prepararHojaResumenEstimacion(
+  libro,
+  datos,
+  logoId,
+  firmaId
+) {
+  const estimacion =
+    datos.estimacion;
+
+  const grupos =
+    resumenEstadosEstimacion(datos)
+      .filter(grupo =>
+        grupo.acumuladas > 0
+      );
+
+  const hoja =
+    libro.addWorksheet(
+      'RESUMEN',
+      {
+        pageSetup: {
+          paperSize: 9,
+          orientation: 'landscape',
+          fitToPage: true,
+          fitToWidth: 1,
+          fitToHeight: 1,
+          horizontalCentered: true,
+          margins: {
+            left: 0.2,
+            right: 0.2,
+            top: 0.3,
+            bottom: 0.3,
+            header: 0.1,
+            footer: 0.1
+          }
+        }
+      }
+    );
+
+  hoja.views = [
+    {
+      showGridLines: false
+    }
+  ];
+
+  const anchos = [
+    5, 22, 12, 10, 14,
+    9, 15, 9, 15, 9,
+    15, 9, 15, 9, 15,
+    12, 12, 17, 17, 17
+  ];
+
+  anchos.forEach((ancho, indice) => {
+    hoja.getColumn(indice + 1).width = ancho;
+  });
+
+  hoja.addImage(
+    logoId,
+    {
+      tl: { col: 7.1, row: 0.1 },
+      ext: { width: 82, height: 64 }
+    }
+  );
+
+  hoja.mergeCells('A2:I2');
+  hoja.getCell('A2').value = EMPRESA;
+  hoja.mergeCells('L2:M2');
+  hoja.getCell('L2').value = 'No. DE ENTREGA';
+  hoja.mergeCells('N2:O2');
+  hoja.getCell('N2').value =
+    nombreEntregaEstimacion(
+      estimacion.numero
+    );
+
+  hoja.mergeCells('A3:B3');
+  hoja.getCell('A3').value = 'No. DE CONTRATO';
+  hoja.mergeCells('C3:I3');
+  hoja.getCell('C3').value = PROCEDIMIENTO;
+
+  hoja.getCell('A5').value = 'SERVICIO';
+  hoja.mergeCells('B5:I8');
+  hoja.getCell('B5').value =
+    SERVICIO_ESTIMACION;
+  hoja.mergeCells('J5:L5');
+  hoja.getCell('J5').value =
+    `PERIODO DE ${estimacion.numero}A ENTREGA:`;
+  hoja.mergeCells('M5:P5');
+  hoja.getCell('M5').value =
+    fechaEstimadaMX(
+      estimacion.fecha_inicio
+    );
+  hoja.getCell('Q5').value = 'AL';
+  hoja.mergeCells('R5:T5');
+  hoja.getCell('R5').value =
+    fechaEstimadaMX(
+      estimacion.fecha_fin
+    );
+  hoja.mergeCells('J7:K7');
+  hoja.getCell('J7').value = 'PROVEEDOR';
+  hoja.mergeCells('L7:T7');
+  hoja.getCell('L7').value = EMPRESA;
+  hoja.mergeCells('L8:T8');
+  hoja.getCell('L8').value =
+    'DIFERENTES ESTADOS DE LA REPÚBLICA MEXICANA';
+  hoja.mergeCells('J9:L9');
+  hoja.getCell('J9').value =
+    'LOCALIZAC. DE LA OBRA:';
+
+  hoja.mergeCells('A12:T13');
+  hoja.getCell('A12').value =
+    'OBSERVACIONES:';
+
+  hoja.mergeCells('A16:A18');
+  hoja.getCell('A16').value = 'No.';
+  hoja.mergeCells('B16:Q16');
+  hoja.getCell('B16').value =
+    'RESUMEN DE ENTREGAS';
+  hoja.mergeCells('R16:R18');
+  hoja.getCell('R16').value =
+    'IMPORTE TOTAL P.V.';
+  hoja.mergeCells('S16:S18');
+  hoja.getCell('S16').value =
+    'IMPORTE P.V. EJECUTADOS';
+  hoja.mergeCells('T16:T18');
+  hoja.getCell('T16').value =
+    'IMPORTE P.V. POR EJECUTAR';
+
+  hoja.mergeCells('B17:B18');
+  hoja.getCell('B17').value = 'CONCEPTO';
+  hoja.mergeCells('C17:C18');
+  hoja.getCell('C17').value = 'UNIDAD';
+  hoja.mergeCells('D17:D18');
+  hoja.getCell('D17').value = 'PV';
+  hoja.mergeCells('E17:E18');
+  hoja.getCell('E17').value = 'P.U.';
+
+  for (let numero = 1; numero <= 5; numero++) {
+    const columnaCantidad =
+      6 + (numero - 1) * 2;
+
+    hoja.getCell(17, columnaCantidad).value =
+      `CAN ${String(numero).padStart(2, '0')}`;
+    hoja.getCell(17, columnaCantidad + 1).value =
+      'IMPORTE';
+    hoja.mergeCells(
+      18,
+      columnaCantidad,
+      18,
+      columnaCantidad + 1
+    );
+    hoja.getCell(18, columnaCantidad).value =
+      `ENTREGA ${String(numero).padStart(2, '0')}`;
+  }
+
+  hoja.mergeCells('P17:P18');
+  hoja.getCell('P17').value =
+    'TOTAL EJECUTADOS';
+  hoja.mergeCells('Q17:Q18');
+  hoja.getCell('Q17').value =
+    'POR EJECUTAR';
+
+  ['A2:T9', 'A12:T13', 'A16:T18']
+    .forEach(rango =>
+      aplicarBordesEstimacion(
+        hoja,
+        rango
+      )
+    );
+
+  for (let fila = 1; fila <= 18; fila++) {
+    hoja.getRow(fila).eachCell(
+      { includeEmpty: true },
+      celda => {
+        celda.font = {
+          name: 'Arial',
+          size: fila >= 16 ? 7 : 8,
+          bold:
+            fila === 2 ||
+            fila === 3 ||
+            fila >= 16
+        };
+        celda.alignment = {
+          horizontal: 'center',
+          vertical: 'middle',
+          wrapText: true
+        };
+      }
+    );
+  }
+
+  for (let fila = 16; fila <= 18; fila++) {
+    for (let c = 1; c <= 20; c++) {
+      hoja.getCell(fila, c).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'D9EAF7' }
+      };
+    }
+  }
+
+  hoja.getRow(5).height = 24;
+  hoja.getRow(16).height = 20;
+  hoja.getRow(17).height = 22;
+  hoja.getRow(18).height = 24;
+
+  let fila = 20;
+
+  grupos.forEach((grupo, indice) => {
+    hoja.getCell(`A${fila}`).value = indice + 1;
+    hoja.getCell(`B${fila}`).value =
+      String(grupo.estado).toUpperCase();
+    hoja.getCell(`C${fila}`).value = 'SERVICIO';
+    hoja.getCell(`D${fila}`).value =
+      grupo.catalogo;
+    hoja.getCell(`E${fila}`).value =
+      Number(estimacion.precio_unitario);
+
+    for (
+      let numero = 1;
+      numero <= 5;
+      numero++
+    ) {
+      const columnaCantidad =
+        6 + (numero - 1) * 2;
+
+      const entrega =
+        grupo.entregas.get(numero) || {
+          cantidad: 0,
+          importe: 0
+        };
+
+      hoja.getCell(
+        fila,
+        columnaCantidad
+      ).value = entrega.cantidad || null;
+
+      hoja.getCell(
+        fila,
+        columnaCantidad + 1
+      ).value = entrega.importe || null;
+
+      hoja.getCell(
+        fila,
+        columnaCantidad + 1
+      ).numFmt = '$#,##0.00';
+    }
+
+    hoja.getCell(`P${fila}`).value = {
+      formula:
+        `SUM(F${fila},H${fila},J${fila},L${fila},N${fila})`,
+      result: grupo.acumuladas
+    };
+    hoja.getCell(`Q${fila}`).value = {
+      formula:
+        `MAX(D${fila}-P${fila},0)`,
+      result: grupo.pendientes
+    };
+    hoja.getCell(`R${fila}`).value = {
+      formula: `D${fila}*E${fila}`,
+      result:
+        grupo.catalogo *
+        Number(estimacion.precio_unitario)
+    };
+    hoja.getCell(`S${fila}`).value = {
+      formula: `P${fila}*E${fila}`,
+      result:
+        grupo.acumuladas *
+        Number(estimacion.precio_unitario)
+    };
+    hoja.getCell(`T${fila}`).value = {
+      formula: `Q${fila}*E${fila}`,
+      result:
+        grupo.pendientes *
+        Number(estimacion.precio_unitario)
+    };
+
+    for (let c = 1; c <= 20; c++) {
+      const celda =
+        hoja.getCell(fila, c);
+
+      celda.font = {
+        name: 'Arial',
+        size: 7
+      };
+      celda.alignment = {
+        horizontal:
+          c === 2 ? 'left' : 'center',
+        vertical: 'middle',
+        wrapText: true
+      };
+    }
+
+    ['E', 'G', 'I', 'K', 'M', 'O', 'R', 'S', 'T']
+      .forEach(columna => {
+        hoja.getCell(`${columna}${fila}`).numFmt =
+          '$#,##0.00';
+      });
+
+    aplicarBordesEstimacion(
+      hoja,
+      `A${fila}:T${fila}`,
+      'BFBFBF'
+    );
+
+    fila++;
+  });
+
+  const filaTotal = fila + 1;
+
+  hoja.mergeCells(`A${filaTotal}:C${filaTotal}`);
+  hoja.getCell(`A${filaTotal}`).value = 'TOTALES';
+
+  const catalogoTotal =
+    Number(datos.resumen.catalogo_total || 0);
+
+  const ejecutadasTotal =
+    grupos.reduce(
+      (suma, grupo) =>
+        suma + grupo.acumuladas,
+      0
+    );
+
+  const pendientesTotal =
+    Math.max(
+      catalogoTotal - ejecutadasTotal,
+      0
+    );
+
+  hoja.getCell(`D${filaTotal}`).value =
+    catalogoTotal;
+
+  for (
+    let numero = 1;
+    numero <= 5;
+    numero++
+  ) {
+    const columnaCantidad =
+      6 + (numero - 1) * 2;
+
+    const letraCantidad =
+      hoja.getColumn(columnaCantidad).letter;
+
+    const letraImporte =
+      hoja.getColumn(columnaCantidad + 1).letter;
+
+    const cantidad =
+      grupos.reduce(
+        (suma, grupo) =>
+          suma +
+          Number(
+            grupo.entregas.get(numero)?.cantidad ||
+            0
+          ),
+        0
+      );
+
+    const importe =
+      grupos.reduce(
+        (suma, grupo) =>
+          suma +
+          Number(
+            grupo.entregas.get(numero)?.importe ||
+            0
+          ),
+        0
+      );
+
+    hoja.getCell(
+      filaTotal,
+      columnaCantidad
+    ).value = {
+      formula:
+        grupos.length
+          ? `SUM(${letraCantidad}20:${letraCantidad}${fila - 1})`
+          : '0',
+      result: cantidad
+    };
+
+    hoja.getCell(
+      filaTotal,
+      columnaCantidad + 1
+    ).value = {
+      formula:
+        grupos.length
+          ? `SUM(${letraImporte}20:${letraImporte}${fila - 1})`
+          : '0',
+      result: importe
+    };
+  }
+
+  hoja.getCell(`P${filaTotal}`).value = {
+    formula:
+      `SUM(F${filaTotal},H${filaTotal},J${filaTotal},L${filaTotal},N${filaTotal})`,
+    result: ejecutadasTotal
+  };
+  hoja.getCell(`Q${filaTotal}`).value = {
+    formula:
+      `MAX(D${filaTotal}-P${filaTotal},0)`,
+    result: pendientesTotal
+  };
+  hoja.getCell(`R${filaTotal}`).value = {
+    formula:
+      `D${filaTotal}*$E$20`,
+    result:
+      catalogoTotal *
+      Number(estimacion.precio_unitario)
+  };
+  hoja.getCell(`S${filaTotal}`).value = {
+    formula:
+      `P${filaTotal}*$E$20`,
+    result:
+      ejecutadasTotal *
+      Number(estimacion.precio_unitario)
+  };
+  hoja.getCell(`T${filaTotal}`).value = {
+    formula:
+      `Q${filaTotal}*$E$20`,
+    result:
+      pendientesTotal *
+      Number(estimacion.precio_unitario)
+  };
+
+  for (let c = 1; c <= 20; c++) {
+    const celda =
+      hoja.getCell(filaTotal, c);
+
+    celda.font = {
+      name: 'Arial',
+      size: 8,
+      bold: true
+    };
+    celda.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'D9EAF7' }
+    };
+    celda.alignment = {
+      horizontal: 'center',
+      vertical: 'middle'
+    };
+  }
+
+  aplicarBordesEstimacion(
+    hoja,
+    `A${filaTotal}:T${filaTotal}`
+  );
+
+  ['E', 'G', 'I', 'K', 'M', 'O', 'R', 'S', 'T']
+    .forEach(columna => {
+      hoja.getCell(`${columna}${filaTotal}`).numFmt =
+        '$#,##0.00';
+    });
+
+  const filaResumen = filaTotal + 3;
+
+  hoja.mergeCells(`B${filaResumen}:F${filaResumen}`);
+  hoja.getCell(`B${filaResumen}`).value =
+    'RESUMEN SERVICIOS';
+
+  const conceptos = [
+    ['IMPORTE', Number(datos.resumen.subtotal || 0)],
+    ['IVA', Number(datos.resumen.iva || 0)],
+    ['TOTAL', Number(datos.resumen.total || 0)]
+  ];
+
+  conceptos.forEach((item, indice) => {
+    const r = filaResumen + 1 + indice;
+
+    hoja.mergeCells(`B${r}:F${r}`);
+    hoja.getCell(`B${r}`).value = item[0];
+    hoja.mergeCells(`G${r}:I${r}`);
+    hoja.getCell(`G${r}`).value = item[1];
+    hoja.getCell(`G${r}`).numFmt = '$#,##0.00';
+    hoja.mergeCells(`Q${r}:R${r}`);
+    hoja.getCell(`Q${r}`).value = item[0];
+    hoja.mergeCells(`S${r}:T${r}`);
+    hoja.getCell(`S${r}`).value = item[1];
+    hoja.getCell(`S${r}`).numFmt = '$#,##0.00';
+
+    aplicarBordesEstimacion(
+      hoja,
+      `B${r}:I${r}`
+    );
+    aplicarBordesEstimacion(
+      hoja,
+      `Q${r}:T${r}`
+    );
+  });
+
+  const inicioFirmas = filaResumen + 6;
+
+  hoja.mergeCells(`B${inicioFirmas}:D${inicioFirmas}`);
+  hoja.getCell(`B${inicioFirmas}`).value =
+    'ÁREA REQUIRENTE';
+  hoja.mergeCells(`J${inicioFirmas}:N${inicioFirmas}`);
+  hoja.getCell(`J${inicioFirmas}`).value =
+    'ÁREA ADMINISTRATIVA';
+  hoja.mergeCells(`Q${inicioFirmas}:T${inicioFirmas}`);
+  hoja.getCell(`Q${inicioFirmas}`).value =
+    'PROVEEDOR';
+
+  hoja.mergeCells(`B${inicioFirmas + 1}:D${inicioFirmas + 1}`);
+  hoja.getCell(`B${inicioFirmas + 1}`).value =
+    FIRMANTES_ESTIMACION.requirente.area;
+  hoja.mergeCells(`J${inicioFirmas + 1}:N${inicioFirmas + 1}`);
+  hoja.getCell(`J${inicioFirmas + 1}`).value =
+    FIRMANTES_ESTIMACION.administrativa.area;
+  hoja.mergeCells(`Q${inicioFirmas + 1}:T${inicioFirmas + 1}`);
+  hoja.getCell(`Q${inicioFirmas + 1}`).value =
+    FIRMANTES_ESTIMACION.proveedor.area;
+
+  hoja.mergeCells(`B${inicioFirmas + 5}:D${inicioFirmas + 5}`);
+  hoja.getCell(`B${inicioFirmas + 5}`).value =
+    FIRMANTES_ESTIMACION.requirente.nombre;
+  hoja.mergeCells(`J${inicioFirmas + 5}:N${inicioFirmas + 5}`);
+  hoja.getCell(`J${inicioFirmas + 5}`).value =
+    FIRMANTES_ESTIMACION.administrativa.nombre;
+  hoja.mergeCells(`Q${inicioFirmas + 5}:T${inicioFirmas + 5}`);
+  hoja.getCell(`Q${inicioFirmas + 5}`).value =
+    FIRMANTES_ESTIMACION.proveedor.nombre;
+
+  hoja.mergeCells(`B${inicioFirmas + 6}:D${inicioFirmas + 6}`);
+  hoja.getCell(`B${inicioFirmas + 6}`).value =
+    FIRMANTES_ESTIMACION.requirente.cargo;
+  hoja.mergeCells(`J${inicioFirmas + 6}:N${inicioFirmas + 6}`);
+  hoja.getCell(`J${inicioFirmas + 6}`).value =
+    FIRMANTES_ESTIMACION.administrativa.cargo;
+  hoja.mergeCells(`Q${inicioFirmas + 6}:T${inicioFirmas + 6}`);
+  hoja.getCell(`Q${inicioFirmas + 6}`).value =
+    FIRMANTES_ESTIMACION.proveedor.cargo;
+
+  hoja.addImage(
+    firmaId,
+    {
+      tl: {
+        col: 16.7,
+        row: inicioFirmas + 0.5
+      },
+      ext: {
+        width: 150,
+        height: 68
+      }
+    }
+  );
+
+  for (
+    let r = inicioFirmas;
+    r <= inicioFirmas + 6;
+    r++
+  ) {
+    hoja.getRow(r).eachCell(
+      { includeEmpty: true },
+      celda => {
+        celda.font = {
+          name: 'Arial',
+          size: 7,
+          bold:
+            r === inicioFirmas ||
+            r >= inicioFirmas + 5
+        };
+        celda.alignment = {
+          horizontal: 'center',
+          vertical: 'middle',
+          wrapText: true
+        };
+      }
+    );
+  }
+
+  hoja.pageSetup.printArea =
+    `A1:T${inicioFirmas + 6}`;
+  hoja.headerFooter.oddFooter =
+    `&CResumen · Estimación ${estimacion.numero} · Página &P de &N`;
+
+  return hoja;
+}
+
+async function descargarPendientesVoboLumenXLSX() {
+  const pendientes =
+    Array.isArray(
+      ESTIMACION_LUMEN?.pendientes_vobo
+    )
+      ? ESTIMACION_LUMEN.pendientes_vobo
+      : [];
+
+  if (!pendientes.length) {
+    toast('No hay P.V. atendidas pendientes de Vo.Bo.');
+    return;
+  }
+
+  try {
+    toast('Preparando pendientes de Vo.Bo.…');
+
+    const ExcelJS =
+      await cargarExcelJSLumen();
+
+    const libro =
+      new ExcelJS.Workbook();
+
+    libro.creator = EMPRESA;
+    libro.lastModifiedBy = EMPRESA;
+
+    const hoja =
+      libro.addWorksheet(
+        'PENDIENTES VOBO',
+        {
+          views: [
+            {
+              state: 'frozen',
+              ySplit: 1
+            }
+          ]
+        }
+      );
+
+    hoja.columns = [
+      {
+        header: 'P.V.',
+        key: 'pv',
+        width: 20
+      },
+      {
+        header: 'ESTADO',
+        key: 'estado',
+        width: 28
+      },
+      {
+        header: 'CUADRILLA',
+        key: 'cuadrilla',
+        width: 22
+      }
+    ];
+
+    pendientes.forEach(punto => {
+      hoja.addRow({
+        pv: String(punto.pv || ''),
+        estado:
+          punto.estado || 'Sin estado',
+        cuadrilla:
+          punto.sub || 'Sin cuadrilla'
+      });
+    });
+
+    hoja.getRow(1).height = 24;
+    hoja.getRow(1).eachCell(celda => {
+      celda.font = {
+        bold: true,
+        color: { argb: 'FFFFFFFF' }
+      };
+      celda.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF0D1B2A' }
+      };
+      celda.alignment = {
+        horizontal: 'center',
+        vertical: 'middle'
+      };
+    });
+
+    hoja.getColumn(1).numFmt = '@';
+
+    hoja.eachRow((fila, numero) => {
+      if (numero > 1) {
+        fila.alignment = {
+          vertical: 'middle'
+        };
+      }
+
+      fila.eachCell(celda => {
+        celda.border = {
+          top: { style: 'thin', color: { argb: 'FFD8E0E8' } },
+          left: { style: 'thin', color: { argb: 'FFD8E0E8' } },
+          bottom: { style: 'thin', color: { argb: 'FFD8E0E8' } },
+          right: { style: 'thin', color: { argb: 'FFD8E0E8' } }
+        };
+      });
+    });
+
+    hoja.autoFilter = {
+      from: 'A1',
+      to: 'C1'
+    };
+
+    const buffer =
+      await libro.xlsx.writeBuffer();
+
+    const blob =
+      new Blob(
+        [buffer],
+        {
+          type:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+      );
+
+    const enlace =
+      document.createElement('a');
+
+    const url =
+      URL.createObjectURL(blob);
+
+    enlace.href = url;
+    enlace.download =
+      `Pendientes_VoBo_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+
+    setTimeout(
+      () => URL.revokeObjectURL(url),
+      1000
+    );
+
+    toast('Excel de pendientes generado');
+  } catch (error) {
+    console.error(
+      'No fue posible generar el Excel de pendientes:',
+      error
+    );
+
+    toast(
+      error.message ||
+      'No fue posible generar el Excel de pendientes'
+    );
+  }
+}
+
+async function descargarEstimacionLumenXLSX() {
+  const datos =
+    ESTIMACION_LUMEN;
+
+  if (
+    !datos ||
+    !datos.estimacion ||
+    !Array.isArray(datos.lecherias) ||
+    !datos.lecherias.length
+  ) {
+    toast(
+      'No hay P.V. disponibles para generar el Excel'
+    );
+
+    return;
+  }
+
+  try {
+    toast('Preparando Excel oficial…');
+
+    const ExcelJS =
+      await cargarExcelJSLumen();
+
+    const libro =
+      new ExcelJS.Workbook();
+
+    libro.creator = EMPRESA;
+    libro.lastModifiedBy = EMPRESA;
+    libro.created = new Date();
+    libro.modified = new Date();
+    libro.company = EMPRESA;
+    libro.subject =
+      `Estimación ${datos.estimacion.numero}`;
+
+    const logoId =
+      libro.addImage({
+        base64: LUMEN_XLS_LOGO,
+        extension: 'png'
+      });
+
+    const firmaId =
+      libro.addImage({
+        base64: LUMEN_XLS_FIRMA,
+        extension: 'png'
+      });
+
+    prepararHojaPaqueteEstimacion(
+      libro,
+      datos,
+      logoId,
+      firmaId
+    );
+
+    prepararHojaResumenEstimacion(
+      libro,
+      datos,
+      logoId,
+      firmaId
+    );
+
+    const buffer =
+      await libro.xlsx.writeBuffer();
+
+    const blob =
+      new Blob(
+        [buffer],
+        {
+          type:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+      );
+
+    const enlace =
+      document.createElement('a');
+
+    const url =
+      URL.createObjectURL(blob);
+
+    enlace.href = url;
+    enlace.download =
+      `Estimacion_${datos.estimacion.numero}_${datos.estimacion.fecha_inicio}_${datos.estimacion.fecha_fin}.xlsx`;
+
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+
+    setTimeout(
+      () => URL.revokeObjectURL(url),
+      1000
+    );
+
+    toast('Excel oficial generado');
+
+  } catch (error) {
+    console.error(
+      'No fue posible generar el Excel de estimación:',
+      error
+    );
+
+    toast(
+      error.message ||
+      'No fue posible generar el Excel'
+    );
+  }
+}
+
 
 let tt; function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2200);}
 
