@@ -1504,9 +1504,40 @@ function renderEspecial() {
       </div>
     </div>
 
+    <div
+      style="
+        border-top:1px solid var(--line);
+        margin:18px 0 12px;
+      "
+    ></div>
+
+    <details id="estimacionTemporalGenerica" style="margin-bottom:18px;">
+      <summary
+        style="
+          cursor:pointer;
+          list-style:none;
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:12px;
+          padding:14px 15px;
+          border:1px solid var(--line);
+          border-radius:12px;
+          background:var(--card);
+          font-weight:800;
+          color:var(--ink);
+        "
+      >
+        <span>PREPARACIÓN TEMPORAL · ESTIMACIÓN POR LISTADO</span>
+        <span style="font-size:18px;">⌄</span>
+      </summary>
+      <div id="estimacionTemporalContenido" style="padding:14px 2px 0;"></div>
+    </details>
+
   `;
 
   renderEstimacionLumenEspecial();
+  renderEstimacionTemporalGenerica();
 }
 
 function estadoEspecialTexto(status) {
@@ -26654,6 +26685,262 @@ async function descargarPendientesVoboLumenXLSX() {
       error.message ||
       'No fue posible generar el Excel de pendientes'
     );
+  }
+}
+
+
+// ============================================================
+// PREPARACIÓN TEMPORAL / GENÉRICA DE ESTIMACIONES POR LISTADO
+// No escribe en Supabase ni altera las estimaciones oficiales.
+// ============================================================
+let ESTIMACION_TEMPORAL = null;
+
+function renderEstimacionTemporalGenerica() {
+  const sc = document.getElementById('estimacionTemporalContenido');
+  if (!sc || (ROLE !== 'gen' && ROLE !== 'admin')) return;
+
+  sc.innerHTML = `
+    <div style="font-size:11px;color:var(--mut);line-height:1.5;margin-bottom:12px;">
+      Carga un Excel con dos columnas: la primera corresponde a la estimación anterior
+      y la segunda a la estimación que deseas preparar. El análisis no modifica la base de datos.
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px;">
+      <label style="font-size:11px;color:var(--mut);">N.º estimación objetivo
+        <input id="estimTempNumero" type="number" min="1" value="2" style="width:100%;margin-top:5px;">
+      </label>
+      <label style="font-size:11px;color:var(--mut);">Inicio del periodo
+        <input id="estimTempInicio" type="date" style="width:100%;margin-top:5px;">
+      </label>
+      <label style="font-size:11px;color:var(--mut);">Fin del periodo
+        <input id="estimTempFin" type="date" style="width:100%;margin-top:5px;">
+      </label>
+    </div>
+    <input id="estimTempArchivo" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="analizarArchivoEstimacionTemporal(this.files?.[0])">
+    <button class="btn" onclick="document.getElementById('estimTempArchivo').click()">📂 Seleccionar Excel de estimaciones</button>
+    <div id="estimTempResultado" style="margin-top:14px;font-size:11px;color:var(--mut);">
+      Aún no se ha cargado un archivo.
+    </div>
+  `;
+}
+
+function normalizarPVTemporal(valor, catalogoSet) {
+  let pv = String(valor ?? '').trim().replace(/\.0+$/, '').replace(/\s+/g, '');
+  if (!pv) return '';
+  if (catalogoSet.has(pv)) return pv;
+  if (/^\d+$/.test(pv)) {
+    for (let largo = pv.length + 1; largo <= 12; largo++) {
+      const candidato = pv.padStart(largo, '0');
+      if (catalogoSet.has(candidato)) return candidato;
+    }
+  }
+  return pv;
+}
+
+function listaHTMLTemporal(titulo, lista) {
+  if (!lista?.length) return '';
+  return `
+    <details style="margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:9px 11px;">
+      <summary style="cursor:pointer;font-weight:700;color:var(--ink);">${titulo} (${lista.length})</summary>
+      <div style="margin-top:8px;max-height:180px;overflow:auto;font-family:monospace;font-size:10px;line-height:1.6;">
+        ${lista.map(x => `<div>${textoSeguroLumen(x)}</div>`).join('')}
+      </div>
+    </details>`;
+}
+
+async function analizarArchivoEstimacionTemporal(archivo) {
+  if (!archivo) return;
+  const salida = document.getElementById('estimTempResultado');
+  try {
+    salida.innerHTML = 'Analizando archivo…';
+    const buffer = await archivo.arrayBuffer();
+    const libro = XLSX.read(buffer, { type: 'array' });
+    const hoja = libro.Sheets[libro.SheetNames[0]];
+    const matriz = XLSX.utils.sheet_to_json(hoja, { header: 1, defval: '', raw: false });
+    if (!matriz.length || matriz[0].length < 2) throw new Error('El archivo debe contener al menos dos columnas.');
+
+    const encabezados = matriz[0].map(v => String(v || '').trim());
+    const filas = matriz.slice(1);
+    const catalogoSet = new Set((LECH || []).map(p => String(p.pv || '').trim()));
+
+    const extraer = indice => filas.map(f => normalizarPVTemporal(f[indice], catalogoSet)).filter(Boolean);
+    const anteriorBruta = extraer(0);
+    const objetivoBruta = extraer(1);
+    const duplicadasAnterior = [...new Set(anteriorBruta.filter((pv,i,a) => a.indexOf(pv) !== i))];
+    const duplicadasObjetivo = [...new Set(objetivoBruta.filter((pv,i,a) => a.indexOf(pv) !== i))];
+    const anterior = [...new Set(anteriorBruta)];
+    const objetivo = [...new Set(objetivoBruta)];
+    const setAnterior = new Set(anterior);
+
+    const noExistenAnterior = anterior.filter(pv => !catalogoSet.has(pv));
+    const noExistenObjetivo = objetivo.filter(pv => !catalogoSet.has(pv));
+    const repetidasAnterior = objetivo.filter(pv => setAnterior.has(pv));
+    const validasPV = objetivo.filter(pv => catalogoSet.has(pv) && !setAnterior.has(pv));
+    const mapa = new Map((LECH || []).map(p => [String(p.pv || '').trim(), p]));
+    const validas = validasPV.map(pv => mapa.get(pv)).filter(Boolean);
+    const conVobo = validas.filter(p => p.status === 'at' && p.vobo === 'ok');
+    const sinVobo = validas.filter(p => p.status === 'at' && p.vobo !== 'ok');
+    const noAtendidas = validas.filter(p => p.status !== 'at');
+
+    ESTIMACION_TEMPORAL = {
+      archivo: archivo.name,
+      encabezadoAnterior: encabezados[0] || 'ESTIMACIÓN ANTERIOR',
+      encabezadoObjetivo: encabezados[1] || 'ESTIMACIÓN OBJETIVO',
+      anterior, objetivo, validas,
+      duplicadasAnterior, duplicadasObjetivo,
+      noExistenAnterior, noExistenObjetivo,
+      repetidasAnterior, conVobo, sinVobo, noAtendidas
+    };
+
+    salida.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;">
+        ${tarjetaTemporal('P.V. estimación anterior', anterior.length)}
+        ${tarjetaTemporal('P.V. estimación objetivo', objetivo.length)}
+        ${tarjetaTemporal('Disponibles', validas.length)}
+        ${tarjetaTemporal('Atendidas con Vo.Bo.', conVobo.length)}
+        ${tarjetaTemporal('Atendidas sin Vo.Bo.', sinVobo.length)}
+        ${tarjetaTemporal('No atendidas', noAtendidas.length)}
+      </div>
+      ${listaHTMLTemporal('Coinciden con la estimación anterior · excluidas', repetidasAnterior)}
+      ${listaHTMLTemporal('No existen en padrón · estimación objetivo', noExistenObjetivo)}
+      ${listaHTMLTemporal('No existen en padrón · estimación anterior', noExistenAnterior)}
+      ${listaHTMLTemporal('Duplicadas dentro de la estimación objetivo', duplicadasObjetivo)}
+      ${listaHTMLTemporal('Duplicadas dentro de la estimación anterior', duplicadasAnterior)}
+      ${listaHTMLTemporal('Atendidas sin Vo.Bo.', sinVobo.map(p => p.pv))}
+      ${listaHTMLTemporal('No atendidas', noAtendidas.map(p => p.pv))}
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn" onclick="descargarEstimacionTemporalXLSX()" ${validas.length ? '' : 'disabled'}>📊 Generar Excel preliminar</button>
+      </div>
+      <div style="margin-top:8px;font-size:10px;color:var(--mut);">
+        El Excel incluye las P.V. válidas aunque todavía no tengan Vo.Bo. Las coincidencias con la estimación anterior y las P.V. inexistentes quedan excluidas.
+      </div>`;
+  } catch (error) {
+    console.error('Error analizando estimación temporal:', error);
+    ESTIMACION_TEMPORAL = null;
+    salida.innerHTML = `<span style="color:var(--rej);">${textoSeguroLumen(error.message || 'No fue posible analizar el archivo')}</span>`;
+  }
+}
+
+function tarjetaTemporal(etiqueta, valor) {
+  return `<div style="border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--card);">
+    <div style="font-size:20px;font-weight:800;color:var(--ink);">${valor}</div>
+    <div style="font-size:9px;color:var(--mut);margin-top:3px;">${etiqueta}</div>
+  </div>`;
+}
+
+function catalogoTemporalPorEstado() {
+  const mapa = new Map();
+  (LECH || []).filter(p => p.activo !== false).forEach(p => {
+    const estado = p.estado || 'Sin entidad';
+    mapa.set(estado, (mapa.get(estado) || 0) + 1);
+  });
+  return [...mapa.entries()].map(([estado, cantidad]) => ({ estado, cantidad }));
+}
+
+async function descargarEstimacionTemporalXLSX() {
+  if (!ESTIMACION_TEMPORAL?.validas?.length) {
+    toast('Primero carga y valida el archivo');
+    return;
+  }
+  try {
+    toast('Preparando Excel preliminar…');
+    const numero = Math.max(1, Number(document.getElementById('estimTempNumero')?.value || 2));
+    const inicio = document.getElementById('estimTempInicio')?.value || '';
+    const fin = document.getElementById('estimTempFin')?.value || '';
+    const cantidad = ESTIMACION_TEMPORAL.validas.length;
+    const precio = Number(PRECIO_FACHADA);
+    const subtotal = cantidad * precio;
+    const iva = subtotal * Number(IVA);
+
+    const datos = {
+      estimacion: {
+        numero,
+        estado: 'borrador',
+        fecha_inicio: inicio,
+        fecha_fin: fin,
+        precio_unitario: precio,
+        meta_control: null
+      },
+      lecherias: ESTIMACION_TEMPORAL.validas,
+      catalogo: Array.isArray(ESTIMACION_LUMEN?.catalogo) && ESTIMACION_LUMEN.catalogo.length
+        ? ESTIMACION_LUMEN.catalogo
+        : catalogoTemporalPorEstado(),
+      // Intencionalmente vacío: en esta preparación temporal no contamos todavía
+      // con la estimación anterior oficialmente cerrada.
+      entregas: [],
+      resumen: {
+        cantidad,
+        catalogo_total: (LECH || []).filter(p => p.activo !== false).length,
+        subtotal,
+        iva,
+        total: subtotal + iva
+      }
+    };
+
+    const ExcelJS = await cargarExcelJSLumen();
+    const libro = new ExcelJS.Workbook();
+    libro.creator = EMPRESA;
+    libro.lastModifiedBy = EMPRESA;
+    libro.subject = `Estimación ${numero} preliminar por listado`;
+    const logoId = libro.addImage({ base64: LUMEN_XLS_LOGO, extension: 'png' });
+    const firmaId = libro.addImage({ base64: LUMEN_XLS_FIRMA, extension: 'png' });
+
+    prepararHojaPaqueteEstimacion(libro, datos, logoId, firmaId);
+    prepararHojaResumenEstimacion(libro, datos, logoId, firmaId);
+
+    // Para esta fase temporal, "SERVICIOS ANTERIORES" debe quedar vacío.
+    const paquete = libro.getWorksheet('1PAQUETE SERVICIOS');
+    if (paquete) {
+      for (let fila = 14; fila <= paquete.rowCount; fila++) {
+        paquete.getCell(fila, 11).value = null; // K = SERVICIOS ANTERIORES
+      }
+    }
+    const resumen = libro.getWorksheet('RESUMEN');
+    if (resumen && numero > 1) {
+      // F/G corresponden a la Entrega 1 en el formato actual. Se dejan vacías
+      // hasta que la estimación anterior quede cerrada oficialmente.
+      for (let fila = 19; fila <= resumen.rowCount; fila++) {
+        resumen.getCell(fila, 6).value = null;
+        resumen.getCell(fila, 7).value = null;
+      }
+    }
+
+    // Hoja de control para que el archivo conserve trazabilidad del análisis.
+    const control = libro.addWorksheet('CONTROL PRELIMINAR');
+    control.columns = [
+      { header: 'CONCEPTO', key: 'concepto', width: 42 },
+      { header: 'CANTIDAD', key: 'cantidad', width: 14 }
+    ];
+    [
+      ['P.V. lista anterior', ESTIMACION_TEMPORAL.anterior.length],
+      ['P.V. lista objetivo', ESTIMACION_TEMPORAL.objetivo.length],
+      ['Coinciden con estimación anterior', ESTIMACION_TEMPORAL.repetidasAnterior.length],
+      ['No existen en padrón', ESTIMACION_TEMPORAL.noExistenObjetivo.length],
+      ['P.V. incluidas en preliminar', cantidad],
+      ['Atendidas con Vo.Bo.', ESTIMACION_TEMPORAL.conVobo.length],
+      ['Atendidas sin Vo.Bo.', ESTIMACION_TEMPORAL.sinVobo.length],
+      ['No atendidas', ESTIMACION_TEMPORAL.noAtendidas.length]
+    ].forEach(([concepto, cantidad]) => control.addRow({ concepto, cantidad }));
+    control.addRow({ concepto: '', cantidad: '' });
+    control.addRow({ concepto: 'P.V. EXCLUIDAS POR COINCIDIR CON ESTIMACIÓN ANTERIOR', cantidad: '' });
+    ESTIMACION_TEMPORAL.repetidasAnterior.forEach(pv => control.addRow({ concepto: pv, cantidad: '' }));
+    control.addRow({ concepto: 'P.V. NO ENCONTRADAS EN PADRÓN', cantidad: '' });
+    ESTIMACION_TEMPORAL.noExistenObjetivo.forEach(pv => control.addRow({ concepto: pv, cantidad: '' }));
+    control.getRow(1).font = { bold: true };
+
+    const buffer = await libro.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const enlace = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    enlace.href = url;
+    enlace.download = `Estimacion_${numero}_PRELIMINAR_${new Date().toISOString().slice(0,10)}.xlsx`;
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast(`Excel preliminar generado: ${cantidad} P.V.`);
+  } catch (error) {
+    console.error('No fue posible generar la estimación temporal:', error);
+    toast(error.message || 'No fue posible generar el Excel preliminar');
   }
 }
 
