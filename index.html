@@ -4456,7 +4456,11 @@ let sup=`
   const aperturaAutorizada =
   !!(
     p.actaApertura &&
-    p.actaApertura.documento_generado_v2_url
+    p.actaApertura.documento_firmado_v2_url &&
+    (
+      p.actaApertura.estado === 'en_revision' ||
+      p.actaApertura.estado === 'aprobada'
+    )
   );
   const nP=(p.fotosPrev||[]).length, nF=(p.fotosFin||[]).length;
   const faltaCat=faltanCatFin(p);
@@ -4571,7 +4575,8 @@ let sup=`
   p.status === 'ini'
   ) {
     const puedeMarcarAtendido =
-    reqOk;
+    reqOk &&
+    aperturaAutorizada;
 
     actions = `
       <button
@@ -6705,6 +6710,23 @@ async function addExtraEvidencia() {
 
 async function markAt() {
   if (!CUR || ROLE !== 'sub') return;
+
+  const aperturaAutorizada =
+  !!(
+    CUR.actaApertura &&
+    CUR.actaApertura.documento_firmado_v2_url &&
+    (
+      CUR.actaApertura.estado === 'en_revision' ||
+      CUR.actaApertura.estado === 'aprobada'
+    )
+  );
+
+  if (!aperturaAutorizada) {
+    toast(
+      'Primero genera, firma y carga el Acta de Inicio. Después podrás marcar la lechería como atendida.'
+    );
+    return;
+  }
 
   const nP = (CUR.fotosPrev || []).length;
   const nF = (CUR.fotosFin || []).length;
