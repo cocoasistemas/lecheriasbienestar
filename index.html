@@ -4424,7 +4424,11 @@ let sup=`
   }
   sup+='</div>';
 
-  const vo=p.vobo;
+  const vo =
+  p.status === 'at' &&
+  (!p.vobo || p.vobo === '-')
+    ? 'wait'
+    : p.vobo;
   const nPrevTL=(p.fotosPrev||[]).length, nFinTL=(p.fotosFin||[]).length;
   const tl=`<div class="sect"><h3>Estatus y validación</h3><div class="tl">
     <div class="tlrow">
