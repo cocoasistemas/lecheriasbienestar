@@ -6918,6 +6918,14 @@ async function vobo(aprobado) {
       toast('✅ Vo.Bo. otorgado — entra a estimación');
       await openSheet(CUR.id);
       render();
+
+      // Si la Estimación Interna LUMEN está cargada, refresca sus
+      // contadores/listado en segundo plano para reflejar el nuevo Vo.Bo.
+      if (ESTIMACION_LUMEN?.estimacion?.numero) {
+        await cargarVistaEstimacionLumen(
+          Number(ESTIMACION_LUMEN.estimacion.numero)
+        );
+      }
     } catch (error) {
       console.error(error);
       toast('No fue posible otorgar el Vo.Bo.');
@@ -24050,6 +24058,7 @@ function actaPDF() {
 // ============================================================
 
 let ESTIMACION_LUMEN = null;
+let ESTIMACION_LUMEN_LISTADO_ARCHIVO_INFO = null;
 let EXCELJS_LUMEN_PROMESA = null;
 let ESTIMACION_LUMEN_ADELANTADAS_ABIERTO = false;
 let ESTIMACION_LUMEN_PENDIENTES_ABIERTO = false;
@@ -24606,6 +24615,139 @@ async function quitarAdelantadaLumen(
   }
 }
 
+async function cargarListadoOficialEstimacionLumenDesdeArchivo(archivo) {
+  const estimacion = ESTIMACION_LUMEN?.estimacion;
+
+  if (!estimacion || estimacion.estado !== 'borrador') {
+    toast('Sólo puedes cargar un listado oficial en una estimación en borrador');
+    return;
+  }
+
+  if (!archivo) return;
+
+  try {
+    const buffer = await archivo.arrayBuffer();
+    const libro = XLSX.read(buffer, { type: 'array' });
+    const hoja = libro.Sheets[libro.SheetNames[0]];
+    const matriz = XLSX.utils.sheet_to_json(hoja, { header: 1, defval: '' });
+
+    if (!matriz.length) throw new Error('El archivo no contiene datos');
+
+    const numero = Number(estimacion.numero);
+    const normalizarCabecera = valor => String(valor ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+
+    const cabeceras = (matriz[0] || []).map(normalizarCabecera);
+    let indice = cabeceras.findIndex(h =>
+      new RegExp(`(?:estimacion|est)\\s*${numero}(?:\\D|$)`, 'i').test(h)
+    );
+
+    if (indice < 0) {
+      indice = cabeceras.findIndex(h =>
+        h === String(numero) || h === `estimacion ${numero}` || h === `est ${numero}`
+      );
+    }
+
+    if (indice < 0) {
+      throw new Error(
+        `No encontré una columna para la Estimación ${numero}. Encabezados detectados: ` +
+        (matriz[0] || []).filter(Boolean).join(' | ')
+      );
+    }
+
+    const catalogoSet = new Set(
+      (window.LECH || []).map(x => String(x.pv || '').trim()).filter(Boolean)
+    );
+    const leidas = [];
+
+    for (let i = 1; i < matriz.length; i++) {
+      const pv = normalizarPVTemporal(matriz[i]?.[indice], catalogoSet);
+      if (pv) leidas.push(pv);
+    }
+
+    if (!leidas.length) {
+      throw new Error(`La columna de Estimación ${numero} no contiene P.V.`);
+    }
+
+    const conteo = new Map();
+    leidas.forEach(pv => conteo.set(pv, (conteo.get(pv) || 0) + 1));
+    const duplicadas = [...conteo.entries()]
+      .filter(([, n]) => n > 1)
+      .map(([pv]) => pv);
+    const pvs = [...new Set(leidas)];
+
+    const confirmar = window.confirm(
+      `¿Cargar ${pvs.length} P.V. como listado oficial de la Estimación ${numero}?\n\n` +
+      `Este archivo reemplazará cualquier listado oficial previamente cargado para esta estimación.\n` +
+      `No modifica Vo.Bo., avances ni lecherías.`
+    );
+
+    if (!confirmar) return;
+
+    toast('Cargando listado oficial…');
+
+    const { data, error } = await sb.rpc(
+      'cargar_listado_oficial_estimacion_lumen',
+      {
+        p_estimacion_id: Number(estimacion.id),
+        p_pvs: pvs
+      }
+    );
+
+    if (error) throw error;
+
+    ESTIMACION_LUMEN_LISTADO_ARCHIVO_INFO = {
+      nombre: archivo.name,
+      totalFilas: leidas.length,
+      unicas: pvs.length,
+      duplicadas
+    };
+
+    ESTIMACION_LUMEN = data;
+    ESTIMACION_LUMEN_ADELANTADAS_SEL.clear();
+    pintarVistaEstimacionLumen();
+    toast(`Listado oficial cargado: ${pvs.length} P.V.`);
+  } catch (error) {
+    console.error('No fue posible cargar el listado oficial:', error);
+    toast(error.message || 'No fue posible cargar el listado oficial');
+  } finally {
+    const input = document.getElementById('estimacionLumenArchivoOficial');
+    if (input) input.value = '';
+  }
+}
+
+async function abrirPvPendienteVoboEstimacionLumen(pvCodificada) {
+  const pv = decodeURIComponent(pvCodificada);
+  const punto = (window.LECH || LECH || []).find(
+    x => String(x.pv || '').trim() === String(pv || '').trim()
+  );
+
+  if (!punto) {
+    toast(`No se encontró la P.V. ${pv} en el padrón cargado`);
+    return;
+  }
+
+  await openSheet(punto.id);
+}
+
+async function actualizarDatosEstimacionLumen() {
+  const numero = Number(ESTIMACION_LUMEN?.estimacion?.numero || 0) || null;
+  toast('Actualizando datos de la estimación…');
+  await cargarVistaEstimacionLumen(numero);
+  toast('✓ Datos de la estimación actualizados');
+}
+
+function listaListadoOficialLumen(filtro) {
+  const lista = Array.isArray(ESTIMACION_LUMEN?.listado_oficial)
+    ? ESTIMACION_LUMEN.listado_oficial
+    : [];
+  return lista.filter(filtro);
+}
+
 function pintarVistaEstimacionLumen() {
   const sc =
     document.getElementById(
@@ -24684,6 +24826,36 @@ function pintarVistaEstimacionLumen() {
 
   const cerrado =
     estimacion.estado === 'cerrada';
+
+
+  const listadoOficialActivo =
+    resumen.listado_oficial_activo === true;
+
+  const listadoOficialTotal = Number(resumen.listado_oficial_total || 0);
+  const listadoEncontradas = Number(resumen.listado_encontradas || 0);
+  const listadoConVobo = Number(resumen.listado_con_vobo || 0);
+  const listadoSinVobo = Number(resumen.listado_sin_vobo || 0);
+  const listadoNoAtendidas = Number(resumen.listado_no_atendidas || 0);
+  const listadoNoEncontradas = Number(resumen.listado_no_encontradas || 0);
+  const listadoBloqueadas = Number(resumen.listado_bloqueadas_historicas || 0);
+
+  const listadoPendientesVobo = listaListadoOficialLumen(x =>
+    x.existe && x.activo && x.status === 'at' && x.vobo !== 'ok'
+  );
+  const listadoPendientesAtencion = listaListadoOficialLumen(x =>
+    x.existe && x.activo && x.status !== 'at'
+  );
+  const listadoInexistentes = listaListadoOficialLumen(x => !x.existe);
+  const listadoBloqueadasDetalle = listaListadoOficialLumen(x => x.bloqueada_historica);
+
+  const listadoConciliado = listadoOficialActivo &&
+    listadoOficialTotal > 0 &&
+    listadoConVobo === listadoOficialTotal &&
+    listadoNoEncontradas === 0 &&
+    listadoNoAtendidas === 0 &&
+    listadoSinVobo === 0 &&
+    listadoBloqueadas === 0 &&
+    cantidad === listadoOficialTotal;
 
   const opciones =
     historial
@@ -24860,12 +25032,11 @@ function pintarVistaEstimacionLumen() {
     <div class="note">
       <b>Estimación interna LUMEN.</b>
       <br><br>
-      Las P.V. con Vo.Bo. dentro del periodo se
-      incorporan automáticamente. Las P.V. con
-      Vo.Bo. posterior al periodo sólo se incorporan
-      cuando GEN o ADMIN las seleccionan como
-      adelantadas. Al cerrar, el periodo, las
-      claves y los montos quedan congelados.
+      ${
+        listadoOficialActivo
+          ? `Esta estimación está gobernada por un <b>listado oficial</b>. Sólo las P.V. del archivo que estén activas, atendidas, con Vo.Bo. y sin pertenecer a otra estimación cerrada se incorporan al borrador. El periodo se conserva para clasificar su origen.`
+          : `Las P.V. con Vo.Bo. dentro del periodo se incorporan automáticamente. Las P.V. con Vo.Bo. posterior al periodo sólo se incorporan cuando GEN o ADMIN las seleccionan como adelantadas. Al cerrar, el periodo, las claves y los montos quedan congelados.`
+      }
     </div>
 
     <div class="sect">
@@ -24945,6 +25116,63 @@ function pintarVistaEstimacionLumen() {
       }
     </div>
 
+    ${
+      !cerrado
+        ? `
+          <div class="sect">
+            <h3>Listado oficial de la estimación</h3>
+
+            <div class="note" style="border-left:4px solid ${listadoOficialActivo ? 'var(--done)' : 'var(--wait)'}">
+              ${
+                listadoOficialActivo
+                  ? `El listado oficial está activo y define el universo de esta estimación. Puedes reemplazarlo mientras siga en borrador.`
+                  : `Todavía no hay listado oficial. Mientras no cargues uno, la estimación conserva la lógica anterior por periodo y adelantadas.`
+              }
+            </div>
+
+            <input id="estimacionLumenArchivoOficial" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="cargarListadoOficialEstimacionLumenDesdeArchivo(this.files?.[0])">
+            <button type="button" class="btn btn-done" onclick="document.getElementById('estimacionLumenArchivoOficial').click()" style="width:100%;margin-bottom:10px">
+              📂 ${listadoOficialActivo ? 'Reemplazar listado oficial' : 'Cargar listado oficial'}
+            </button>
+
+            ${
+              ESTIMACION_LUMEN_LISTADO_ARCHIVO_INFO
+                ? `<div style="font-size:10px;color:var(--mut);margin-bottom:9px">Último archivo cargado en esta sesión: <b>${textoSeguroLumen(ESTIMACION_LUMEN_LISTADO_ARCHIVO_INFO.nombre)}</b> · ${ESTIMACION_LUMEN_LISTADO_ARCHIVO_INFO.unicas} P.V. únicas${ESTIMACION_LUMEN_LISTADO_ARCHIVO_INFO.duplicadas.length ? ` · ${ESTIMACION_LUMEN_LISTADO_ARCHIVO_INFO.duplicadas.length} duplicadas omitidas` : ''}</div>`
+                : ''
+            }
+
+            ${
+              listadoOficialActivo
+                ? `
+                  <div class="estim-row"><span class="l">P.V. del listado oficial</span><span class="v">${listadoOficialTotal}</span></div>
+                  <div class="estim-row"><span class="l">Encontradas en padrón</span><span class="v">${listadoEncontradas}</span></div>
+                  <div class="estim-row"><span class="l">Atendidas con Vo.Bo.</span><span class="v" style="color:var(--done)">${listadoConVobo}</span></div>
+                  <div class="estim-row"><span class="l">Atendidas sin Vo.Bo.</span><span class="v" style="color:${listadoSinVobo ? 'var(--wait)' : 'var(--done)'}">${listadoSinVobo}</span></div>
+                  <div class="estim-row"><span class="l">No atendidas</span><span class="v" style="color:${listadoNoAtendidas ? 'var(--rej)' : 'var(--done)'}">${listadoNoAtendidas}</span></div>
+                  <div class="estim-row"><span class="l">No encontradas</span><span class="v" style="color:${listadoNoEncontradas ? 'var(--rej)' : 'var(--done)'}">${listadoNoEncontradas}</span></div>
+                  <div class="estim-row"><span class="l">Bloqueadas por estimación cerrada</span><span class="v" style="color:${listadoBloqueadas ? 'var(--rej)' : 'var(--done)'}">${listadoBloqueadas}</span></div>
+                  <div class="estim-row tot"><span class="l">Incluidas actualmente</span><span class="v">${cantidad} / ${listadoOficialTotal}</span></div>
+
+                  ${listadoPendientesVobo.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:800;color:var(--wait)">Pendientes de Vo.Bo. (${listadoPendientesVobo.length})</summary><div style="margin-top:7px;max-height:180px;overflow:auto">${listadoPendientesVobo.map(x => `<button type="button" class="estim-row" onclick="abrirPvPendienteVoboEstimacionLumen('${encodeURIComponent(String(x.pv || ''))}')" style="width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;cursor:pointer;padding-left:0;padding-right:0"><span class="l"><b>P.V. ${textoSeguroLumen(x.pv)}</b><small style="display:block;color:var(--mut)">${textoSeguroLumen(x.estado || '')} · ${textoSeguroLumen(x.sub || '')}</small></span><span class="v" style="display:flex;align-items:center;gap:6px">Sin Vo.Bo. <b>›</b></span></button>`).join('')}</div><div style="font-size:9px;color:var(--mut);margin-top:6px">Toca una P.V. para abrir su ficha y gestionar el Vo.Bo.</div></details>` : ''}
+
+                  ${listadoPendientesAtencion.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:800;color:var(--rej)">No atendidas (${listadoPendientesAtencion.length})</summary><div style="margin-top:7px;max-height:180px;overflow:auto">${listadoPendientesAtencion.map(x => `<div class="estim-row"><span class="l"><b>P.V. ${textoSeguroLumen(x.pv)}</b><small style="display:block;color:var(--mut)">${textoSeguroLumen(x.estado || '')} · ${textoSeguroLumen(x.sub || '')}</small></span><span class="v">${textoSeguroLumen(x.status || 'sin avance')}</span></div>`).join('')}</div></details>` : ''}
+
+                  ${listadoInexistentes.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:800;color:var(--rej)">No encontradas (${listadoInexistentes.length})</summary><div style="margin-top:7px;max-height:180px;overflow:auto;font-family:monospace">${listadoInexistentes.map(x => `<div>${textoSeguroLumen(x.pv)}</div>`).join('')}</div></details>` : ''}
+
+                  ${listadoBloqueadasDetalle.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:800;color:var(--rej)">Ya congeladas en otra estimación (${listadoBloqueadasDetalle.length})</summary><div style="margin-top:7px;max-height:180px;overflow:auto;font-family:monospace">${listadoBloqueadasDetalle.map(x => `<div>${textoSeguroLumen(x.pv)}</div>`).join('')}</div></details>` : ''}
+
+                  <div class="note" style="margin-top:10px;border-left:4px solid ${listadoConciliado ? 'var(--done)' : 'var(--wait)'}">
+                    <b>${listadoConciliado ? '✓ Listado completamente conciliado.' : 'Listado aún pendiente de conciliación.'}</b>
+                    ${listadoConciliado ? ' Ya puede cerrarse con seguridad.' : ' Las P.V. pendientes se incorporarán automáticamente cuando cumplan requisitos y pulse Actualizar datos.'}
+                  </div>
+                `
+                : ''
+            }
+          </div>
+        `
+        : ''
+    }
+
     <div class="sect">
       <div class="estim-hero">
         <div class="lbl">
@@ -24968,7 +25196,7 @@ function pintarVistaEstimacionLumen() {
       </div>
 
       <div class="estim-row">
-        <span class="l">P.V. adelantadas incluidas</span>
+        <span class="l">${listadoOficialActivo ? 'P.V. incorporadas fuera del periodo' : 'P.V. adelantadas incluidas'}</span>
         <span class="v">${cantidadAdelantadas}</span>
       </div>
 
@@ -25064,7 +25292,7 @@ function pintarVistaEstimacionLumen() {
     </div>
 
     ${
-      !cerrado
+      !cerrado && !listadoOficialActivo
         ? `
           <div class="sect">
             <button
@@ -25187,7 +25415,7 @@ function pintarVistaEstimacionLumen() {
         <button
           class="expbtn"
           style="background:var(--steel);color:#fff"
-          onclick="cargarVistaEstimacionLumen(${Number(estimacion.numero)})"
+          onclick="actualizarDatosEstimacionLumen()"
         >
           Actualizar datos
         </button>
@@ -25213,8 +25441,9 @@ function pintarVistaEstimacionLumen() {
               class="btn btn-admin"
               style="width:100%;margin-top:10px"
               onclick="confirmarCierreEstimacionLumen()"
+              ${listadoOficialActivo && !listadoConciliado ? 'disabled' : ''}
             >
-              Cerrar y congelar estimación
+              ${listadoOficialActivo && !listadoConciliado ? 'Cierre bloqueado · listado incompleto' : 'Cerrar y congelar estimación'}
             </button>
           `
           : ''
