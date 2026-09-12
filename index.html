@@ -17621,61 +17621,389 @@ function desvio(p){
   if(d< -1) return {cls:'d-soon',txt:Math.abs(d)+'d antes',dias:d};
   return {cls:'d-on',txt:'A tiempo',dias:d};
 }
+let CONTROL_PROGRAMA = {
+  data: null,
+  fecha: null,
+  cargando: false
+};
+
+function fechaHoyPrograma() {
+  return new Date().toLocaleDateString(
+    'en-CA',
+    { timeZone: 'America/Mexico_City' }
+  );
+}
+
+function fechaProgramaCorta(valor) {
+  if (!valor) return '—';
+  const [y,m,d] = String(valor).split('-').map(Number);
+  return new Date(y, m - 1, d, 12)
+    .toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: 'short'
+    })
+    .replace('.', '');
+}
+
+function numeroPrograma(valor, decimales = 1) {
+  const n = Number(valor || 0);
+  return Number.isInteger(n)
+    ? String(n)
+    : n.toFixed(decimales);
+}
+
+function colorDesviacionPrograma(valor) {
+  const n = Number(valor || 0);
+  if (n <= -30) return 'var(--rej)';
+  if (n < -10) return 'var(--wait)';
+  if (n >= 10) return 'var(--done)';
+  return 'var(--steel)';
+}
+
+function etiquetaEstadoPrograma(estado) {
+  const mapa = {
+    critica: ['CRÍTICA', 'var(--rej)'],
+    riesgo: ['EN RIESGO', 'var(--wait)'],
+    adelantada: ['ADELANTADA', 'var(--done)'],
+    en_meta: ['EN META', 'var(--steel)'],
+    sin_meta: ['NO PROGRAMADA ESTA SEMANA', 'var(--mut)'],
+    pendiente: ['PENDIENTE', 'var(--mut)']
+  };
+  return mapa[estado] || ['—', 'var(--mut)'];
+}
+
+async function consultarControlPrograma(fecha = null) {
+  const fechaCorte = fecha || fechaHoyPrograma();
+  const { data, error } = await sb.rpc(
+    'obtener_control_programacion',
+    { p_fecha: fechaCorte }
+  );
+  if (error) throw error;
+  return data;
+}
+
+async function cargarProgramaOperativo(fecha = null) {
+  if (CONTROL_PROGRAMA.cargando) return;
+  CONTROL_PROGRAMA.cargando = true;
+  CONTROL_PROGRAMA.fecha = fecha || fechaHoyPrograma();
+
+  const sc = document.getElementById('scroll');
+  if (sc && TAB === 'programa') {
+    sc.innerHTML = `
+      <div class="note" style="margin:14px;">
+        Cargando programación semanal por cuadrilla…
+      </div>`;
+  }
+
+  try {
+    CONTROL_PROGRAMA.data =
+      await consultarControlPrograma(CONTROL_PROGRAMA.fecha);
+    pintarProgramaOperativo();
+  } catch (error) {
+    console.error(error);
+    if (sc && TAB === 'programa') {
+      sc.innerHTML = `
+        <div class="note" style="margin:14px;border-left:4px solid var(--rej);">
+          <b>No fue posible cargar la programación.</b><br><br>
+          ${textoSeguroLumen(error?.message || String(error))}
+        </div>`;
+    }
+  } finally {
+    CONTROL_PROGRAMA.cargando = false;
+  }
+}
+
+function cambiarSemanaPrograma(fecha) {
+  cargarProgramaOperativo(fecha);
+}
+
 function renderPrograma(){
   document.getElementById('crumbs').style.display='none';
   document.getElementById('filters').style.display='none';
-  const pts=visiblePts().filter(p=>p.fcomp);
-  const hoy=HOY.toISOString().slice(0,10);
-  // programado a la fecha = compromisos <= hoy ; real = atendidas <= hoy
-  const programado=pts.filter(p=>daysBetween(p.fcomp,hoy)>=0).length;
-  const real=pts.filter(p=>p.status==='at'&&p.freal&&daysBetween(p.freal,hoy)>=0).length;
-  const atrasadas=pts.filter(p=>{const d=desvio(p);return d.cls==='d-late';}).length;
-  const aTiempo=pts.filter(p=>{const d=desvio(p);return d.cls==='d-on'||d.cls==='d-soon';}).length;
-  const desvGlobal=real-programado; // negativo = atraso
 
-  const sc=document.getElementById('scroll'); sc.innerHTML='';
-  const wrap=document.createElement('div');
+  const sc=document.getElementById('scroll');
+  sc.innerHTML = `
+    <div class="note" style="margin:14px;">
+      Cargando programación semanal por cuadrilla…
+    </div>`;
 
-  // curva programado vs real (por semana)
-  const curva=buildCurva(pts);
-  wrap.innerHTML=`
-    <div class="progsum">
-      <div class="s"><div class="v">${programado}</div><div class="k">Programado a hoy</div></div>
-      <div class="s"><div class="v" style="color:var(--leche)">${real}</div><div class="k">Real a hoy</div></div>
-      <div class="s"><div class="v" style="color:${desvGlobal<0?'var(--rej)':'var(--done)'}">${desvGlobal>=0?'+':''}${desvGlobal}</div><div class="k">Desviación</div></div>
-    </div>
-    <div class="curvebox">
-      <h4>Avance programado vs real (acumulado)</h4>
-      ${curva}
-      <div style="display:flex;gap:16px;font-size:10.5px;margin-top:8px;color:var(--mut)">
-        <span><span style="display:inline-block;width:14px;height:3px;background:#9aa7b4;vertical-align:middle;margin-right:5px"></span>Programado</span>
-        <span><span style="display:inline-block;width:14px;height:3px;background:var(--leche);vertical-align:middle;margin-right:5px"></span>Real</span>
-      </div>
-    </div>
-    <div class="progsum" style="margin-top:2px">
-      <div class="s"><div class="v" style="color:var(--rej)">${atrasadas}</div><div class="k">Atrasadas</div></div>
-      <div class="s"><div class="v" style="color:var(--done)">${aTiempo}</div><div class="k">A tiempo</div></div>
-      <div class="s"><div class="v">${pts.length}</div><div class="k">Con fecha</div></div>
-    </div>
-    <div class="sectlabel">Detalle por lechería (desviaciones)</div>`;
-  sc.appendChild(wrap);
-
-  // ordenar: más atrasadas primero
-  const sorted=[...pts].sort((a,b)=>desvio(b).dias-desvio(a).dias).slice(0,120);
-  sorted.forEach(p=>{
-    const d=desvio(p);
-    const row=document.createElement('div'); row.className='progrow'; row.style.cursor='pointer';
-    row.onclick=()=>openSheet(p.id);
-    row.innerHTML=`
-      <div class="t"><b>${p.pv} · ${p.municipio}</b><span class="desv-badge ${d.cls}">${d.txt}</span></div>
-      <div class="dates">
-        <div class="dt"><div class="v">${p.fcomp||'—'}</div><div class="k">Compromiso</div></div>
-        <div class="dt"><div class="v">${p.freal||'—'}</div><div class="k">Real</div></div>
-        <div class="dt"><div class="v">${p.sub||'—'}</div><div class="k">Cuadrilla</div></div>
-      </div>`;
-    sc.appendChild(row);
-  });
+  cargarProgramaOperativo(
+    CONTROL_PROGRAMA.fecha || fechaHoyPrograma()
+  );
 }
+
+function pintarProgramaOperativo() {
+  if (TAB !== 'programa') return;
+
+  const sc = document.getElementById('scroll');
+  const datos = CONTROL_PROGRAMA.data || {};
+  const semana = datos.semana || {};
+  const resumen = datos.resumen || {};
+  const proyecto = datos.proyecto || {};
+  const cuadrillas = Array.isArray(datos.cuadrillas) ? datos.cuadrillas : [];
+  const semanas = Array.isArray(datos.semanas) ? datos.semanas : [];
+  const hoy = fechaHoyPrograma();
+
+  const opciones = semanas.map(s => {
+    const esActual = hoy >= s.fecha_inicio && hoy <= s.fecha_fin;
+    const esFutura = hoy < s.fecha_inicio;
+    const valor = esActual
+      ? hoy
+      : (esFutura ? s.fecha_inicio : s.fecha_fin);
+    return `
+      <option value="${valor}" ${Number(s.semana_numero)===Number(semana.numero)?'selected':''}>
+        Semana ${s.semana_numero} · ${fechaProgramaCorta(s.fecha_inicio)} — ${fechaProgramaCorta(s.fecha_fin)} · ${s.meta_semanal} P.V.
+      </option>`;
+  }).join('');
+
+  const desviacion = Number(resumen.desviacion || 0);
+  const desviacionProyecto = Number(proyecto.desviacion || 0);
+  const esSemanaFutura = hoy < String(semana.fecha_inicio || '');
+  const desviacionDiaria = Number(resumen.meta_dia || 0) > 0
+    ? ((Number(resumen.ejecutadas_dia || 0) - Number(resumen.meta_dia || 0)) * 100 / Number(resumen.meta_dia || 0))
+    : 0;
+  const deficitCuadrillas = esSemanaFutura
+    ? 0
+    : cuadrillas.reduce((total, c) => total + Number(c.faltante_esperado || 0), 0);
+
+  const filas = cuadrillas.map(c => {
+    const estadoVisual = esSemanaFutura
+      ? (Number(c.meta_semanal || 0) > 0
+          ? ['PROGRAMADA · AÚN NO INICIA', 'var(--mut)']
+          : ['NO PROGRAMADA ESTA SEMANA', 'var(--mut)'])
+      : etiquetaEstadoPrograma(c.estado);
+    const [etiqueta, color] = estadoVisual;
+    const esperado = Number(c.esperado_acumulado || 0);
+    const real = Number(c.ejecutadas_semana || 0);
+    const pctBarra = esperado > 0
+      ? Math.max(0, Math.min(120, real / esperado * 100))
+      : (real > 0 ? 120 : 0);
+    const desv = Number(c.desviacion || 0);
+
+    return `
+      <div class="progrow" style="cursor:default;">
+        <div class="t" style="align-items:flex-start;gap:8px;">
+          <div>
+            <b>${textoSeguroLumen(c.sub || '—')} · ${textoSeguroLumen(c.zona || '')}</b>
+            <div style="font-size:9.5px;color:var(--mut);margin-top:2px;">
+              ${textoSeguroLumen(c.nombre_zona || '')}
+            </div>
+          </div>
+          <span style="margin-left:auto;padding:4px 7px;border-radius:999px;background:${color};color:#fff;font-size:8px;font-weight:900;white-space:nowrap;">
+            ${etiqueta}
+          </span>
+        </div>
+
+        <div class="dates" style="margin-top:8px;">
+          <div class="dt"><div class="v">${numeroPrograma(c.meta_semanal)}</div><div class="k">Meta semana</div></div>
+          <div class="dt"><div class="v">${numeroPrograma(c.esperado_acumulado)}</div><div class="k">Esperado al corte</div></div>
+          <div class="dt"><div class="v">${numeroPrograma(c.ejecutadas_semana)}</div><div class="k">Atendidas semana</div></div>
+        </div>
+
+        <div style="height:7px;background:#e7edf3;border-radius:999px;overflow:hidden;margin-top:9px;">
+          <div style="height:100%;width:${Math.min(100,pctBarra)}%;background:${color};"></div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;gap:8px;margin-top:7px;font-size:9.5px;color:var(--mut);">
+          <span>Hoy: <b>${numeroPrograma(c.ejecutadas_dia)}</b> / ${numeroPrograma(c.meta_dia)}</span>
+          <span>Desv. <b style="color:${colorDesviacionPrograma(desv)}">${desv>0?'+':''}${numeroPrograma(desv)}%</b></span>
+        </div>
+      </div>`;
+  }).join('');
+
+  sc.innerHTML = `
+    <div class="sect">
+      <h3>Programa de avance por cuadrilla</h3>
+
+      <div class="note">
+        <b>Control contra meta semanal.</b><br><br>
+        La meta de cada cuadrilla se distribuye entre <b>6 días operativos (lunes a sábado)</b>.
+        El domingo no incrementa el avance esperado. El avance real se calcula con las P.V.
+        <b>marcadas como atendidas según su fecha real</b>; el Vo.Bo. no altera este control operativo.
+        Una desviación de <b>-30% o menor</b> genera alerta.
+      </div>
+
+      <div class="dashcard" style="border-left:4px solid var(--leche);">
+        <div style="font-size:10px;color:var(--mut);margin-bottom:5px;">Semana de análisis</div>
+        <select onchange="cambiarSemanaPrograma(this.value)" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px;background:#fff;font:inherit;font-size:11px;font-weight:800;color:var(--ink);">
+          ${opciones}
+        </select>
+        <div style="margin-top:7px;font-size:9.5px;color:var(--mut);">
+          ${esSemanaFutura
+            ? `Semana futura · inicia <b>${fechaProgramaCorta(semana.fecha_inicio)}</b>`
+            : `Corte: <b>${fechaProgramaCorta(datos.fecha_corte)}</b> · Día operativo ${Number(semana.dias_transcurridos || 0)} de ${Number(semana.dias_operativos || 6)}`
+          }
+        </div>
+      </div>
+
+      <div class="progsum">
+        <div class="s"><div class="v">${numeroPrograma(resumen.meta_semanal)}</div><div class="k">Meta semanal</div></div>
+        <div class="s"><div class="v">${numeroPrograma(resumen.esperado_acumulado)}</div><div class="k">Esperado al corte</div></div>
+        <div class="s"><div class="v" style="color:var(--done)">${numeroPrograma(resumen.ejecutadas_semana)}</div><div class="k">Atendidas semana</div></div>
+      </div>
+
+      <div class="progsum" style="margin-top:2px;">
+        <div class="s"><div class="v">${numeroPrograma(resumen.meta_dia)}</div><div class="k">Meta del día</div></div>
+        <div class="s">
+          <div class="v" style="color:var(--leche)">${numeroPrograma(resumen.ejecutadas_dia)}</div>
+          <div class="k">Atendidas hoy</div>
+          <div style="font-size:8.5px;margin-top:3px;color:${esSemanaFutura?'var(--mut)':colorDesviacionPrograma(desviacionDiaria)};font-weight:800;">
+            ${esSemanaFutura
+              ? 'Aún no inicia'
+              : (Number(resumen.meta_dia || 0) > 0
+                  ? `Desviación diaria ${desviacionDiaria>0?'+':''}${numeroPrograma(desviacionDiaria)}%`
+                  : 'Sin meta operativa hoy')}
+          </div>
+        </div>
+        <div class="s">
+          <div class="v" style="color:${esSemanaFutura?'var(--mut)':colorDesviacionPrograma(desviacion)}">${esSemanaFutura?'—':`${desviacion>0?'+':''}${numeroPrograma(desviacion)}%`}</div>
+          <div class="k">Desviación semanal acumulada al corte</div>
+        </div>
+      </div>
+
+      <div class="note" style="margin-top:10px;">
+        <b>Cómo leer la alerta.</b> El <b>déficit de cuadrillas</b> suma únicamente lo que le falta a cada CUA atrasada frente a su propio esperado.
+        Una cuadrilla adelantada <b>no compensa ni oculta</b> el atraso de otra.
+      </div>
+
+      <div class="dashcard" style="margin-top:10px;border-left:4px solid ${Number(resumen.cuadrillas_alerta||0)>0?'var(--rej)':'var(--done)'};">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+          <div>
+            <div style="font-size:10px;color:var(--mut);">Alerta operativa</div>
+            <div style="font-size:20px;font-weight:900;color:${Number(resumen.cuadrillas_alerta||0)>0?'var(--rej)':'var(--done)'};">
+              ${Number(resumen.cuadrillas_alerta||0)} cuadrilla${Number(resumen.cuadrillas_alerta||0)===1?'':'s'}
+            </div>
+          </div>
+          <div style="text-align:right;font-size:10px;color:var(--mut);">
+            Déficit de cuadrillas<br><b>${numeroPrograma(deficitCuadrillas)} P.V.</b>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashcard" style="margin-top:10px;border-left:4px solid var(--steel);">
+        <div style="font-size:11px;font-weight:900;margin-bottom:8px;">ACUMULADO DEL PROGRAMA</div>
+        <div style="font-size:9px;color:var(--mut);line-height:1.45;margin-bottom:8px;">
+          Compara la meta esperada desde el inicio de la programación con todas las P.V. realmente atendidas en ese mismo periodo.
+          El cálculo no amarra una P.V. a una cuadrilla original: si las asignaciones cambian, el avance real sigue contabilizándose por su fecha real y la cuadrilla que tenga asignada.
+        </div>
+        <div class="dstats">
+          <div class="s"><div class="v">${numeroPrograma(proyecto.meta_esperada_acumulada)}</div><div class="k">Esperado acumulado</div></div>
+          <div class="s"><div class="v" style="color:var(--done)">${numeroPrograma(proyecto.ejecutadas_acumuladas)}</div><div class="k">Atendidas acumuladas</div></div>
+          <div class="s"><div class="v" style="color:${colorDesviacionPrograma(desviacionProyecto)}">${desviacionProyecto>0?'+':''}${numeroPrograma(desviacionProyecto)}%</div><div class="k">Desviación</div></div>
+        </div>
+      </div>
+
+      <div class="expbtns" style="margin-top:10px;">
+        <button class="expbtn exp-xlsx" onclick="exportProgramaOperativoXLSX()">Excel</button>
+        <button class="expbtn exp-pdf" onclick="exportProgramaOperativoPDF()">PDF</button>
+        <button class="expbtn" onclick="cargarProgramaOperativo(CONTROL_PROGRAMA.fecha)">Actualizar</button>
+      </div>
+
+      <div class="sectlabel">Avance por cuadrilla</div>
+      ${filas || '<div class="note">No hay cuadrillas para mostrar.</div>'}
+    </div>`;
+}
+
+function exportProgramaOperativoXLSX() {
+  const datos = CONTROL_PROGRAMA.data;
+  if (!datos) { toast('Primero carga la programación'); return; }
+
+  const libro = XLSX.utils.book_new();
+  const s = datos.semana || {};
+  const r = datos.resumen || {};
+  const p = datos.proyecto || {};
+
+  const resumen = [
+    ['Concepto','Valor'],
+    ['Semana', s.numero],
+    ['Periodo', `${s.fecha_inicio} a ${s.fecha_fin}`],
+    ['Fecha de corte', datos.fecha_corte],
+    ['Días operativos transcurridos', `${s.dias_transcurridos} de ${s.dias_operativos}`],
+    ['Meta semanal', Number(r.meta_semanal||0)],
+    ['Esperado al corte', Number(r.esperado_acumulado||0)],
+    ['Atendidas semana', Number(r.ejecutadas_semana||0)],
+    ['Atendidas hoy', Number(r.ejecutadas_dia||0)],
+    ['Desviación diaria', Number(r.meta_dia||0)>0 ? `${((Number(r.ejecutadas_dia||0)-Number(r.meta_dia||0))*100/Number(r.meta_dia||0)).toFixed(1)}%` : '—'],
+    ['Desviación semanal acumulada al corte', `${Number(r.desviacion||0)}%`],
+    ['Cuadrillas en alerta', Number(r.cuadrillas_alerta||0)],
+    ['Déficit de cuadrillas', (datos.cuadrillas||[]).reduce((t,c)=>t+Number(c.faltante_esperado||0),0)],
+    ['Esperado acumulado programa', Number(p.meta_esperada_acumulada||0)],
+    ['Atendidas acumuladas programa', Number(p.ejecutadas_acumuladas||0)],
+    ['Desviación acumulada programa', `${Number(p.desviacion||0)}%`]
+  ];
+  const hojaResumen = XLSX.utils.aoa_to_sheet(resumen);
+  hojaResumen['!cols'] = [{wch:34},{wch:24}];
+  XLSX.utils.book_append_sheet(libro, hojaResumen, 'Resumen');
+
+  const detalle = (datos.cuadrillas || []).map(c => ({
+    Cuadrilla: c.sub,
+    Zona: c.zona,
+    'Nombre de zona': c.nombre_zona,
+    'Meta semanal': Number(c.meta_semanal||0),
+    'Meta del día': Number(c.meta_dia||0),
+    'Esperado al corte': Number(c.esperado_acumulado||0),
+    'Atendidas hoy': Number(c.ejecutadas_dia||0),
+    'Atendidas semana': Number(c.ejecutadas_semana||0),
+    'Cumplimiento %': Number(c.cumplimiento||0),
+    'Desviación %': Number(c.desviacion||0),
+    'Faltante esperado': Number(c.faltante_esperado||0),
+    Estado: c.estado,
+    Alerta: c.alerta ? 'SI' : 'NO'
+  }));
+  const hojaDetalle = XLSX.utils.json_to_sheet(detalle);
+  hojaDetalle['!cols'] = [
+    {wch:12},{wch:10},{wch:34},{wch:14},{wch:14},{wch:18},{wch:14},{wch:17},{wch:16},{wch:14},{wch:18},{wch:14},{wch:10}
+  ];
+  XLSX.utils.book_append_sheet(libro, hojaDetalle, 'Cuadrillas');
+
+  XLSX.writeFile(
+    libro,
+    `Programa_Semana_${s.numero}_${datos.fecha_corte}.xlsx`
+  );
+}
+
+function exportProgramaOperativoPDF() {
+  const datos = CONTROL_PROGRAMA.data;
+  if (!datos) { toast('Primero carga la programación'); return; }
+
+  const { jsPDF } = window.jspdf || {};
+  if (!jsPDF) { toast('No fue posible cargar el generador PDF'); return; }
+
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const s = datos.semana || {};
+  const r = datos.resumen || {};
+  let y = 18;
+
+  doc.setFont(undefined,'bold');
+  doc.setFontSize(15);
+  doc.text('Control de programación semanal', 14, y);
+  y += 8;
+  doc.setFont(undefined,'normal');
+  doc.setFontSize(9);
+  doc.text(`Semana ${s.numero} · ${s.fecha_inicio} a ${s.fecha_fin} · corte ${datos.fecha_corte}`, 14, y);
+  y += 9;
+  doc.text(`Meta semanal: ${numeroPrograma(r.meta_semanal)}   Esperado: ${numeroPrograma(r.esperado_acumulado)}   Atendidas: ${numeroPrograma(r.ejecutadas_semana)}   Desv. acum.: ${numeroPrograma(r.desviacion)}%`, 14, y);
+  y += 10;
+
+  doc.setFont(undefined,'bold');
+  doc.text('CUADRILLA',14,y); doc.text('META',61,y); doc.text('ESPERADO',85,y); doc.text('REAL',121,y); doc.text('DESV.',145,y); doc.text('ESTADO',171,y);
+  y += 5;
+  doc.setFont(undefined,'normal');
+
+  (datos.cuadrillas || []).forEach(c => {
+    if (y > 282) { doc.addPage(); y = 18; }
+    doc.text(String(c.sub||''),14,y);
+    doc.text(numeroPrograma(c.meta_semanal),61,y);
+    doc.text(numeroPrograma(c.esperado_acumulado),85,y);
+    doc.text(numeroPrograma(c.ejecutadas_semana),121,y);
+    doc.text(`${numeroPrograma(c.desviacion)}%`,145,y);
+    doc.text(String(c.estado||''),171,y);
+    y += 6;
+  });
+
+  doc.save(`Programa_Semana_${s.numero}_${datos.fecha_corte}.pdf`);
+}
+
 function buildCurva(pts){
   // acumulado semanal de programado (por fcomp) y real (por freal)
   const hoy=HOY.toISOString().slice(0,10);
@@ -19126,625 +19454,66 @@ function calcularReporteSemanal(
 }
 
 function renderReporteSemanal() {
-
-  const semanas =
-    obtenerSemanasPrograma();
-
-  if (!semanas.length) {
-    return '';
-  }
-
-  /*
-   * La primera vez seleccionamos
-   * automáticamente la semana actual.
-   */
-
-  if (!REPORTE_SEMANAL.inicio) {
-
-    const actual =
-      obtenerSemanaActual()
-        .inicio;
-
-    REPORTE_SEMANAL.inicio =
-      semanas.includes(actual)
-        ? actual
-        : semanas[0];
-  }
-
-  const r =
-    calcularReporteSemanal(
-      REPORTE_SEMANAL.inicio
-    );
-
-  const opciones =
-    semanas
-      .map(inicio => {
-
-        const fin =
-          sumarDiasISOReporte(
-            inicio,
-            6
-          );
-
-        return `
-          <option
-            value="${inicio}"
-            ${
-              inicio ===
-              REPORTE_SEMANAL.inicio
-                ? 'selected'
-                : ''
-            }
-          >
-            ${fechaCortaReporte(inicio)}
-            —
-            ${fechaCortaReporte(fin)}
-          </option>
-        `;
-      })
-      .join('');
-
-  let etiquetaEstado =
-    'SEMANA CERRADA';
-
-  let colorEstado =
-    'var(--steel)';
-
-  if (
-    r.estadoSemana ===
-    'curso'
-  ) {
-    etiquetaEstado =
-      'SEMANA EN CURSO';
-
-    colorEstado =
-      'var(--wait)';
-  }
-
-  if (
-    r.estadoSemana ===
-    'futura'
-  ) {
-    etiquetaEstado =
-      'SEMANA PROGRAMADA';
-
-    colorEstado =
-      'var(--mut)';
-  }
-
-  const formatearDesviacion =
-    valor => {
-
-      if (valor > 0) {
-        return `+${valor}%`;
-      }
-
-      return `${valor}%`;
-    };
+  setTimeout(cargarWidgetProgramaSemanal, 0);
 
   return `
-    <div
-      class="sect"
-      id="reporteSemanal"
-    >
+    <div class="sect" id="reporteSemanalPrograma">
+      <h3>Seguimiento contra programa</h3>
+      <div class="note">
+        Cargando meta semanal y avance real por cuadrilla…
+      </div>
+    </div>`;
+}
 
-      <h3>
-        Reporte semanal
-      </h3>
+async function cargarWidgetProgramaSemanal() {
+  const cont = document.getElementById('reporteSemanalPrograma');
+  if (!cont) return;
+
+  try {
+    const datos = await consultarControlPrograma(fechaHoyPrograma());
+    const s = datos?.semana || {};
+    const r = datos?.resumen || {};
+    const criticas = (datos?.cuadrillas || []).filter(c => c.alerta);
+    const desv = Number(r.desviacion || 0);
+
+    cont.innerHTML = `
+      <h3>Seguimiento contra programa</h3>
 
       <div class="note">
-
-        <b>
-          Cumplimiento contra programa
-        </b>
-
-        <br><br>
-
-        Compara el programa establecido
-        contra los Vo.Bo. obtenidos y
-        muestra la desviación semanal
-        y acumulada.
-
+        <b>Semana ${s.numero} · ${fechaProgramaCorta(s.fecha_inicio)} — ${fechaProgramaCorta(s.fecha_fin)}</b><br><br>
+        Control operativo por meta semanal de cuadrilla, distribuida entre 6 días operativos.
+        No depende de la fecha compromiso individual de cada P.V.
       </div>
 
-      <div
-        class="dashcard"
-        style="
-          border-left:
-            4px solid var(--leche);
-        "
-      >
-
-        <div
-          style="
-            display:flex;
-            justify-content:
-              space-between;
-            align-items:center;
-            gap:10px;
-          "
-        >
-
-          <div>
-
-            <div
-              style="
-                font-size:10px;
-                color:var(--mut);
-                margin-bottom:3px;
-              "
-            >
-              Semana de análisis
-            </div>
-
-            <select
-              onchange="
-                cambiarSemanaReporte(
-                  this.value
-                )
-              "
-              style="
-                border:1px solid var(--line);
-                border-radius:7px;
-                padding:7px 9px;
-                background:#fff;
-                font:inherit;
-                font-size:11px;
-                font-weight:800;
-                color:var(--ink);
-              "
-            >
-              ${opciones}
-            </select>
-
-          </div>
-
-          <div
-            style="
-              padding:5px 8px;
-              border-radius:999px;
-              background:${colorEstado};
-              color:#fff;
-              font-size:8.5px;
-              font-weight:900;
-              white-space:nowrap;
-            "
-          >
-            ${etiquetaEstado}
-          </div>
-
-        </div>
-
-        <div
-          style="
-            margin-top:11px;
-            font-size:10px;
-            color:var(--mut);
-          "
-        >
-          ${fechaCortaReporte(r.inicio)}
-          —
-          ${fechaCortaReporte(r.fin)}
-        </div>
-
+      <div class="progsum">
+        <div class="s"><div class="v">${numeroPrograma(r.esperado_acumulado)}</div><div class="k">Esperado al corte</div></div>
+        <div class="s"><div class="v" style="color:var(--done)">${numeroPrograma(r.ejecutadas_semana)}</div><div class="k">Atendidas semana</div></div>
+        <div class="s"><div class="v" style="color:${colorDesviacionPrograma(desv)}">${desv>0?'+':''}${numeroPrograma(desv)}%</div><div class="k">Desviación</div></div>
       </div>
 
-      <div
-        style="
-          display:grid;
-          grid-template-columns:
-            repeat(2, minmax(0,1fr));
-          gap:9px;
-          margin-top:10px;
-        "
-      >
-
-        <!-- SEMANA -->
-
-        <div
-          class="dashcard"
-          style="
-            margin:0;
-            border-top:
-              3px solid var(--leche);
-          "
-        >
-
-          <div
-            style="
-              font-size:11px;
-              font-weight:900;
-              margin-bottom:9px;
-            "
-          >
-            SEMANA
-          </div>
-
-          <div class="dstats">
-
-            <div class="s">
-              <div class="v">
-                ${r.programadasSemana}
-              </div>
-              <div class="k">
-                Programadas
-              </div>
-            </div>
-
-            <div class="s">
-              <div
-                class="v"
-                style="
-                  color:var(--done);
-                "
-              >
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : r.atendidasSemana
-                }
-              </div>
-              <div class="k">
-                Cumplidas
-              </div>
-            </div>
-
-            <div class="s">
-              <div
-                class="v"
-                style="
-                  color:var(--wait);
-                "
-              >
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : r.faltantesSemana
-                }
-              </div>
-              <div class="k">
-                Faltantes
-              </div>
-            </div>
-
-          </div>
-
-          ${
-            r.estadoSemana !== 'futura'
-              ? `
-                <div
-                  style="
-                    margin-top:8px;
-                    padding:7px 8px;
-                    border-radius:7px;
-                    background:var(--milk);
-                    color:var(--steel);
-                    font-size:9px;
-                    line-height:1.4;
-                  "
-                >
-                  Vo.Bo. otorgados durante la semana:
-                  <b>${r.voboOtorgadosSemana}</b>.
-                  Este dato es flujo administrativo y no se usa
-                  para calcular el cumplimiento de las
-                  ${r.programadasSemana} P.V. programadas.
-                </div>
-              `
-              : ''
-          }
-
-          <div
-            style="
-              border-top:
-                1px solid var(--line);
-              margin-top:8px;
-              padding-top:8px;
-              display:flex;
-              justify-content:
-                space-between;
-              gap:8px;
-              font-size:10px;
-            "
-          >
-
-            <span>
-              Cumplimiento
-              <b>
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : `${r.cumplimientoSemana}%`
-                }
-              </b>
-            </span>
-
-            <span>
-              Desv.
-              <b
-                style="
-                  color:${
-                    r.desviacionSemana < 0
-                      ? 'var(--rej)'
-                      : 'var(--done)'
-                  };
-                "
-              >
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : formatearDesviacion(
-                        r.desviacionSemana
-                      )
-                }
-              </b>
-            </span>
-
-          </div>
-
+      <div class="dashcard" style="margin-top:10px;border-left:4px solid ${criticas.length?'var(--rej)':'var(--done)'};">
+        <div style="font-size:10px;color:var(--mut);">Cuadrillas con desviación de -30% o menor</div>
+        <div style="font-size:18px;font-weight:900;color:${criticas.length?'var(--rej)':'var(--done)'};margin-top:3px;">
+          ${criticas.length}
         </div>
-
-        <!-- ACUMULADO -->
-
-        <div
-          class="dashcard"
-          style="
-            margin:0;
-            border-top:
-              3px solid var(--steel);
-          "
-        >
-
-          <div
-            style="
-              font-size:11px;
-              font-weight:900;
-              margin-bottom:9px;
-            "
-          >
-            ACUMULADO
-          </div>
-
-          <div class="dstats">
-
-            <div class="s">
-              <div class="v">
-                ${r.programadasAcumuladas}
-              </div>
-              <div class="k">
-                Programadas
-              </div>
-            </div>
-
-            <div class="s">
-              <div
-                class="v"
-                style="
-                  color:var(--done);
-                "
-              >
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : r.cumplidasPrograma
-                }
-              </div>
-              <div class="k">
-                Cumplidas
-              </div>
-            </div>
-
-            <div class="s">
-              <div
-                class="v"
-                style="
-                  color:var(--wait);
-                "
-              >
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : r.faltantesAcumulados
-                }
-              </div>
-              <div class="k">
-                Faltantes
-              </div>
-            </div>
-
-          </div>
-
-          <div
-            style="
-              border-top:
-                1px solid var(--line);
-              margin-top:8px;
-              padding-top:8px;
-              display:flex;
-              justify-content:
-                space-between;
-              gap:8px;
-              font-size:10px;
-            "
-          >
-
-            <span>
-              Cumplimiento
-              <b>
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : `${r.cumplimientoAcumulado}%`
-                }
-              </b>
-            </span>
-
-            <span>
-              Desv.
-              <b
-                style="
-                  color:${
-                    r.desviacionAcumulada < 0
-                      ? 'var(--rej)'
-                      : 'var(--done)'
-                  };
-                "
-              >
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : formatearDesviacion(
-                        r.desviacionAcumulada
-                      )
-                }
-              </b>
-            </span>
-
-          </div>
-
+        <div style="font-size:9.5px;color:var(--mut);margin-top:5px;line-height:1.5;">
+          ${criticas.length
+            ? criticas.map(c => `${textoSeguroLumen(c.sub)} (${Number(c.desviacion)>0?'+':''}${numeroPrograma(c.desviacion)}%)`).join(' · ')
+            : 'Sin alertas críticas al corte.'}
         </div>
-
       </div>
 
-      ${
-        r.estadoSemana !== 'futura'
-          ? `
-            <div
-              class="dashcard"
-              style="
-                margin-top:10px;
-                border-left:4px solid var(--done);
-              "
-            >
-
-              <div
-                style="
-                  font-size:11px;
-                  font-weight:900;
-                  margin-bottom:9px;
-                "
-              >
-                PRODUCCIÓN REAL AL CORTE
-              </div>
-
-              <div class="dstats">
-
-                <div class="s">
-                  <div
-                    class="v"
-                    style="color:var(--done);"
-                  >
-                    ${r.cumplidasPrograma}
-                  </div>
-
-                  <div class="k">
-                    Del programa
-                  </div>
-                </div>
-
-                <div class="s">
-                  <div
-                    class="v"
-                    style="color:var(--leche);"
-                  >
-                    ${r.trabajosAdelantados}
-                  </div>
-
-                  <div class="k">
-                    Adelantadas
-                  </div>
-                </div>
-
-                <div class="s">
-                  <div
-                    class="v"
-                    style="color:var(--steel);"
-                  >
-                    ${r.atendidasAcumuladas}
-                  </div>
-
-                  <div class="k">
-                    Vo.Bo. totales
-                  </div>
-                </div>
-
-              </div>
-
-              <div
-                style="
-                  border-top:1px solid var(--line);
-                  margin-top:8px;
-                  padding-top:8px;
-                  font-size:9.5px;
-                  line-height:1.45;
-                  color:var(--mut);
-                "
-              >
-                Los Vo.Bo. totales se integran por las
-                lecherías cumplidas dentro del programa
-                acumulado más los trabajos de semanas
-                posteriores ejecutados por adelantado.
-              </div>
-
-            </div>
-          `
-          : ''
-      }
-
-      ${
-        r.estadoSemana !== 'futura'
-          ? `
-            <div
-              class="expbtns"
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <button
-                class="expbtn exp-xlsx"
-                onclick="
-                  exportReporteSemanalXLSX()
-                "
-              >
-                <svg viewBox="0 0 24 24">
-                  <path
-                    d="M12 3v12M7 10l5 5 5-5M5 21h14"
-                  />
-                </svg>
-
-                Excel
-              </button>
-
-              <button
-                class="expbtn exp-pdf"
-                onclick="
-                  exportReporteSemanalPDF()
-                "
-              >
-                <svg viewBox="0 0 24 24">
-                  <path
-                    d="M12 3v12M7 10l5 5 5-5M5 21h14"
-                  />
-                </svg>
-
-                PDF
-              </button>
-
-            </div>
-          `
-          : ''
-      }
-
-    </div>
-  `;
+      <button class="btn" style="margin-top:10px;background:var(--steel);color:#fff;" onclick="setTab('programa')">
+        Ver detalle por cuadrilla
+      </button>`;
+  } catch (error) {
+    console.error(error);
+    cont.innerHTML = `
+      <h3>Seguimiento contra programa</h3>
+      <div class="note" style="border-left:4px solid var(--rej);">
+        No fue posible cargar el control de programación.
+      </div>`;
+  }
 }
 
 function exportReporteSemanalXLSX() {
@@ -21167,7 +20936,6 @@ const tarjetas =
 
         </div>
 
-      ${renderReporteSemanal()}
 
     <div class="sect">
 
@@ -25167,7 +24935,7 @@ function pintarVistaEstimacionLumen() {
 
                   <div class="note" style="margin-top:10px;border-left:4px solid ${listadoConciliado ? 'var(--done)' : 'var(--wait)'}">
                     <b>${listadoConciliado ? '✓ Listado completamente conciliado.' : 'Listado aún pendiente de conciliación.'}</b>
-                    ${listadoConciliado ? ' Ya puede cerrarse con seguridad.' : ' Las P.V. pendientes se incorporarán automáticamente cuando cumplan requisitos y pulse Actualizar datos.'}
+                    ${listadoConciliado ? ' Ya puede cerrarse con seguridad.' : ' Las P.V. pendientes se incorporarán automáticamente cuando cumplan requisitos y pulses Actualizar datos.'}
                   </div>
                 `
                 : ''
