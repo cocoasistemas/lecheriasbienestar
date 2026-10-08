@@ -4452,8 +4452,8 @@ let sup=`
     <div class="ib full"><div class="k">Coordenadas GPS</div><div class="v mono" style="font-size:12px">◉ ${p.lat}, ${p.lng}</div></div>
   </div></div>`;
 
-  // aviso de motivo de rechazo (visible para todos si existe)
-  const motivoBox = (vo==='rej' && p.motivo) ? `<div class="rejmotivo"><b>Motivo del rechazo</b>${p.motivo}</div>` : '';
+  // Motivo del rechazo reservado a perfiles internos; dependencia solo ve el estado.
+  const motivoBox = (ROLE !== 'dep' && vo==='rej' && p.motivo) ? `<div class="rejmotivo"><b>Motivo del rechazo</b>${p.motivo}</div>` : '';
 
   // requisito de fotos (anexo): 3 previas + 3 finales, con fachada global y letrero
   const reqOk = fotosOk(p);
@@ -18564,15 +18564,54 @@ async function analizarArchivoListadoPV(archivo) {
       throw new Error('No fue posible localizar una columna con P.V. en el archivo');
     }
 
-    const todasActas = await cargarActas();
+    /*
+     * IMPORTANTE:
+     * Este módulo consulta únicamente las actas de los P.V. cargados.
+     * No usa cargarActas(), porque esa consulta global puede quedar
+     * limitada por el máximo de filas de PostgREST/Supabase.
+     *
+     * La clave normalizada también permite asociar correctamente P.V.
+     * equivalentes cuando en una fuente existe un cero inicial y en otra no.
+     */
+    const clavePVListado = valor => {
+      const texto = String(valor ?? '').trim();
+      if (!texto) return '';
+      return texto.replace(/^0+(?=\d)/, '');
+    };
+
+    const pvsConsulta = [...new Set(
+      mejor.valores.flatMap(pv => {
+        const original = String(pv).trim();
+        const sinCeros = clavePVListado(original);
+        return sinCeros && sinCeros !== original
+          ? [original, sinCeros]
+          : [original];
+      })
+    )];
+
+    const todasActas = [];
+    const TAMANO_LOTE_ACTAS = 100;
+
+    for (let i = 0; i < pvsConsulta.length; i += TAMANO_LOTE_ACTAS) {
+      const lotePv = pvsConsulta.slice(i, i + TAMANO_LOTE_ACTAS);
+      const { data: actasLote, error: errorActasLote } = await sb
+        .from('actas')
+        .select('*')
+        .eq('clase', 'apertura')
+        .in('pv', lotePv);
+
+      if (errorActasLote) throw errorActasLote;
+      if (Array.isArray(actasLote)) todasActas.push(...actasLote);
+    }
+
     const actasPorPv = new Map();
     const puntaje = a => a?.documento_firmado_v2_url ? 3 : a?.documento_generado_v2_url ? 2 : a?.documento_url ? 1 : 0;
 
-    for (const acta of todasActas || []) {
-      if (acta.clase !== 'apertura' || !acta.pv) continue;
-      const pv = String(acta.pv);
-      const previa = actasPorPv.get(pv);
-      if (!previa || puntaje(acta) > puntaje(previa)) actasPorPv.set(pv, acta);
+    for (const acta of todasActas) {
+      if (!acta?.pv) continue;
+      const pvClave = clavePVListado(acta.pv);
+      const previa = actasPorPv.get(pvClave);
+      if (!previa || puntaje(acta) > puntaje(previa)) actasPorPv.set(pvClave, acta);
     }
 
     const encontrados = [];
@@ -18580,7 +18619,11 @@ async function analizarArchivoListadoPV(archivo) {
     mejor.valores.forEach(pv => {
       const punto = catalogo.get(pv);
       if (punto) {
-        encontrados.push({ pv, punto, acta:actasPorPv.get(pv) || null });
+        encontrados.push({
+          pv,
+          punto,
+          acta:actasPorPv.get(clavePVListado(pv)) || null
+        });
       } else {
         noEncontrados.push(pv);
       }
