@@ -888,7 +888,7 @@ const METAS={"SUB-1": {"semana": 10, "mes": 40, "inicio": "2026-07-06", "termino
 
 
 /* ---- contrato ---- */
-const MIN=1000, MAX=2000;
+const MIN=1000, MAX=1401;
 // ===== PRECIOS =====
 // A LA DEPENDENCIA: unidad estándar por lechería = 21 m² a $17,769.75 + IVA (fijo, sin extraordinarios)
 const PRECIO_FACHADA=17769.75, M2_STD=21, M2_MAX = 28, IVA=0.16;
@@ -4424,7 +4424,11 @@ let sup=`
   }
   sup+='</div>';
 
-  const vo=p.vobo;
+  const vo =
+  p.status === 'at' &&
+  (!p.vobo || p.vobo === '-')
+    ? 'wait'
+    : p.vobo;
   const nPrevTL=(p.fotosPrev||[]).length, nFinTL=(p.fotosFin||[]).length;
   const tl=`<div class="sect"><h3>Estatus y validación</h3><div class="tl">
     <div class="tlrow">
@@ -4448,15 +4452,19 @@ let sup=`
     <div class="ib full"><div class="k">Coordenadas GPS</div><div class="v mono" style="font-size:12px">◉ ${p.lat}, ${p.lng}</div></div>
   </div></div>`;
 
-  // aviso de motivo de rechazo (visible para todos si existe)
-  const motivoBox = (vo==='rej' && p.motivo) ? `<div class="rejmotivo"><b>Motivo del rechazo</b>${p.motivo}</div>` : '';
+  // Motivo del rechazo reservado a perfiles internos; dependencia solo ve el estado.
+  const motivoBox = (ROLE !== 'dep' && vo==='rej' && p.motivo) ? `<div class="rejmotivo"><b>Motivo del rechazo</b>${p.motivo}</div>` : '';
 
   // requisito de fotos (anexo): 3 previas + 3 finales, con fachada global y letrero
   const reqOk = fotosOk(p);
   const aperturaAutorizada =
   !!(
     p.actaApertura &&
-    p.actaApertura.documento_generado_v2_url
+    p.actaApertura.documento_firmado_v2_url &&
+    (
+      p.actaApertura.estado === 'en_revision' ||
+      p.actaApertura.estado === 'aprobada'
+    )
   );
   const nP=(p.fotosPrev||[]).length, nF=(p.fotosFin||[]).length;
   const faltaCat=faltanCatFin(p);
@@ -4571,7 +4579,8 @@ let sup=`
   p.status === 'ini'
   ) {
     const puedeMarcarAtendido =
-    reqOk;
+    reqOk &&
+    aperturaAutorizada;
 
     actions = `
       <button
@@ -6706,6 +6715,23 @@ async function addExtraEvidencia() {
 async function markAt() {
   if (!CUR || ROLE !== 'sub') return;
 
+  const aperturaAutorizada =
+  !!(
+    CUR.actaApertura &&
+    CUR.actaApertura.documento_firmado_v2_url &&
+    (
+      CUR.actaApertura.estado === 'en_revision' ||
+      CUR.actaApertura.estado === 'aprobada'
+    )
+  );
+
+  if (!aperturaAutorizada) {
+    toast(
+      'Primero genera, firma y carga el Acta de Inicio. Después podrás marcar la lechería como atendida.'
+    );
+    return;
+  }
+
   const nP = (CUR.fotosPrev || []).length;
   const nF = (CUR.fotosFin || []).length;
 
@@ -6896,6 +6922,14 @@ async function vobo(aprobado) {
       toast('✅ Vo.Bo. otorgado — entra a estimación');
       await openSheet(CUR.id);
       render();
+
+      // Si la Estimación Interna LUMEN está cargada, refresca sus
+      // contadores/listado en segundo plano para reflejar el nuevo Vo.Bo.
+      if (ESTIMACION_LUMEN?.estimacion?.numero) {
+        await cargarVistaEstimacionLumen(
+          Number(ESTIMACION_LUMEN.estimacion.numero)
+        );
+      }
     } catch (error) {
       console.error(error);
       toast('No fue posible otorgar el Vo.Bo.');
@@ -17587,61 +17621,389 @@ function desvio(p){
   if(d< -1) return {cls:'d-soon',txt:Math.abs(d)+'d antes',dias:d};
   return {cls:'d-on',txt:'A tiempo',dias:d};
 }
+let CONTROL_PROGRAMA = {
+  data: null,
+  fecha: null,
+  cargando: false
+};
+
+function fechaHoyPrograma() {
+  return new Date().toLocaleDateString(
+    'en-CA',
+    { timeZone: 'America/Mexico_City' }
+  );
+}
+
+function fechaProgramaCorta(valor) {
+  if (!valor) return '—';
+  const [y,m,d] = String(valor).split('-').map(Number);
+  return new Date(y, m - 1, d, 12)
+    .toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: 'short'
+    })
+    .replace('.', '');
+}
+
+function numeroPrograma(valor, decimales = 1) {
+  const n = Number(valor || 0);
+  return Number.isInteger(n)
+    ? String(n)
+    : n.toFixed(decimales);
+}
+
+function colorDesviacionPrograma(valor) {
+  const n = Number(valor || 0);
+  if (n <= -30) return 'var(--rej)';
+  if (n < -10) return 'var(--wait)';
+  if (n >= 10) return 'var(--done)';
+  return 'var(--steel)';
+}
+
+function etiquetaEstadoPrograma(estado) {
+  const mapa = {
+    critica: ['CRÍTICA', 'var(--rej)'],
+    riesgo: ['EN RIESGO', 'var(--wait)'],
+    adelantada: ['ADELANTADA', 'var(--done)'],
+    en_meta: ['EN META', 'var(--steel)'],
+    sin_meta: ['NO PROGRAMADA ESTA SEMANA', 'var(--mut)'],
+    pendiente: ['PENDIENTE', 'var(--mut)']
+  };
+  return mapa[estado] || ['—', 'var(--mut)'];
+}
+
+async function consultarControlPrograma(fecha = null) {
+  const fechaCorte = fecha || fechaHoyPrograma();
+  const { data, error } = await sb.rpc(
+    'obtener_control_programacion',
+    { p_fecha: fechaCorte }
+  );
+  if (error) throw error;
+  return data;
+}
+
+async function cargarProgramaOperativo(fecha = null) {
+  if (CONTROL_PROGRAMA.cargando) return;
+  CONTROL_PROGRAMA.cargando = true;
+  CONTROL_PROGRAMA.fecha = fecha || fechaHoyPrograma();
+
+  const sc = document.getElementById('scroll');
+  if (sc && TAB === 'programa') {
+    sc.innerHTML = `
+      <div class="note" style="margin:14px;">
+        Cargando programación semanal por cuadrilla…
+      </div>`;
+  }
+
+  try {
+    CONTROL_PROGRAMA.data =
+      await consultarControlPrograma(CONTROL_PROGRAMA.fecha);
+    pintarProgramaOperativo();
+  } catch (error) {
+    console.error(error);
+    if (sc && TAB === 'programa') {
+      sc.innerHTML = `
+        <div class="note" style="margin:14px;border-left:4px solid var(--rej);">
+          <b>No fue posible cargar la programación.</b><br><br>
+          ${textoSeguroLumen(error?.message || String(error))}
+        </div>`;
+    }
+  } finally {
+    CONTROL_PROGRAMA.cargando = false;
+  }
+}
+
+function cambiarSemanaPrograma(fecha) {
+  cargarProgramaOperativo(fecha);
+}
+
 function renderPrograma(){
   document.getElementById('crumbs').style.display='none';
   document.getElementById('filters').style.display='none';
-  const pts=visiblePts().filter(p=>p.fcomp);
-  const hoy=HOY.toISOString().slice(0,10);
-  // programado a la fecha = compromisos <= hoy ; real = atendidas <= hoy
-  const programado=pts.filter(p=>daysBetween(p.fcomp,hoy)>=0).length;
-  const real=pts.filter(p=>p.status==='at'&&p.freal&&daysBetween(p.freal,hoy)>=0).length;
-  const atrasadas=pts.filter(p=>{const d=desvio(p);return d.cls==='d-late';}).length;
-  const aTiempo=pts.filter(p=>{const d=desvio(p);return d.cls==='d-on'||d.cls==='d-soon';}).length;
-  const desvGlobal=real-programado; // negativo = atraso
 
-  const sc=document.getElementById('scroll'); sc.innerHTML='';
-  const wrap=document.createElement('div');
+  const sc=document.getElementById('scroll');
+  sc.innerHTML = `
+    <div class="note" style="margin:14px;">
+      Cargando programación semanal por cuadrilla…
+    </div>`;
 
-  // curva programado vs real (por semana)
-  const curva=buildCurva(pts);
-  wrap.innerHTML=`
-    <div class="progsum">
-      <div class="s"><div class="v">${programado}</div><div class="k">Programado a hoy</div></div>
-      <div class="s"><div class="v" style="color:var(--leche)">${real}</div><div class="k">Real a hoy</div></div>
-      <div class="s"><div class="v" style="color:${desvGlobal<0?'var(--rej)':'var(--done)'}">${desvGlobal>=0?'+':''}${desvGlobal}</div><div class="k">Desviación</div></div>
-    </div>
-    <div class="curvebox">
-      <h4>Avance programado vs real (acumulado)</h4>
-      ${curva}
-      <div style="display:flex;gap:16px;font-size:10.5px;margin-top:8px;color:var(--mut)">
-        <span><span style="display:inline-block;width:14px;height:3px;background:#9aa7b4;vertical-align:middle;margin-right:5px"></span>Programado</span>
-        <span><span style="display:inline-block;width:14px;height:3px;background:var(--leche);vertical-align:middle;margin-right:5px"></span>Real</span>
-      </div>
-    </div>
-    <div class="progsum" style="margin-top:2px">
-      <div class="s"><div class="v" style="color:var(--rej)">${atrasadas}</div><div class="k">Atrasadas</div></div>
-      <div class="s"><div class="v" style="color:var(--done)">${aTiempo}</div><div class="k">A tiempo</div></div>
-      <div class="s"><div class="v">${pts.length}</div><div class="k">Con fecha</div></div>
-    </div>
-    <div class="sectlabel">Detalle por lechería (desviaciones)</div>`;
-  sc.appendChild(wrap);
-
-  // ordenar: más atrasadas primero
-  const sorted=[...pts].sort((a,b)=>desvio(b).dias-desvio(a).dias).slice(0,120);
-  sorted.forEach(p=>{
-    const d=desvio(p);
-    const row=document.createElement('div'); row.className='progrow'; row.style.cursor='pointer';
-    row.onclick=()=>openSheet(p.id);
-    row.innerHTML=`
-      <div class="t"><b>${p.pv} · ${p.municipio}</b><span class="desv-badge ${d.cls}">${d.txt}</span></div>
-      <div class="dates">
-        <div class="dt"><div class="v">${p.fcomp||'—'}</div><div class="k">Compromiso</div></div>
-        <div class="dt"><div class="v">${p.freal||'—'}</div><div class="k">Real</div></div>
-        <div class="dt"><div class="v">${p.sub||'—'}</div><div class="k">Cuadrilla</div></div>
-      </div>`;
-    sc.appendChild(row);
-  });
+  cargarProgramaOperativo(
+    CONTROL_PROGRAMA.fecha || fechaHoyPrograma()
+  );
 }
+
+function pintarProgramaOperativo() {
+  if (TAB !== 'programa') return;
+
+  const sc = document.getElementById('scroll');
+  const datos = CONTROL_PROGRAMA.data || {};
+  const semana = datos.semana || {};
+  const resumen = datos.resumen || {};
+  const proyecto = datos.proyecto || {};
+  const cuadrillas = Array.isArray(datos.cuadrillas) ? datos.cuadrillas : [];
+  const semanas = Array.isArray(datos.semanas) ? datos.semanas : [];
+  const hoy = fechaHoyPrograma();
+
+  const opciones = semanas.map(s => {
+    const esActual = hoy >= s.fecha_inicio && hoy <= s.fecha_fin;
+    const esFutura = hoy < s.fecha_inicio;
+    const valor = esActual
+      ? hoy
+      : (esFutura ? s.fecha_inicio : s.fecha_fin);
+    return `
+      <option value="${valor}" ${Number(s.semana_numero)===Number(semana.numero)?'selected':''}>
+        Semana ${s.semana_numero} · ${fechaProgramaCorta(s.fecha_inicio)} — ${fechaProgramaCorta(s.fecha_fin)} · ${s.meta_semanal} P.V.
+      </option>`;
+  }).join('');
+
+  const desviacion = Number(resumen.desviacion || 0);
+  const desviacionProyecto = Number(proyecto.desviacion || 0);
+  const esSemanaFutura = hoy < String(semana.fecha_inicio || '');
+  const desviacionDiaria = Number(resumen.meta_dia || 0) > 0
+    ? ((Number(resumen.ejecutadas_dia || 0) - Number(resumen.meta_dia || 0)) * 100 / Number(resumen.meta_dia || 0))
+    : 0;
+  const deficitCuadrillas = esSemanaFutura
+    ? 0
+    : cuadrillas.reduce((total, c) => total + Number(c.faltante_esperado || 0), 0);
+
+  const filas = cuadrillas.map(c => {
+    const estadoVisual = esSemanaFutura
+      ? (Number(c.meta_semanal || 0) > 0
+          ? ['PROGRAMADA · AÚN NO INICIA', 'var(--mut)']
+          : ['NO PROGRAMADA ESTA SEMANA', 'var(--mut)'])
+      : etiquetaEstadoPrograma(c.estado);
+    const [etiqueta, color] = estadoVisual;
+    const esperado = Number(c.esperado_acumulado || 0);
+    const real = Number(c.ejecutadas_semana || 0);
+    const pctBarra = esperado > 0
+      ? Math.max(0, Math.min(120, real / esperado * 100))
+      : (real > 0 ? 120 : 0);
+    const desv = Number(c.desviacion || 0);
+
+    return `
+      <div class="progrow" style="cursor:default;">
+        <div class="t" style="align-items:flex-start;gap:8px;">
+          <div>
+            <b>${textoSeguroLumen(c.sub || '—')} · ${textoSeguroLumen(c.zona || '')}</b>
+            <div style="font-size:9.5px;color:var(--mut);margin-top:2px;">
+              ${textoSeguroLumen(c.nombre_zona || '')}
+            </div>
+          </div>
+          <span style="margin-left:auto;padding:4px 7px;border-radius:999px;background:${color};color:#fff;font-size:8px;font-weight:900;white-space:nowrap;">
+            ${etiqueta}
+          </span>
+        </div>
+
+        <div class="dates" style="margin-top:8px;">
+          <div class="dt"><div class="v">${numeroPrograma(c.meta_semanal)}</div><div class="k">Meta semana</div></div>
+          <div class="dt"><div class="v">${numeroPrograma(c.esperado_acumulado)}</div><div class="k">Esperado al corte</div></div>
+          <div class="dt"><div class="v">${numeroPrograma(c.ejecutadas_semana)}</div><div class="k">Atendidas semana</div></div>
+        </div>
+
+        <div style="height:7px;background:#e7edf3;border-radius:999px;overflow:hidden;margin-top:9px;">
+          <div style="height:100%;width:${Math.min(100,pctBarra)}%;background:${color};"></div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;gap:8px;margin-top:7px;font-size:9.5px;color:var(--mut);">
+          <span>Hoy: <b>${numeroPrograma(c.ejecutadas_dia)}</b> / ${numeroPrograma(c.meta_dia)}</span>
+          <span>Desv. <b style="color:${colorDesviacionPrograma(desv)}">${desv>0?'+':''}${numeroPrograma(desv)}%</b></span>
+        </div>
+      </div>`;
+  }).join('');
+
+  sc.innerHTML = `
+    <div class="sect">
+      <h3>Programa de avance por cuadrilla</h3>
+
+      <div class="note">
+        <b>Control contra meta semanal.</b><br><br>
+        La meta de cada cuadrilla se distribuye entre <b>6 días operativos (lunes a sábado)</b>.
+        El domingo no incrementa el avance esperado. El avance real se calcula con las P.V.
+        <b>marcadas como atendidas según su fecha real</b>; el Vo.Bo. no altera este control operativo.
+        Una desviación de <b>-30% o menor</b> genera alerta.
+      </div>
+
+      <div class="dashcard" style="border-left:4px solid var(--leche);">
+        <div style="font-size:10px;color:var(--mut);margin-bottom:5px;">Semana de análisis</div>
+        <select onchange="cambiarSemanaPrograma(this.value)" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px;background:#fff;font:inherit;font-size:11px;font-weight:800;color:var(--ink);">
+          ${opciones}
+        </select>
+        <div style="margin-top:7px;font-size:9.5px;color:var(--mut);">
+          ${esSemanaFutura
+            ? `Semana futura · inicia <b>${fechaProgramaCorta(semana.fecha_inicio)}</b>`
+            : `Corte: <b>${fechaProgramaCorta(datos.fecha_corte)}</b> · Día operativo ${Number(semana.dias_transcurridos || 0)} de ${Number(semana.dias_operativos || 6)}`
+          }
+        </div>
+      </div>
+
+      <div class="progsum">
+        <div class="s"><div class="v">${numeroPrograma(resumen.meta_semanal)}</div><div class="k">Meta semanal</div></div>
+        <div class="s"><div class="v">${numeroPrograma(resumen.esperado_acumulado)}</div><div class="k">Esperado al corte</div></div>
+        <div class="s"><div class="v" style="color:var(--done)">${numeroPrograma(resumen.ejecutadas_semana)}</div><div class="k">Atendidas semana</div></div>
+      </div>
+
+      <div class="progsum" style="margin-top:2px;">
+        <div class="s"><div class="v">${numeroPrograma(resumen.meta_dia)}</div><div class="k">Meta del día</div></div>
+        <div class="s">
+          <div class="v" style="color:var(--leche)">${numeroPrograma(resumen.ejecutadas_dia)}</div>
+          <div class="k">Atendidas hoy</div>
+          <div style="font-size:8.5px;margin-top:3px;color:${esSemanaFutura?'var(--mut)':colorDesviacionPrograma(desviacionDiaria)};font-weight:800;">
+            ${esSemanaFutura
+              ? 'Aún no inicia'
+              : (Number(resumen.meta_dia || 0) > 0
+                  ? `Desviación diaria ${desviacionDiaria>0?'+':''}${numeroPrograma(desviacionDiaria)}%`
+                  : 'Sin meta operativa hoy')}
+          </div>
+        </div>
+        <div class="s">
+          <div class="v" style="color:${esSemanaFutura?'var(--mut)':colorDesviacionPrograma(desviacion)}">${esSemanaFutura?'—':`${desviacion>0?'+':''}${numeroPrograma(desviacion)}%`}</div>
+          <div class="k">Desviación semanal acumulada al corte</div>
+        </div>
+      </div>
+
+      <div class="note" style="margin-top:10px;">
+        <b>Cómo leer la alerta.</b> El <b>déficit de cuadrillas</b> suma únicamente lo que le falta a cada CUA atrasada frente a su propio esperado.
+        Una cuadrilla adelantada <b>no compensa ni oculta</b> el atraso de otra.
+      </div>
+
+      <div class="dashcard" style="margin-top:10px;border-left:4px solid ${Number(resumen.cuadrillas_alerta||0)>0?'var(--rej)':'var(--done)'};">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+          <div>
+            <div style="font-size:10px;color:var(--mut);">Alerta operativa</div>
+            <div style="font-size:20px;font-weight:900;color:${Number(resumen.cuadrillas_alerta||0)>0?'var(--rej)':'var(--done)'};">
+              ${Number(resumen.cuadrillas_alerta||0)} cuadrilla${Number(resumen.cuadrillas_alerta||0)===1?'':'s'}
+            </div>
+          </div>
+          <div style="text-align:right;font-size:10px;color:var(--mut);">
+            Déficit de cuadrillas<br><b>${numeroPrograma(deficitCuadrillas)} P.V.</b>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashcard" style="margin-top:10px;border-left:4px solid var(--steel);">
+        <div style="font-size:11px;font-weight:900;margin-bottom:8px;">ACUMULADO DEL PROGRAMA</div>
+        <div style="font-size:9px;color:var(--mut);line-height:1.45;margin-bottom:8px;">
+          Compara la meta esperada desde el inicio de la programación con todas las P.V. realmente atendidas en ese mismo periodo.
+          El cálculo no amarra una P.V. a una cuadrilla original: si las asignaciones cambian, el avance real sigue contabilizándose por su fecha real y la cuadrilla que tenga asignada.
+        </div>
+        <div class="dstats">
+          <div class="s"><div class="v">${numeroPrograma(proyecto.meta_esperada_acumulada)}</div><div class="k">Esperado acumulado</div></div>
+          <div class="s"><div class="v" style="color:var(--done)">${numeroPrograma(proyecto.ejecutadas_acumuladas)}</div><div class="k">Atendidas acumuladas</div></div>
+          <div class="s"><div class="v" style="color:${colorDesviacionPrograma(desviacionProyecto)}">${desviacionProyecto>0?'+':''}${numeroPrograma(desviacionProyecto)}%</div><div class="k">Desviación</div></div>
+        </div>
+      </div>
+
+      <div class="expbtns" style="margin-top:10px;">
+        <button class="expbtn exp-xlsx" onclick="exportProgramaOperativoXLSX()">Excel</button>
+        <button class="expbtn exp-pdf" onclick="exportProgramaOperativoPDF()">PDF</button>
+        <button class="expbtn" onclick="cargarProgramaOperativo(CONTROL_PROGRAMA.fecha)">Actualizar</button>
+      </div>
+
+      <div class="sectlabel">Avance por cuadrilla</div>
+      ${filas || '<div class="note">No hay cuadrillas para mostrar.</div>'}
+    </div>`;
+}
+
+function exportProgramaOperativoXLSX() {
+  const datos = CONTROL_PROGRAMA.data;
+  if (!datos) { toast('Primero carga la programación'); return; }
+
+  const libro = XLSX.utils.book_new();
+  const s = datos.semana || {};
+  const r = datos.resumen || {};
+  const p = datos.proyecto || {};
+
+  const resumen = [
+    ['Concepto','Valor'],
+    ['Semana', s.numero],
+    ['Periodo', `${s.fecha_inicio} a ${s.fecha_fin}`],
+    ['Fecha de corte', datos.fecha_corte],
+    ['Días operativos transcurridos', `${s.dias_transcurridos} de ${s.dias_operativos}`],
+    ['Meta semanal', Number(r.meta_semanal||0)],
+    ['Esperado al corte', Number(r.esperado_acumulado||0)],
+    ['Atendidas semana', Number(r.ejecutadas_semana||0)],
+    ['Atendidas hoy', Number(r.ejecutadas_dia||0)],
+    ['Desviación diaria', Number(r.meta_dia||0)>0 ? `${((Number(r.ejecutadas_dia||0)-Number(r.meta_dia||0))*100/Number(r.meta_dia||0)).toFixed(1)}%` : '—'],
+    ['Desviación semanal acumulada al corte', `${Number(r.desviacion||0)}%`],
+    ['Cuadrillas en alerta', Number(r.cuadrillas_alerta||0)],
+    ['Déficit de cuadrillas', (datos.cuadrillas||[]).reduce((t,c)=>t+Number(c.faltante_esperado||0),0)],
+    ['Esperado acumulado programa', Number(p.meta_esperada_acumulada||0)],
+    ['Atendidas acumuladas programa', Number(p.ejecutadas_acumuladas||0)],
+    ['Desviación acumulada programa', `${Number(p.desviacion||0)}%`]
+  ];
+  const hojaResumen = XLSX.utils.aoa_to_sheet(resumen);
+  hojaResumen['!cols'] = [{wch:34},{wch:24}];
+  XLSX.utils.book_append_sheet(libro, hojaResumen, 'Resumen');
+
+  const detalle = (datos.cuadrillas || []).map(c => ({
+    Cuadrilla: c.sub,
+    Zona: c.zona,
+    'Nombre de zona': c.nombre_zona,
+    'Meta semanal': Number(c.meta_semanal||0),
+    'Meta del día': Number(c.meta_dia||0),
+    'Esperado al corte': Number(c.esperado_acumulado||0),
+    'Atendidas hoy': Number(c.ejecutadas_dia||0),
+    'Atendidas semana': Number(c.ejecutadas_semana||0),
+    'Cumplimiento %': Number(c.cumplimiento||0),
+    'Desviación %': Number(c.desviacion||0),
+    'Faltante esperado': Number(c.faltante_esperado||0),
+    Estado: c.estado,
+    Alerta: c.alerta ? 'SI' : 'NO'
+  }));
+  const hojaDetalle = XLSX.utils.json_to_sheet(detalle);
+  hojaDetalle['!cols'] = [
+    {wch:12},{wch:10},{wch:34},{wch:14},{wch:14},{wch:18},{wch:14},{wch:17},{wch:16},{wch:14},{wch:18},{wch:14},{wch:10}
+  ];
+  XLSX.utils.book_append_sheet(libro, hojaDetalle, 'Cuadrillas');
+
+  XLSX.writeFile(
+    libro,
+    `Programa_Semana_${s.numero}_${datos.fecha_corte}.xlsx`
+  );
+}
+
+function exportProgramaOperativoPDF() {
+  const datos = CONTROL_PROGRAMA.data;
+  if (!datos) { toast('Primero carga la programación'); return; }
+
+  const { jsPDF } = window.jspdf || {};
+  if (!jsPDF) { toast('No fue posible cargar el generador PDF'); return; }
+
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const s = datos.semana || {};
+  const r = datos.resumen || {};
+  let y = 18;
+
+  doc.setFont(undefined,'bold');
+  doc.setFontSize(15);
+  doc.text('Control de programación semanal', 14, y);
+  y += 8;
+  doc.setFont(undefined,'normal');
+  doc.setFontSize(9);
+  doc.text(`Semana ${s.numero} · ${s.fecha_inicio} a ${s.fecha_fin} · corte ${datos.fecha_corte}`, 14, y);
+  y += 9;
+  doc.text(`Meta semanal: ${numeroPrograma(r.meta_semanal)}   Esperado: ${numeroPrograma(r.esperado_acumulado)}   Atendidas: ${numeroPrograma(r.ejecutadas_semana)}   Desv. acum.: ${numeroPrograma(r.desviacion)}%`, 14, y);
+  y += 10;
+
+  doc.setFont(undefined,'bold');
+  doc.text('CUADRILLA',14,y); doc.text('META',61,y); doc.text('ESPERADO',85,y); doc.text('REAL',121,y); doc.text('DESV.',145,y); doc.text('ESTADO',171,y);
+  y += 5;
+  doc.setFont(undefined,'normal');
+
+  (datos.cuadrillas || []).forEach(c => {
+    if (y > 282) { doc.addPage(); y = 18; }
+    doc.text(String(c.sub||''),14,y);
+    doc.text(numeroPrograma(c.meta_semanal),61,y);
+    doc.text(numeroPrograma(c.esperado_acumulado),85,y);
+    doc.text(numeroPrograma(c.ejecutadas_semana),121,y);
+    doc.text(`${numeroPrograma(c.desviacion)}%`,145,y);
+    doc.text(String(c.estado||''),171,y);
+    y += 6;
+  });
+
+  doc.save(`Programa_Semana_${s.numero}_${datos.fecha_corte}.pdf`);
+}
+
 function buildCurva(pts){
   // acumulado semanal de programado (por fcomp) y real (por freal)
   const hoy=HOY.toISOString().slice(0,10);
@@ -18202,15 +18564,54 @@ async function analizarArchivoListadoPV(archivo) {
       throw new Error('No fue posible localizar una columna con P.V. en el archivo');
     }
 
-    const todasActas = await cargarActas();
+    /*
+     * IMPORTANTE:
+     * Este módulo consulta únicamente las actas de los P.V. cargados.
+     * No usa cargarActas(), porque esa consulta global puede quedar
+     * limitada por el máximo de filas de PostgREST/Supabase.
+     *
+     * La clave normalizada también permite asociar correctamente P.V.
+     * equivalentes cuando en una fuente existe un cero inicial y en otra no.
+     */
+    const clavePVListado = valor => {
+      const texto = String(valor ?? '').trim();
+      if (!texto) return '';
+      return texto.replace(/^0+(?=\d)/, '');
+    };
+
+    const pvsConsulta = [...new Set(
+      mejor.valores.flatMap(pv => {
+        const original = String(pv).trim();
+        const sinCeros = clavePVListado(original);
+        return sinCeros && sinCeros !== original
+          ? [original, sinCeros]
+          : [original];
+      })
+    )];
+
+    const todasActas = [];
+    const TAMANO_LOTE_ACTAS = 100;
+
+    for (let i = 0; i < pvsConsulta.length; i += TAMANO_LOTE_ACTAS) {
+      const lotePv = pvsConsulta.slice(i, i + TAMANO_LOTE_ACTAS);
+      const { data: actasLote, error: errorActasLote } = await sb
+        .from('actas')
+        .select('*')
+        .eq('clase', 'apertura')
+        .in('pv', lotePv);
+
+      if (errorActasLote) throw errorActasLote;
+      if (Array.isArray(actasLote)) todasActas.push(...actasLote);
+    }
+
     const actasPorPv = new Map();
     const puntaje = a => a?.documento_firmado_v2_url ? 3 : a?.documento_generado_v2_url ? 2 : a?.documento_url ? 1 : 0;
 
-    for (const acta of todasActas || []) {
-      if (acta.clase !== 'apertura' || !acta.pv) continue;
-      const pv = String(acta.pv);
-      const previa = actasPorPv.get(pv);
-      if (!previa || puntaje(acta) > puntaje(previa)) actasPorPv.set(pv, acta);
+    for (const acta of todasActas) {
+      if (!acta?.pv) continue;
+      const pvClave = clavePVListado(acta.pv);
+      const previa = actasPorPv.get(pvClave);
+      if (!previa || puntaje(acta) > puntaje(previa)) actasPorPv.set(pvClave, acta);
     }
 
     const encontrados = [];
@@ -18218,7 +18619,11 @@ async function analizarArchivoListadoPV(archivo) {
     mejor.valores.forEach(pv => {
       const punto = catalogo.get(pv);
       if (punto) {
-        encontrados.push({ pv, punto, acta:actasPorPv.get(pv) || null });
+        encontrados.push({
+          pv,
+          punto,
+          acta:actasPorPv.get(clavePVListado(pv)) || null
+        });
       } else {
         noEncontrados.push(pv);
       }
@@ -19092,625 +19497,66 @@ function calcularReporteSemanal(
 }
 
 function renderReporteSemanal() {
-
-  const semanas =
-    obtenerSemanasPrograma();
-
-  if (!semanas.length) {
-    return '';
-  }
-
-  /*
-   * La primera vez seleccionamos
-   * automáticamente la semana actual.
-   */
-
-  if (!REPORTE_SEMANAL.inicio) {
-
-    const actual =
-      obtenerSemanaActual()
-        .inicio;
-
-    REPORTE_SEMANAL.inicio =
-      semanas.includes(actual)
-        ? actual
-        : semanas[0];
-  }
-
-  const r =
-    calcularReporteSemanal(
-      REPORTE_SEMANAL.inicio
-    );
-
-  const opciones =
-    semanas
-      .map(inicio => {
-
-        const fin =
-          sumarDiasISOReporte(
-            inicio,
-            6
-          );
-
-        return `
-          <option
-            value="${inicio}"
-            ${
-              inicio ===
-              REPORTE_SEMANAL.inicio
-                ? 'selected'
-                : ''
-            }
-          >
-            ${fechaCortaReporte(inicio)}
-            —
-            ${fechaCortaReporte(fin)}
-          </option>
-        `;
-      })
-      .join('');
-
-  let etiquetaEstado =
-    'SEMANA CERRADA';
-
-  let colorEstado =
-    'var(--steel)';
-
-  if (
-    r.estadoSemana ===
-    'curso'
-  ) {
-    etiquetaEstado =
-      'SEMANA EN CURSO';
-
-    colorEstado =
-      'var(--wait)';
-  }
-
-  if (
-    r.estadoSemana ===
-    'futura'
-  ) {
-    etiquetaEstado =
-      'SEMANA PROGRAMADA';
-
-    colorEstado =
-      'var(--mut)';
-  }
-
-  const formatearDesviacion =
-    valor => {
-
-      if (valor > 0) {
-        return `+${valor}%`;
-      }
-
-      return `${valor}%`;
-    };
+  setTimeout(cargarWidgetProgramaSemanal, 0);
 
   return `
-    <div
-      class="sect"
-      id="reporteSemanal"
-    >
+    <div class="sect" id="reporteSemanalPrograma">
+      <h3>Seguimiento contra programa</h3>
+      <div class="note">
+        Cargando meta semanal y avance real por cuadrilla…
+      </div>
+    </div>`;
+}
 
-      <h3>
-        Reporte semanal
-      </h3>
+async function cargarWidgetProgramaSemanal() {
+  const cont = document.getElementById('reporteSemanalPrograma');
+  if (!cont) return;
+
+  try {
+    const datos = await consultarControlPrograma(fechaHoyPrograma());
+    const s = datos?.semana || {};
+    const r = datos?.resumen || {};
+    const criticas = (datos?.cuadrillas || []).filter(c => c.alerta);
+    const desv = Number(r.desviacion || 0);
+
+    cont.innerHTML = `
+      <h3>Seguimiento contra programa</h3>
 
       <div class="note">
-
-        <b>
-          Cumplimiento contra programa
-        </b>
-
-        <br><br>
-
-        Compara el programa establecido
-        contra los Vo.Bo. obtenidos y
-        muestra la desviación semanal
-        y acumulada.
-
+        <b>Semana ${s.numero} · ${fechaProgramaCorta(s.fecha_inicio)} — ${fechaProgramaCorta(s.fecha_fin)}</b><br><br>
+        Control operativo por meta semanal de cuadrilla, distribuida entre 6 días operativos.
+        No depende de la fecha compromiso individual de cada P.V.
       </div>
 
-      <div
-        class="dashcard"
-        style="
-          border-left:
-            4px solid var(--leche);
-        "
-      >
-
-        <div
-          style="
-            display:flex;
-            justify-content:
-              space-between;
-            align-items:center;
-            gap:10px;
-          "
-        >
-
-          <div>
-
-            <div
-              style="
-                font-size:10px;
-                color:var(--mut);
-                margin-bottom:3px;
-              "
-            >
-              Semana de análisis
-            </div>
-
-            <select
-              onchange="
-                cambiarSemanaReporte(
-                  this.value
-                )
-              "
-              style="
-                border:1px solid var(--line);
-                border-radius:7px;
-                padding:7px 9px;
-                background:#fff;
-                font:inherit;
-                font-size:11px;
-                font-weight:800;
-                color:var(--ink);
-              "
-            >
-              ${opciones}
-            </select>
-
-          </div>
-
-          <div
-            style="
-              padding:5px 8px;
-              border-radius:999px;
-              background:${colorEstado};
-              color:#fff;
-              font-size:8.5px;
-              font-weight:900;
-              white-space:nowrap;
-            "
-          >
-            ${etiquetaEstado}
-          </div>
-
-        </div>
-
-        <div
-          style="
-            margin-top:11px;
-            font-size:10px;
-            color:var(--mut);
-          "
-        >
-          ${fechaCortaReporte(r.inicio)}
-          —
-          ${fechaCortaReporte(r.fin)}
-        </div>
-
+      <div class="progsum">
+        <div class="s"><div class="v">${numeroPrograma(r.esperado_acumulado)}</div><div class="k">Esperado al corte</div></div>
+        <div class="s"><div class="v" style="color:var(--done)">${numeroPrograma(r.ejecutadas_semana)}</div><div class="k">Atendidas semana</div></div>
+        <div class="s"><div class="v" style="color:${colorDesviacionPrograma(desv)}">${desv>0?'+':''}${numeroPrograma(desv)}%</div><div class="k">Desviación</div></div>
       </div>
 
-      <div
-        style="
-          display:grid;
-          grid-template-columns:
-            repeat(2, minmax(0,1fr));
-          gap:9px;
-          margin-top:10px;
-        "
-      >
-
-        <!-- SEMANA -->
-
-        <div
-          class="dashcard"
-          style="
-            margin:0;
-            border-top:
-              3px solid var(--leche);
-          "
-        >
-
-          <div
-            style="
-              font-size:11px;
-              font-weight:900;
-              margin-bottom:9px;
-            "
-          >
-            SEMANA
-          </div>
-
-          <div class="dstats">
-
-            <div class="s">
-              <div class="v">
-                ${r.programadasSemana}
-              </div>
-              <div class="k">
-                Programadas
-              </div>
-            </div>
-
-            <div class="s">
-              <div
-                class="v"
-                style="
-                  color:var(--done);
-                "
-              >
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : r.atendidasSemana
-                }
-              </div>
-              <div class="k">
-                Cumplidas
-              </div>
-            </div>
-
-            <div class="s">
-              <div
-                class="v"
-                style="
-                  color:var(--wait);
-                "
-              >
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : r.faltantesSemana
-                }
-              </div>
-              <div class="k">
-                Faltantes
-              </div>
-            </div>
-
-          </div>
-
-          ${
-            r.estadoSemana !== 'futura'
-              ? `
-                <div
-                  style="
-                    margin-top:8px;
-                    padding:7px 8px;
-                    border-radius:7px;
-                    background:var(--milk);
-                    color:var(--steel);
-                    font-size:9px;
-                    line-height:1.4;
-                  "
-                >
-                  Vo.Bo. otorgados durante la semana:
-                  <b>${r.voboOtorgadosSemana}</b>.
-                  Este dato es flujo administrativo y no se usa
-                  para calcular el cumplimiento de las
-                  ${r.programadasSemana} P.V. programadas.
-                </div>
-              `
-              : ''
-          }
-
-          <div
-            style="
-              border-top:
-                1px solid var(--line);
-              margin-top:8px;
-              padding-top:8px;
-              display:flex;
-              justify-content:
-                space-between;
-              gap:8px;
-              font-size:10px;
-            "
-          >
-
-            <span>
-              Cumplimiento
-              <b>
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : `${r.cumplimientoSemana}%`
-                }
-              </b>
-            </span>
-
-            <span>
-              Desv.
-              <b
-                style="
-                  color:${
-                    r.desviacionSemana < 0
-                      ? 'var(--rej)'
-                      : 'var(--done)'
-                  };
-                "
-              >
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : formatearDesviacion(
-                        r.desviacionSemana
-                      )
-                }
-              </b>
-            </span>
-
-          </div>
-
+      <div class="dashcard" style="margin-top:10px;border-left:4px solid ${criticas.length?'var(--rej)':'var(--done)'};">
+        <div style="font-size:10px;color:var(--mut);">Cuadrillas con desviación de -30% o menor</div>
+        <div style="font-size:18px;font-weight:900;color:${criticas.length?'var(--rej)':'var(--done)'};margin-top:3px;">
+          ${criticas.length}
         </div>
-
-        <!-- ACUMULADO -->
-
-        <div
-          class="dashcard"
-          style="
-            margin:0;
-            border-top:
-              3px solid var(--steel);
-          "
-        >
-
-          <div
-            style="
-              font-size:11px;
-              font-weight:900;
-              margin-bottom:9px;
-            "
-          >
-            ACUMULADO
-          </div>
-
-          <div class="dstats">
-
-            <div class="s">
-              <div class="v">
-                ${r.programadasAcumuladas}
-              </div>
-              <div class="k">
-                Programadas
-              </div>
-            </div>
-
-            <div class="s">
-              <div
-                class="v"
-                style="
-                  color:var(--done);
-                "
-              >
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : r.cumplidasPrograma
-                }
-              </div>
-              <div class="k">
-                Cumplidas
-              </div>
-            </div>
-
-            <div class="s">
-              <div
-                class="v"
-                style="
-                  color:var(--wait);
-                "
-              >
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : r.faltantesAcumulados
-                }
-              </div>
-              <div class="k">
-                Faltantes
-              </div>
-            </div>
-
-          </div>
-
-          <div
-            style="
-              border-top:
-                1px solid var(--line);
-              margin-top:8px;
-              padding-top:8px;
-              display:flex;
-              justify-content:
-                space-between;
-              gap:8px;
-              font-size:10px;
-            "
-          >
-
-            <span>
-              Cumplimiento
-              <b>
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : `${r.cumplimientoAcumulado}%`
-                }
-              </b>
-            </span>
-
-            <span>
-              Desv.
-              <b
-                style="
-                  color:${
-                    r.desviacionAcumulada < 0
-                      ? 'var(--rej)'
-                      : 'var(--done)'
-                  };
-                "
-              >
-                ${
-                  r.estadoSemana ===
-                    'futura'
-                    ? '—'
-                    : formatearDesviacion(
-                        r.desviacionAcumulada
-                      )
-                }
-              </b>
-            </span>
-
-          </div>
-
+        <div style="font-size:9.5px;color:var(--mut);margin-top:5px;line-height:1.5;">
+          ${criticas.length
+            ? criticas.map(c => `${textoSeguroLumen(c.sub)} (${Number(c.desviacion)>0?'+':''}${numeroPrograma(c.desviacion)}%)`).join(' · ')
+            : 'Sin alertas críticas al corte.'}
         </div>
-
       </div>
 
-      ${
-        r.estadoSemana !== 'futura'
-          ? `
-            <div
-              class="dashcard"
-              style="
-                margin-top:10px;
-                border-left:4px solid var(--done);
-              "
-            >
-
-              <div
-                style="
-                  font-size:11px;
-                  font-weight:900;
-                  margin-bottom:9px;
-                "
-              >
-                PRODUCCIÓN REAL AL CORTE
-              </div>
-
-              <div class="dstats">
-
-                <div class="s">
-                  <div
-                    class="v"
-                    style="color:var(--done);"
-                  >
-                    ${r.cumplidasPrograma}
-                  </div>
-
-                  <div class="k">
-                    Del programa
-                  </div>
-                </div>
-
-                <div class="s">
-                  <div
-                    class="v"
-                    style="color:var(--leche);"
-                  >
-                    ${r.trabajosAdelantados}
-                  </div>
-
-                  <div class="k">
-                    Adelantadas
-                  </div>
-                </div>
-
-                <div class="s">
-                  <div
-                    class="v"
-                    style="color:var(--steel);"
-                  >
-                    ${r.atendidasAcumuladas}
-                  </div>
-
-                  <div class="k">
-                    Vo.Bo. totales
-                  </div>
-                </div>
-
-              </div>
-
-              <div
-                style="
-                  border-top:1px solid var(--line);
-                  margin-top:8px;
-                  padding-top:8px;
-                  font-size:9.5px;
-                  line-height:1.45;
-                  color:var(--mut);
-                "
-              >
-                Los Vo.Bo. totales se integran por las
-                lecherías cumplidas dentro del programa
-                acumulado más los trabajos de semanas
-                posteriores ejecutados por adelantado.
-              </div>
-
-            </div>
-          `
-          : ''
-      }
-
-      ${
-        r.estadoSemana !== 'futura'
-          ? `
-            <div
-              class="expbtns"
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <button
-                class="expbtn exp-xlsx"
-                onclick="
-                  exportReporteSemanalXLSX()
-                "
-              >
-                <svg viewBox="0 0 24 24">
-                  <path
-                    d="M12 3v12M7 10l5 5 5-5M5 21h14"
-                  />
-                </svg>
-
-                Excel
-              </button>
-
-              <button
-                class="expbtn exp-pdf"
-                onclick="
-                  exportReporteSemanalPDF()
-                "
-              >
-                <svg viewBox="0 0 24 24">
-                  <path
-                    d="M12 3v12M7 10l5 5 5-5M5 21h14"
-                  />
-                </svg>
-
-                PDF
-              </button>
-
-            </div>
-          `
-          : ''
-      }
-
-    </div>
-  `;
+      <button class="btn" style="margin-top:10px;background:var(--steel);color:#fff;" onclick="setTab('programa')">
+        Ver detalle por cuadrilla
+      </button>`;
+  } catch (error) {
+    console.error(error);
+    cont.innerHTML = `
+      <h3>Seguimiento contra programa</h3>
+      <div class="note" style="border-left:4px solid var(--rej);">
+        No fue posible cargar el control de programación.
+      </div>`;
+  }
 }
 
 function exportReporteSemanalXLSX() {
@@ -21133,7 +20979,6 @@ const tarjetas =
 
         </div>
 
-      ${renderReporteSemanal()}
 
     <div class="sect">
 
@@ -24028,6 +23873,7 @@ function actaPDF() {
 // ============================================================
 
 let ESTIMACION_LUMEN = null;
+let ESTIMACION_LUMEN_LISTADO_ARCHIVO_INFO = null;
 let EXCELJS_LUMEN_PROMESA = null;
 let ESTIMACION_LUMEN_ADELANTADAS_ABIERTO = false;
 let ESTIMACION_LUMEN_PENDIENTES_ABIERTO = false;
@@ -24584,6 +24430,139 @@ async function quitarAdelantadaLumen(
   }
 }
 
+async function cargarListadoOficialEstimacionLumenDesdeArchivo(archivo) {
+  const estimacion = ESTIMACION_LUMEN?.estimacion;
+
+  if (!estimacion || estimacion.estado !== 'borrador') {
+    toast('Sólo puedes cargar un listado oficial en una estimación en borrador');
+    return;
+  }
+
+  if (!archivo) return;
+
+  try {
+    const buffer = await archivo.arrayBuffer();
+    const libro = XLSX.read(buffer, { type: 'array' });
+    const hoja = libro.Sheets[libro.SheetNames[0]];
+    const matriz = XLSX.utils.sheet_to_json(hoja, { header: 1, defval: '' });
+
+    if (!matriz.length) throw new Error('El archivo no contiene datos');
+
+    const numero = Number(estimacion.numero);
+    const normalizarCabecera = valor => String(valor ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+
+    const cabeceras = (matriz[0] || []).map(normalizarCabecera);
+    let indice = cabeceras.findIndex(h =>
+      new RegExp(`(?:estimacion|est)\\s*${numero}(?:\\D|$)`, 'i').test(h)
+    );
+
+    if (indice < 0) {
+      indice = cabeceras.findIndex(h =>
+        h === String(numero) || h === `estimacion ${numero}` || h === `est ${numero}`
+      );
+    }
+
+    if (indice < 0) {
+      throw new Error(
+        `No encontré una columna para la Estimación ${numero}. Encabezados detectados: ` +
+        (matriz[0] || []).filter(Boolean).join(' | ')
+      );
+    }
+
+    const catalogoSet = new Set(
+      (window.LECH || []).map(x => String(x.pv || '').trim()).filter(Boolean)
+    );
+    const leidas = [];
+
+    for (let i = 1; i < matriz.length; i++) {
+      const pv = normalizarPVTemporal(matriz[i]?.[indice], catalogoSet);
+      if (pv) leidas.push(pv);
+    }
+
+    if (!leidas.length) {
+      throw new Error(`La columna de Estimación ${numero} no contiene P.V.`);
+    }
+
+    const conteo = new Map();
+    leidas.forEach(pv => conteo.set(pv, (conteo.get(pv) || 0) + 1));
+    const duplicadas = [...conteo.entries()]
+      .filter(([, n]) => n > 1)
+      .map(([pv]) => pv);
+    const pvs = [...new Set(leidas)];
+
+    const confirmar = window.confirm(
+      `¿Cargar ${pvs.length} P.V. como listado oficial de la Estimación ${numero}?\n\n` +
+      `Este archivo reemplazará cualquier listado oficial previamente cargado para esta estimación.\n` +
+      `No modifica Vo.Bo., avances ni lecherías.`
+    );
+
+    if (!confirmar) return;
+
+    toast('Cargando listado oficial…');
+
+    const { data, error } = await sb.rpc(
+      'cargar_listado_oficial_estimacion_lumen',
+      {
+        p_estimacion_id: Number(estimacion.id),
+        p_pvs: pvs
+      }
+    );
+
+    if (error) throw error;
+
+    ESTIMACION_LUMEN_LISTADO_ARCHIVO_INFO = {
+      nombre: archivo.name,
+      totalFilas: leidas.length,
+      unicas: pvs.length,
+      duplicadas
+    };
+
+    ESTIMACION_LUMEN = data;
+    ESTIMACION_LUMEN_ADELANTADAS_SEL.clear();
+    pintarVistaEstimacionLumen();
+    toast(`Listado oficial cargado: ${pvs.length} P.V.`);
+  } catch (error) {
+    console.error('No fue posible cargar el listado oficial:', error);
+    toast(error.message || 'No fue posible cargar el listado oficial');
+  } finally {
+    const input = document.getElementById('estimacionLumenArchivoOficial');
+    if (input) input.value = '';
+  }
+}
+
+async function abrirPvPendienteVoboEstimacionLumen(pvCodificada) {
+  const pv = decodeURIComponent(pvCodificada);
+  const punto = (window.LECH || LECH || []).find(
+    x => String(x.pv || '').trim() === String(pv || '').trim()
+  );
+
+  if (!punto) {
+    toast(`No se encontró la P.V. ${pv} en el padrón cargado`);
+    return;
+  }
+
+  await openSheet(punto.id);
+}
+
+async function actualizarDatosEstimacionLumen() {
+  const numero = Number(ESTIMACION_LUMEN?.estimacion?.numero || 0) || null;
+  toast('Actualizando datos de la estimación…');
+  await cargarVistaEstimacionLumen(numero);
+  toast('✓ Datos de la estimación actualizados');
+}
+
+function listaListadoOficialLumen(filtro) {
+  const lista = Array.isArray(ESTIMACION_LUMEN?.listado_oficial)
+    ? ESTIMACION_LUMEN.listado_oficial
+    : [];
+  return lista.filter(filtro);
+}
+
 function pintarVistaEstimacionLumen() {
   const sc =
     document.getElementById(
@@ -24662,6 +24641,36 @@ function pintarVistaEstimacionLumen() {
 
   const cerrado =
     estimacion.estado === 'cerrada';
+
+
+  const listadoOficialActivo =
+    resumen.listado_oficial_activo === true;
+
+  const listadoOficialTotal = Number(resumen.listado_oficial_total || 0);
+  const listadoEncontradas = Number(resumen.listado_encontradas || 0);
+  const listadoConVobo = Number(resumen.listado_con_vobo || 0);
+  const listadoSinVobo = Number(resumen.listado_sin_vobo || 0);
+  const listadoNoAtendidas = Number(resumen.listado_no_atendidas || 0);
+  const listadoNoEncontradas = Number(resumen.listado_no_encontradas || 0);
+  const listadoBloqueadas = Number(resumen.listado_bloqueadas_historicas || 0);
+
+  const listadoPendientesVobo = listaListadoOficialLumen(x =>
+    x.existe && x.activo && x.status === 'at' && x.vobo !== 'ok'
+  );
+  const listadoPendientesAtencion = listaListadoOficialLumen(x =>
+    x.existe && x.activo && x.status !== 'at'
+  );
+  const listadoInexistentes = listaListadoOficialLumen(x => !x.existe);
+  const listadoBloqueadasDetalle = listaListadoOficialLumen(x => x.bloqueada_historica);
+
+  const listadoConciliado = listadoOficialActivo &&
+    listadoOficialTotal > 0 &&
+    listadoConVobo === listadoOficialTotal &&
+    listadoNoEncontradas === 0 &&
+    listadoNoAtendidas === 0 &&
+    listadoSinVobo === 0 &&
+    listadoBloqueadas === 0 &&
+    cantidad === listadoOficialTotal;
 
   const opciones =
     historial
@@ -24838,12 +24847,11 @@ function pintarVistaEstimacionLumen() {
     <div class="note">
       <b>Estimación interna LUMEN.</b>
       <br><br>
-      Las P.V. con Vo.Bo. dentro del periodo se
-      incorporan automáticamente. Las P.V. con
-      Vo.Bo. posterior al periodo sólo se incorporan
-      cuando GEN o ADMIN las seleccionan como
-      adelantadas. Al cerrar, el periodo, las
-      claves y los montos quedan congelados.
+      ${
+        listadoOficialActivo
+          ? `Esta estimación está gobernada por un <b>listado oficial</b>. Sólo las P.V. del archivo que estén activas, atendidas, con Vo.Bo. y sin pertenecer a otra estimación cerrada se incorporan al borrador. El periodo se conserva para clasificar su origen.`
+          : `Las P.V. con Vo.Bo. dentro del periodo se incorporan automáticamente. Las P.V. con Vo.Bo. posterior al periodo sólo se incorporan cuando GEN o ADMIN las seleccionan como adelantadas. Al cerrar, el periodo, las claves y los montos quedan congelados.`
+      }
     </div>
 
     <div class="sect">
@@ -24923,6 +24931,63 @@ function pintarVistaEstimacionLumen() {
       }
     </div>
 
+    ${
+      !cerrado
+        ? `
+          <div class="sect">
+            <h3>Listado oficial de la estimación</h3>
+
+            <div class="note" style="border-left:4px solid ${listadoOficialActivo ? 'var(--done)' : 'var(--wait)'}">
+              ${
+                listadoOficialActivo
+                  ? `El listado oficial está activo y define el universo de esta estimación. Puedes reemplazarlo mientras siga en borrador.`
+                  : `Todavía no hay listado oficial. Mientras no cargues uno, la estimación conserva la lógica anterior por periodo y adelantadas.`
+              }
+            </div>
+
+            <input id="estimacionLumenArchivoOficial" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="cargarListadoOficialEstimacionLumenDesdeArchivo(this.files?.[0])">
+            <button type="button" class="btn btn-done" onclick="document.getElementById('estimacionLumenArchivoOficial').click()" style="width:100%;margin-bottom:10px">
+              📂 ${listadoOficialActivo ? 'Reemplazar listado oficial' : 'Cargar listado oficial'}
+            </button>
+
+            ${
+              ESTIMACION_LUMEN_LISTADO_ARCHIVO_INFO
+                ? `<div style="font-size:10px;color:var(--mut);margin-bottom:9px">Último archivo cargado en esta sesión: <b>${textoSeguroLumen(ESTIMACION_LUMEN_LISTADO_ARCHIVO_INFO.nombre)}</b> · ${ESTIMACION_LUMEN_LISTADO_ARCHIVO_INFO.unicas} P.V. únicas${ESTIMACION_LUMEN_LISTADO_ARCHIVO_INFO.duplicadas.length ? ` · ${ESTIMACION_LUMEN_LISTADO_ARCHIVO_INFO.duplicadas.length} duplicadas omitidas` : ''}</div>`
+                : ''
+            }
+
+            ${
+              listadoOficialActivo
+                ? `
+                  <div class="estim-row"><span class="l">P.V. del listado oficial</span><span class="v">${listadoOficialTotal}</span></div>
+                  <div class="estim-row"><span class="l">Encontradas en padrón</span><span class="v">${listadoEncontradas}</span></div>
+                  <div class="estim-row"><span class="l">Atendidas con Vo.Bo.</span><span class="v" style="color:var(--done)">${listadoConVobo}</span></div>
+                  <div class="estim-row"><span class="l">Atendidas sin Vo.Bo.</span><span class="v" style="color:${listadoSinVobo ? 'var(--wait)' : 'var(--done)'}">${listadoSinVobo}</span></div>
+                  <div class="estim-row"><span class="l">No atendidas</span><span class="v" style="color:${listadoNoAtendidas ? 'var(--rej)' : 'var(--done)'}">${listadoNoAtendidas}</span></div>
+                  <div class="estim-row"><span class="l">No encontradas</span><span class="v" style="color:${listadoNoEncontradas ? 'var(--rej)' : 'var(--done)'}">${listadoNoEncontradas}</span></div>
+                  <div class="estim-row"><span class="l">Bloqueadas por estimación cerrada</span><span class="v" style="color:${listadoBloqueadas ? 'var(--rej)' : 'var(--done)'}">${listadoBloqueadas}</span></div>
+                  <div class="estim-row tot"><span class="l">Incluidas actualmente</span><span class="v">${cantidad} / ${listadoOficialTotal}</span></div>
+
+                  ${listadoPendientesVobo.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:800;color:var(--wait)">Pendientes de Vo.Bo. (${listadoPendientesVobo.length})</summary><div style="margin-top:7px;max-height:180px;overflow:auto">${listadoPendientesVobo.map(x => `<button type="button" class="estim-row" onclick="abrirPvPendienteVoboEstimacionLumen('${encodeURIComponent(String(x.pv || ''))}')" style="width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;cursor:pointer;padding-left:0;padding-right:0"><span class="l"><b>P.V. ${textoSeguroLumen(x.pv)}</b><small style="display:block;color:var(--mut)">${textoSeguroLumen(x.estado || '')} · ${textoSeguroLumen(x.sub || '')}</small></span><span class="v" style="display:flex;align-items:center;gap:6px">Sin Vo.Bo. <b>›</b></span></button>`).join('')}</div><div style="font-size:9px;color:var(--mut);margin-top:6px">Toca una P.V. para abrir su ficha y gestionar el Vo.Bo.</div></details>` : ''}
+
+                  ${listadoPendientesAtencion.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:800;color:var(--rej)">No atendidas (${listadoPendientesAtencion.length})</summary><div style="margin-top:7px;max-height:180px;overflow:auto">${listadoPendientesAtencion.map(x => `<div class="estim-row"><span class="l"><b>P.V. ${textoSeguroLumen(x.pv)}</b><small style="display:block;color:var(--mut)">${textoSeguroLumen(x.estado || '')} · ${textoSeguroLumen(x.sub || '')}</small></span><span class="v">${textoSeguroLumen(x.status || 'sin avance')}</span></div>`).join('')}</div></details>` : ''}
+
+                  ${listadoInexistentes.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:800;color:var(--rej)">No encontradas (${listadoInexistentes.length})</summary><div style="margin-top:7px;max-height:180px;overflow:auto;font-family:monospace">${listadoInexistentes.map(x => `<div>${textoSeguroLumen(x.pv)}</div>`).join('')}</div></details>` : ''}
+
+                  ${listadoBloqueadasDetalle.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:800;color:var(--rej)">Ya congeladas en otra estimación (${listadoBloqueadasDetalle.length})</summary><div style="margin-top:7px;max-height:180px;overflow:auto;font-family:monospace">${listadoBloqueadasDetalle.map(x => `<div>${textoSeguroLumen(x.pv)}</div>`).join('')}</div></details>` : ''}
+
+                  <div class="note" style="margin-top:10px;border-left:4px solid ${listadoConciliado ? 'var(--done)' : 'var(--wait)'}">
+                    <b>${listadoConciliado ? '✓ Listado completamente conciliado.' : 'Listado aún pendiente de conciliación.'}</b>
+                    ${listadoConciliado ? ' Ya puede cerrarse con seguridad.' : ' Las P.V. pendientes se incorporarán automáticamente cuando cumplan requisitos y pulses Actualizar datos.'}
+                  </div>
+                `
+                : ''
+            }
+          </div>
+        `
+        : ''
+    }
+
     <div class="sect">
       <div class="estim-hero">
         <div class="lbl">
@@ -24946,7 +25011,7 @@ function pintarVistaEstimacionLumen() {
       </div>
 
       <div class="estim-row">
-        <span class="l">P.V. adelantadas incluidas</span>
+        <span class="l">${listadoOficialActivo ? 'P.V. incorporadas fuera del periodo' : 'P.V. adelantadas incluidas'}</span>
         <span class="v">${cantidadAdelantadas}</span>
       </div>
 
@@ -25042,7 +25107,7 @@ function pintarVistaEstimacionLumen() {
     </div>
 
     ${
-      !cerrado
+      !cerrado && !listadoOficialActivo
         ? `
           <div class="sect">
             <button
@@ -25165,7 +25230,7 @@ function pintarVistaEstimacionLumen() {
         <button
           class="expbtn"
           style="background:var(--steel);color:#fff"
-          onclick="cargarVistaEstimacionLumen(${Number(estimacion.numero)})"
+          onclick="actualizarDatosEstimacionLumen()"
         >
           Actualizar datos
         </button>
@@ -25191,8 +25256,9 @@ function pintarVistaEstimacionLumen() {
               class="btn btn-admin"
               style="width:100%;margin-top:10px"
               onclick="confirmarCierreEstimacionLumen()"
+              ${listadoOficialActivo && !listadoConciliado ? 'disabled' : ''}
             >
-              Cerrar y congelar estimación
+              ${listadoOficialActivo && !listadoConciliado ? 'Cierre bloqueado · listado incompleto' : 'Cerrar y congelar estimación'}
             </button>
           `
           : ''
